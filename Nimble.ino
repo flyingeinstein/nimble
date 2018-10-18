@@ -44,59 +44,36 @@ const char* influx_measurement = "walls";
 #include <AutoConnectCredential.h>
 #endif
 
-#include <DHT.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
-
-#include "Sensors.h"
-
-#define DHTPIN 12     // what digital pin we're connected to
-#define ONE_WIRE_BUS  4
-
-// Dallas 1wire temperature sensor resolution
-#define SENSOR_RESOLUTION 9
-
 #define ENABLE_DHT
 //#define ENABLE_MOISTURE
 //#define ENABLE_MOTION
 //#define ENABLE_INFLUX
-#define LCD SSD1306
 
-// Libraries OLED
-#if (LCD == SSD1306)
-#include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
-Adafruit_SSD1306 display(OLED_RESET);
-#endif
 
-// Uncomment whatever type you're using!
-//#define DHTTYPE DHT11   // DHT 11
-#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
+#include "DeviceManager.h"
+#include "Motion.h"
+#include "AnalogPin.h"
+#include "DHTSensor.h"
+#include "OneWireSensors.h"
+#include "Display.h"
+
+// our fonts
+#include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/FreeSans12pt7b.h>
+#include <Fonts/FreeSansBoldOblique9pt7b.h>
+#include <Fonts/Org_01.h>
+
+const GFXfont* display_fonts[] = {  
+  NULL,           // will be the built-in font
+  &FreeSans12pt7b,
+  &FreeSans9pt7b,
+  &FreeSansBoldOblique9pt7b,
+  &Org_01
+};
+Display display;
+char* pages[6] = { NULL };
 
 #define TIMESTAMP_MIN  1500000000   // time must be greater than this to be considered NTP valid time
-
-// Connect pin 1 (on the left) of the sensor to +5V
-// NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
-// to 3.3V instead of 5V!
-// Connect pin 2 of the sensor to whatever your DHTPIN is
-// Connect pin 4 (on the right) of the sensor to GROUND
-// Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
-
-// Initialize DHT sensor.
-// Note that older versions of this library took an optional third parameter to
-// tweak the timings for faster processors.  This parameter is no longer needed
-// as the current DHT reading algorithm adjusts itself to work on faster procs.
-DHT dht(DHTPIN, DHTTYPE);
-
-// Dallas Semi 1-wire temp sensors
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature DS18B20(&oneWire);
-
-short sensor_read_motion(const SensorInfo& sensor, Outputs& outputs);
 
 typedef enum {
   JsonName,
@@ -109,6 +86,7 @@ extern InfluxTarget targets[] = {
   { "gem", "motion" }
 };
 
+#if 0
 SensorInfo sensors[] = {
   {
     /* type             */ Motion,
@@ -119,14 +97,18 @@ SensorInfo sensors[] = {
     /* read function    */ sensor_read_motion
   }
 };
+#endif
 
 ESP8266WebServer server(80);
+
+#if defined(CAPTIVE_PORTAL)
 AutoConnect Portal(server);
+#endif
 
 WiFiUDP ntpUDP;
 NTPClient ntp(ntpUDP);
 
-
+/*
 class Data {
   public:
     bool humidityPresent;
@@ -143,8 +125,16 @@ class Data {
 };
 
 Data data;
-Outputs readings;
+*/
 
+void setPageCode(short page, const char* code)
+{
+  if(page < (sizeof(pages)/sizeof(pages[0]))) {
+    if(pages[page])
+      free(pages[page]);
+    pages[page] = strdup(code); //malloc(strlen(code)+1);
+  }
+}
 
 /*** Web Server
 
@@ -164,8 +154,8 @@ void handleRoot() {
   status += "<h3><label>Site</label> ";
   status += hostname;
   status += "</h3>";
+#if 0
   status += "<table><tbody>";
-
   status += "<tr><th>Timestamp</th><td>";
   status += data.timestamp;
   status += "</td></tr>";
@@ -190,6 +180,7 @@ void handleRoot() {
     status += "</td></tr>";
   }
   status += "</tbody></table>";
+  #endif
   status += "<h6>Copyright 2018, Flying Einstein LLC</h6></body></html>";
   server.send(200, "text/html", status);
 }
@@ -287,20 +278,133 @@ void sendToInflux()
 }
 #endif
 
-void setup() {
-  // Initiate the LCD and disply the Splash Screen
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false);  // initialize with the I2C addr 0x3C (for the 128x32)
-  display.display();
-  display.clearDisplay();
+#if 0
+void JsonAddSensorReadings(String& json, SensorType st, JsonPart part)
+{
+  Devices::ReadingIterator itr = DeviceManager.forEach(st);
+  json += ",  \"";
+  json += SensorTypeName(st);
+  json += "\": [";
+  SensorReading r;
+  while ( r = itr.next() ) {
+    if (i > 0) json += ", ";
+    if (part == JsonValue) {
+      json += r.toString();
+    //} else if (part == JsonName) {
+    //  json += itr.device ? itr.device->name : "n/a";
+    } else if (part == JsonFull) {
+      json += "{ \"type\": \"";
+      json += SensorTypeName(r.sensorType);
+      json += "\", \"device\": ";
+      json += itr.device->id;
+      json += "\", \"slot\": ";
+      json += itr.slotOrdinal;
+      json += "\", \"ts\": ";
+      json += r.timestamp;
+      json += ", \"value\": ";
+      json += r.toString();
+      json += "}";
+    }
+  }
+  json += "]\n";
+}
 
+void JsonSendStatus() {
+  String status = "{\n  \"site\": \"";
+  status += hostname;
+  status += "\"";
+  if (data.timestamp > TIMESTAMP_MIN) {
+    status += ",  \"timestamp\": ";
+    status += data.timestamp;
+  }
+  if (data.humidityPresent) {
+    status += ",  \"humidity\": ";
+    status += data.humidity;
+    status += ",  \"heatIndex\": ";
+    status += data.heatIndex;
+  }
+  if (data.moisturePresent) {
+    status += ",  \"moisture\": ";
+    status += data.moisture;
+  }
+
+  status += ",  \"temperatures\": [";
+  for (int i = 0; i < data.temperatureCount; i++) {
+    if (i > 0)
+      status += ",";
+    status += data.temperature[i];
+  }
+  status += "]\n";
+
+  JsonAddSensorReadings(status, Motion, JsonValue);
+
+  status += "}";
+  SendHeaders();
+  server.send(200, "text/html", status);
+}
+
+const char* hex = "0123456789ABCDEF";
+
+void JsonSendDevices() {
+  String status = "{\n  \"site\": \"";
+  status += hostname;
+  status += "\",  \"humidity\": ";
+  status += data.humidityPresent ? "true" : "false";
+  status += ",  \"moisture\": \"";
+  status += data.moisturePresent ? "true" : "false";
+  status += "\",";
+
+  status += "  \"temperatureDevices\": [";
+  uint8_t devices = 0;
+  if (data.humidityPresent) {
+    devices++;
+    status += "\"DHT\"";
+  }
+  uint8_t count = DS18B20.getDS18Count();
+  DeviceAddress devaddr;
+  for (int i = 0; i < count; i++) {
+    if (devices > 0)
+      status += ",";
+    if (DS18B20.getAddress(devaddr, i)) {
+      status += "\"";
+      for (int j = 0; j < 8; j++) {
+        if (j > 0)
+          status += ":";
+        status += hex[ devaddr[j] / 16 ];
+        status += hex[ devaddr[j] % 16 ];
+      }
+      status += "\"";
+    }
+    devices++;
+  }
+  status += "]\n";
+
+  JsonAddSensorReadings(status, Motion, JsonName);
+
+  status += "}\n";
+  SendHeaders();
+  server.send(200, "text/html", status);
+}
+#endif
+
+void setup() {
   Serial.begin(230400);
   Serial.println("Nimble Multi-Sensor");
   Serial.println("(c)2018 FlyingEinstein.com");
 
+  DeviceManager.begin( ntp );
+  DeviceManager.add( new DHTSensor(2, 12) );      // D6
+  //DeviceManager.add( new OneWireSensor(1, 2) );   // D4
+  DeviceManager.add( new MotionIR(6, 14) );       // D5
+  
+  display.begin(DeviceManager, display_fonts);
+  setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");
+  display.execute(pages[0]);
+
   server.addHandler(&optionsRequestHandler);
   server.on("/", handleRoot);
-  server.on("/status", JsonSendStatus);
-  server.on("/devices", JsonSendDevices);
+  //server.on("/status", JsonSendStatus);
+  //server.on("/devices", JsonSendDevices);
 
   server.onNotFound(handleNotFound);
   
@@ -390,394 +494,88 @@ void setup() {
   // begin the ntp client
   ntp.begin();
 
-  // humidity sensor
-  dht.begin();
-
-  // setup OneWire bus
-  DS18B20.begin();
-  //DS18B20.setResolution(sensorDeviceAddress, SENSOR_RESOLUTION);
-
-  pinMode(14, INPUT);
-  pinMode(DHTPIN, INPUT);
-
   Serial.print("Host: ");
   Serial.print(hostname);
   Serial.print("   IP: ");
   Serial.println(WiFi.localIP());
 }
 
-#define LCD_COL1  45
-#define LCD_COL2  85
-#include <Fonts/FreeSans9pt7b.h>
-#include <Fonts/FreeSans12pt7b.h>
-#include <Fonts/FreeSansBoldOblique9pt7b.h>
-#include <Fonts/Org_01.h>
 
-#define TITLE_FONT FreeSans12pt7b
-#define  DATA_FONT FreeSans9pt7b
-#define LINE_HEIGHT 12
-
-unsigned long long lastMotion = 0;
-
-void OLED_Display()
+void PrintData(SensorType st)
 {
-  int y = 16;
-  unsigned long alone = millis() - lastMotion;
-
-  if(alone > 30000) {
-    display.clearDisplay();
-    display.display();
-    return;
-  }
-  display.dim( alone > 15000 );
-
-  //display.ssd1306_command(SSD1306_SETCONTRAST);
-  //display.ssd1306_command(255); // Whereama c is a value from 0 to 255 (sets contrast e.g. brightness)
-  
-  // Update OLED values
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-  display.setFont(&TITLE_FONT);
-  display.setTextSize(1);
-  display.setCursor(0, y);
-  display.print(data.temperature[0], 1);
-
-  //display.setTextSize(1);
-  display.setFont(NULL);
-  display.drawCircle(display.getCursorX()+3, 8, 1, WHITE);
-  display.setCursor(display.getCursorX()+1, 8);
-  display.print(" F");
-
-  display.setFont(&FreeSans9pt7b);
-  //display.setTextSize(1);
-  y += FreeSans9pt7b.yAdvance; //LINE_HEIGHT;
-  display.setCursor(0, y);
-  display.print(hostname);
-
-  // display motion devices
-  for (int i = 0, x=120; i < readings.count; i++) {
-    SensorReading r = readings.values[i];
-    if(r.sensorType!=Motion)
-      continue;
-    if(r.b)
-      display.fillCircle(x, y-4, 4, WHITE);
-    else
-      display.drawCircle(x, y-4, 4, WHITE);
-    x -= 8;
-  }
-  
-  display.setFont(NULL);
-
-#if 0
-  //display.setTextSize(1);
-  y = 64 - LINE_HEIGHT;
-  display.setCursor(0, y);
-  display.print("HI");
-  display.setCursor(LCD_COL1, y);
-  display.print(data.heatIndex, 1);
-  display.print("\xB0C");
-  
-  y -= LINE_HEIGHT;
-  display.setCursor(0, y);
-  display.print("RH");
-  display.setCursor(LCD_COL1, y);
-  display.print(data.humidity, 1);
-  display.print("%");
-#else
-  y = 0;
-  display.setCursor(LCD_COL2, y);
-  display.print("HI");
-  display.setCursor(LCD_COL2+15, y);
-  display.print(data.heatIndex, 1);
-  
-  y += LINE_HEIGHT;
-  display.setCursor(LCD_COL2, y);
-  display.print("RH");
-  display.setCursor(LCD_COL2+15, y);
-  display.print(data.humidity, 1);
-  //display.print("%");  
-#endif
-
-  display.display();
-}
-
-void PrintData(Data& data)
-{
-  // print data to console
-  Serial.print("T");
-  Serial.print(data.timestamp);
-  if (data.humidityPresent) {
-    Serial.print("  RH ");
-    Serial.print(data.humidity);
-    Serial.print("%\t");
-    Serial.print("HI ");
-    Serial.print(data.heatIndex);
-    Serial.print("*F  ");
-  }
-  if (data.moisturePresent) {
-    Serial.print("Moisture ");
-    Serial.print(data.moisture);
-    Serial.print("  ");
-  }
-  if (data.temperatureCount > 0) {
-    Serial.print("T[");
-    for (int i = 0; i < data.temperatureCount; i++) {
-      if (i > 0)
-        Serial.print(" ");
-      Serial.print(data.temperature[1]);
+  int n=0;
+  SensorReading r;
+  Devices::ReadingIterator itr = DeviceManager.forEach(st);
+  while( r = itr.next() ) {
+    if(n==0) {
+      Serial.print(SensorTypeName(st));
+      Serial.print(": ");
+    } else {
+      Serial.print(", ");
     }
-    Serial.print("]");
+    Serial.print(itr.device->id);
+    Serial.print(':');
+    Serial.print(itr.slot);
+    Serial.print('=');
+    Serial.print(r.toString());
+    
+    n++;
   }
-  Serial.println();
-}
-
-short sensor_read_motion(const SensorInfo& sensor, Outputs& readings)
-{
-  // read a typical motion sensor on a digital pin
-  bool motion = digitalRead(sensor.pin) ? true : false;
-  if(motion)
-    lastMotion = millis();
-  readings.write( SensorReading(sensor, motion) );
+  if(n>0) Serial.println();
 }
 
 unsigned long long nextRead = 0;
 unsigned long long nextDisplayUpdate = 0;
+unsigned long long nextPrintUpdate = 0;
+unsigned long nextInfluxWrite = 0;
 uint8_t state = 0;
-uint8_t attempts = 0;
-Data newdata;
 
 enum {
   STATE_PREAMBLE,
-  STATE_READ_HUMIDITY,
-  STATE_READ_MOISTURE,
-  STATE_READ_1WIRE,
-  STATE_READ_MOTION,
   STATE_SAVE_DATA,
   STATE_POST_INFLUX
 };
 
 void loop() {
-  float h, f;
-  uint8_t count;
 
 #if defined(ALLOW_OTA_UPDATE)
   ArduinoOTA.handle();
 #endif
   
+#if defined(CAPTIVE_PORTAL)
   Portal.handleClient();
-
-  // no further processing if we are not in station mode
-  if((WiFi.getMode() != WIFI_STA) ==0)
-    return;
-    
-  ntp.update();
+#else
+  server.handleClient();
+#endif
 
 #if defined(LCD)
   if (millis() > nextDisplayUpdate) {
-    OLED_Display();
+    if(pages[0])
+      display.execute(pages[0]);
     nextDisplayUpdate = millis() + 400;
   }
 #endif
 
-#if 0
-  // allow sensors to update as updateFrequency
-  readings.reset();
-  for (int i = 0; i < sizeof(sensors) / sizeof(sensors[0]); i++) {
-    const SensorInfo& sensor = sensors[i];
-    short rv = sensor.read(sensor, readings);
+  // no further processing if we are not in station mode
+  if(WiFi.getMode() != WIFI_STA)
+    return;
+
+  ntp.update();
+
+  DeviceManager.handleUpdate();
+
+  if (millis() > nextPrintUpdate) {
+    Serial.println();
+    PrintData(Motion);
+    PrintData(Humidity);
+    PrintData(Temperature);
+    nextPrintUpdate = millis() + 1000;
   }
-#endif
 
-  switch (state) {
-    case STATE_PREAMBLE:
-      if (millis() > nextRead) {
-        memset(&newdata, 0, sizeof(newdata));
-        newdata.timestamp = ntp.getEpochTime();
-        if (newdata.timestamp > TIMESTAMP_MIN) {
-          state++;
-          attempts = 0;
-        } else {
-          // wait another x millis for NTP to complete
-          Serial.println("ntp not ready");
-          nextRead = millis() + 1000;  // now we defer the next read attempt for X seconds
-        }
-      }
-      break;
-    case STATE_READ_HUMIDITY:
-#ifdef ENABLE_DHT
-      if (millis() > nextRead) {
-        // Reading temperature or humidity takes about 250 milliseconds!
-        // SensorInfo readings may also be up to 2 seconds 'old' (its a very slow sensor)
-        h = dht.readHumidity();
-        // Read temperature as Fahrenheit (isFahrenheit = true)
-        f = dht.readTemperature(true);
-  
-        // Check if any reads failed and exit early (to try again).
-        if (isnan(h) || isnan(f)) {
-          Serial.println("Failed to read from DHT sensor!");
-          if (++attempts > 3) 
-            state++;  // skip humidity
-          else {
-            nextRead = millis() + 1000;  // now we defer the next read attempt for X seconds
-            delay(100);
-          }
-          return;  
-        }
-  
-        // update data
-        newdata.humidityPresent = true;
-        newdata.humidity = h;
-        newdata.heatIndex = dht.computeHeatIndex(f, h);
-        newdata.temperature[newdata.temperatureCount++] = f;
-      }
-#endif
-      state++;
-      break;
-    case STATE_READ_MOISTURE:
-#ifdef ENABLE_MOISTURE
-      newdata.moisture = 1024 - analogRead(A0);
-      newdata.moisturePresent = true;
-#endif
-      state++;
-      break;
-    case STATE_READ_1WIRE:
-      // read Dallas DS18 temperature devices
-      count = DS18B20.getDS18Count();
-      DS18B20.requestTemperatures();
-      for (int i = 0; i < count; i++) {
-        newdata.temperature[newdata.temperatureCount++] = DS18B20.getTempFByIndex(i);
-      }
-      state++;
-      break;
-    case STATE_READ_MOTION:
-      state++;
-      break;
-    case STATE_SAVE_DATA:
-      if (newdata.humidityPresent || newdata.moisturePresent || newdata.temperatureCount > 0) {
-        data = newdata;
-        PrintData(data);
-        state++;
-      } else
-        state = 0;
-      break;
-
-    case STATE_POST_INFLUX:
 #ifdef ENABLE_INFLUX
-      if (enable_influx && influx_server != NULL)
-        sendToInflux();
+  if (enable_influx && influx_server != NULL && millis() > nextInfluxWrite) {
+    nextInfluxWrite = millis() + 60000;
+    sendToInflux();
+  }
 #endif
-      state++;
-      break;
-
-    default:
-      nextRead = millis() + 5000;  // now we defer the next read attempt for X seconds
-      state = 0;  // back to beginning
-      break;
-  }
-
-}
-
-
-void JsonAddSensorReadings(String& json, SensorType st, JsonPart part)
-{
-  json += ",  \"";
-  json += SensorTypeName(st);
-  json += "\": [";
-  for (int i = 0; i < readings.count; i++) {
-    SensorReading r = readings.values[i];
-    if(r.sensorType!=st)
-      continue;
-    if (i > 0) json += ", ";
-    if (part == JsonValue) {
-      json += r.toString();
-    } else if (part == JsonName) {
-      json += r.sensor ? r.sensor->name : "n/a";
-    } else if (part == JsonFull) {
-      json += "{ \"type\": \"";
-      json += SensorTypeName(r.sensorType);
-      json += "\", \"ts\": ";
-      json += r.timestamp;
-      json += ", \"value\": ";
-      json += r.toString();
-      json += "}";
-    }
-  }
-  json += "]\n";
-}
-
-void JsonSendStatus() {
-  String status = "{\n  \"site\": \"";
-  status += hostname;
-  status += "\"";
-  if (data.timestamp > TIMESTAMP_MIN) {
-    status += ",  \"timestamp\": ";
-    status += data.timestamp;
-  }
-  if (data.humidityPresent) {
-    status += ",  \"humidity\": ";
-    status += data.humidity;
-    status += ",  \"heatIndex\": ";
-    status += data.heatIndex;
-  }
-  if (data.moisturePresent) {
-    status += ",  \"moisture\": ";
-    status += data.moisture;
-  }
-
-  status += ",  \"temperatures\": [";
-  for (int i = 0; i < data.temperatureCount; i++) {
-    if (i > 0)
-      status += ",";
-    status += data.temperature[i];
-  }
-  status += "]\n";
-
-  JsonAddSensorReadings(status, Motion, JsonValue);
-
-  status += "}";
-  SendHeaders();
-  server.send(200, "text/html", status);
-}
-
-const char* hex = "0123456789ABCDEF";
-
-void JsonSendDevices() {
-  String status = "{\n  \"site\": \"";
-  status += hostname;
-  status += "\",  \"humidity\": ";
-  status += data.humidityPresent ? "true" : "false";
-  status += ",  \"moisture\": \"";
-  status += data.moisturePresent ? "true" : "false";
-  status += "\",";
-
-  status += "  \"temperatureDevices\": [";
-  uint8_t devices = 0;
-  if (data.humidityPresent) {
-    devices++;
-    status += "\"DHT\"";
-  }
-  uint8_t count = DS18B20.getDS18Count();
-  DeviceAddress devaddr;
-  for (int i = 0; i < count; i++) {
-    if (devices > 0)
-      status += ",";
-    if (DS18B20.getAddress(devaddr, i)) {
-      status += "\"";
-      for (int j = 0; j < 8; j++) {
-        if (j > 0)
-          status += ":";
-        status += hex[ devaddr[j] / 16 ];
-        status += hex[ devaddr[j] % 16 ];
-      }
-      status += "\"";
-    }
-    devices++;
-  }
-  status += "]\n";
-
-  JsonAddSensorReadings(status, Motion, JsonName);
-
-  status += "}\n";
-  SendHeaders();
-  server.send(200, "text/html", status);
 }
