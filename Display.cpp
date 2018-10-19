@@ -19,7 +19,7 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
 Display::Display()
 	: display(OLED_RESET), fonts(NULL), nfonts(0),
 	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
-	  w(0), str(NULL)
+	  w(0), str(NULL), gx(6), gy(9)
 {
 }
 
@@ -43,6 +43,7 @@ void Display::reset()
   P=1;
   str = NULL;
   strLength=-1;
+  gx = 6; gy = 9;
   display.clearDisplay();
   display.setCursor(0,0);
   display.setFont(NULL);
@@ -52,7 +53,7 @@ void Display::reset()
 
 short& Display::getRegister(char reg)
 {
-	switch(reg) {
+	switch(toupper(reg)) {
 		case 'G': return G;
 		case 'D': return D;
 		case 'S': return S;
@@ -91,11 +92,6 @@ void Display::print(const char* str, short strLength) {
     display.print(*str++);
 }
 
-void Display::setCursorRC(short r, short c)
-{
-  display.setCursor(X=C*6, Y=R*9);
-}
-
 bool Display::exec() 
 {
   SensorReading r;
@@ -109,13 +105,17 @@ bool Display::exec()
 		case 2: // draw reading to X,Y
       print( devices->getReading(D, S) );
 		  break;
-    case 6: // draw line
+    case 4: // draw line
       break;
-    case 8: // draw rect
-    case 81: // fill rect
+    case 5: // draw rect
+    case 6: // fill rect
       break;
-    case 9: // draw circle
-    case 91: // fill circle
+    case 7: // draw circle
+    case 8: // fill circle
+      break;
+    case 50: // set grid size
+      gx = W;
+      gy = H;
       break;
 		default:
 		  Serial.print("? G");
@@ -199,12 +199,18 @@ bool Display::execute(const char* input, ParseException* _pex)
 		*preg = i;
     switch(reg) {
       case 'R':
+        display.setCursor(display.getCursorX(), Y=R*gy);
+        break;
       case 'C':
-        setCursorRC(R,C);
+        display.setCursor(X=C*gx,display.getCursorY());
         break;
       case 'X':
+        if(G<80)
+          display.setCursor(X,display.getCursorY());
+        break;
       case 'Y':
-        display.setCursor(X,Y);
+        if(G<80)
+          display.setCursor(display.getCursorX(),Y);
         break;
       case 'T':
         display.setTextSize(T);

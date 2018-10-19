@@ -73,6 +73,7 @@ const char* influx_measurement = "walls";
 const FontInfo display_fonts[] = {  
   FONT(FreeSans9pt7b),
   FONT(FreeSans12pt7b),
+  FONT(FreeSans18pt7b),
   FONT(FreeSansBold9pt7b),
   FONT(FreeSansBoldOblique9pt7b),
   FONT(FreeMono9pt7b),

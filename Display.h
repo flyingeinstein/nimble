@@ -75,6 +75,9 @@ class Display
 		const char* str;
     short strLength;
 
+    // grid size
+    short gx, gy;
+
     // reset parser and display getting ready for a new page draw
     void reset();
 
