@@ -24,6 +24,6 @@ void DigitalPin::handleUpdate()
 {
   readings[0] = SensorReading(pinType, digitalRead(pin) ? true : false);
   if(reversePolarity)
-    readings[0].b != readings[0].b;
+    readings[0].b = !readings[0].b;
   state = Nominal;
 }

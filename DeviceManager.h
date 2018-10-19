@@ -20,6 +20,8 @@ typedef struct _InfluxTarget {
 typedef enum SensorType {
   Invalid,
   Numeric,       // general numeric value
+  Timestamp,     // a unix timestamp
+  Milliseconds,  // a measurement in milliseconds
   Humidity,      // Relative Humidity (RH)
   Hygrometer,
   Temperature,   // Celcius or Farenheit
@@ -217,8 +219,8 @@ class SensorReading
   // todo: we should also add a String id and alias field (i.e. 1wire would have id as hex string, and alias as the temp probe name)
   public:
     SensorType sensorType;
-    unsigned long timestamp;
     char valueType;
+    unsigned long timestamp;
     union {
       float f;
       long l;

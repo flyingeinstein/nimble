@@ -60,15 +60,27 @@ const char* influx_measurement = "walls";
 // our fonts
 #include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
+#include <Fonts/FreeSans18pt7b.h>
+#include <Fonts/FreeSansBold9pt7b.h>
 #include <Fonts/FreeSansBoldOblique9pt7b.h>
+#include <Fonts/FreeMono9pt7b.h>
+#include <Fonts/FreeMono12pt7b.h>
+#include <Fonts/FreeMono18pt7b.h>
 #include <Fonts/Org_01.h>
+#include <Fonts/Picopixel.h>
+#include <Fonts/Tiny3x3a2pt7b.h>
 
-const GFXfont* display_fonts[] = {  
-  NULL,           // will be the built-in font
-  &FreeSans12pt7b,
-  &FreeSans9pt7b,
-  &FreeSansBoldOblique9pt7b,
-  &Org_01
+const FontInfo display_fonts[] = {  
+  FONT(FreeSans9pt7b),
+  FONT(FreeSans12pt7b),
+  FONT(FreeSansBold9pt7b),
+  FONT(FreeSansBoldOblique9pt7b),
+  FONT(FreeMono9pt7b),
+  FONT(FreeMono12pt7b),
+  FONT(FreeMono18pt7b),
+  FONT(Org_01),
+  FONT(Picopixel),
+  FONT(Tiny3x3a2pt7b)
 };
 Display display;
 char* pages[6] = { NULL };
@@ -81,7 +93,7 @@ typedef enum {
   JsonFull
 } JsonPart;
 
-extern InfluxTarget targets[] = {
+InfluxTarget targets[] = {
   { "gem", "walls" },
   { "gem", "motion" }
 };
@@ -129,7 +141,7 @@ Data data;
 
 void setPageCode(short page, const char* code)
 {
-  if(page < (sizeof(pages)/sizeof(pages[0]))) {
+  if(page < (short)(sizeof(pages)/sizeof(pages[0]))) {
     if(pages[page])
       free(pages[page]);
     pages[page] = strdup(code); //malloc(strlen(code)+1);
@@ -392,19 +404,13 @@ void setup() {
   Serial.println("Nimble Multi-Sensor");
   Serial.println("(c)2018 FlyingEinstein.com");
 
-  DeviceManager.begin( ntp );
-  DeviceManager.add( new DHTSensor(2, 12) );      // D6
-  //DeviceManager.add( new OneWireSensor(1, 2) );   // D4
-  DeviceManager.add( new MotionIR(6, 14) );       // D5
-  
-  display.begin(DeviceManager, display_fonts);
-  setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");
-  display.execute(pages[0]);
-
   server.addHandler(&optionsRequestHandler);
   server.on("/", handleRoot);
   //server.on("/status", JsonSendStatus);
   //server.on("/devices", JsonSendDevices);
+  server.on("/display/fonts", HTTP_GET, handlePageGetFonts);
+  server.on("/display/page/code", HTTP_GET, handlePageGetCode);
+  server.on("/display/page/code", HTTP_POST, handlePageSetCode);
 
   server.onNotFound(handleNotFound);
   
@@ -494,6 +500,15 @@ void setup() {
   // begin the ntp client
   ntp.begin();
 
+  DeviceManager.begin( ntp );
+  DeviceManager.add( new DHTSensor(2, 12) );      // D6
+  //DeviceManager.add( new OneWireSensor(1, 2) );   // D4
+  DeviceManager.add( new MotionIR(6, 14) );       // D5
+  
+  display.begin(DeviceManager, display_fonts);
+  setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");
+  display.execute(pages[0]);
+
   Serial.print("Host: ");
   Serial.print(hostname);
   Serial.print("   IP: ");
@@ -506,7 +521,7 @@ void PrintData(SensorType st)
   int n=0;
   SensorReading r;
   Devices::ReadingIterator itr = DeviceManager.forEach(st);
-  while( r = itr.next() ) {
+  while( (r = itr.next()) ) {
     if(n==0) {
       Serial.print(SensorTypeName(st));
       Serial.print(": ");

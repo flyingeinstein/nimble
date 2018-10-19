@@ -15,6 +15,14 @@
 
 #include "DeviceManager.h"
 
+#define FONT(name)  { &name, #name }
+
+typedef struct _FontInfo {
+  const GFXfont* font;
+  const char* name;
+} FontInfo;
+
+
 typedef enum {
 	SyntaxError,
 	InvalidRegister,
@@ -36,15 +44,21 @@ class Display
   public:
     Adafruit_SSD1306 display;
     Devices* devices;
-    const GFXfont** fonts;
+    const FontInfo* fonts;
+    short nfonts;
     
   public:
   	Display();
-  
-  	void begin(Devices& _devices, const GFXfont** _fonts=NULL);
 
-    void clear();
-    
+    void begin(Devices& _devices);
+
+  	template<size_t N>
+  	void begin(Devices& _devices, const FontInfo (&_fonts)[N]) { 
+  	  begin(_devices); 
+  	  fonts = _fonts; 
+  	  nfonts = (short)N; 
+  	}
+   
   	short& getRegister(char reg);
   
   	// parse a program
@@ -60,6 +74,9 @@ class Display
 		// holds the most recent string argument
 		const char* str;
     short strLength;
+
+    // reset parser and display getting ready for a new page draw
+    void reset();
 
     // execute based on the value of the registers
     bool exec();

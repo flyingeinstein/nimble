@@ -17,30 +17,37 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
 }
 
 Display::Display()
-	: display(OLED_RESET), fonts(NULL),
-	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(0), R(0), T(0), C(0), W(0), H(0),
+	: display(OLED_RESET), fonts(NULL), nfonts(0),
+	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
 	  w(0), str(NULL)
 {
 }
 
-void Display::begin(Devices& _devices, const GFXfont** _fonts)
+void Display::begin(Devices& _devices)
 {
   devices = &_devices;
-  fonts = _fonts;
   
   #if (LCD == SSD1306)
   // Initiate the LCD and disply the Splash Screen
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false);  // initialize with the I2C addr 0x3C (for the 128x32)
+  display.ssd1306_command(SSD1306_SETCONTRAST);
+  display.ssd1306_command(255); // Where arg is a value from 0 to 255 (sets contrast e.g. brightness)
   display.display();
   display.clearDisplay();
 #endif
 }
 
-void Display::clear()
+void Display::reset()
 {
-  G=D=S=_F=X=Y=W=H=U=P=R=T=C=w=0;
+  G=D=S=_F=X=Y=W=H=U=R=T=C=w=0;
+  P=1;
   str = NULL;
   strLength=-1;
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.setFont(NULL);
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
 }
 
 short& Display::getRegister(char reg)
@@ -74,7 +81,7 @@ void Display::print(SensorReading r) {
       if(r.b)
         display.fillCircle(X, Y-4, 4, WHITE);
       else
-        display.drawCircle(Y, Y-4, 4, WHITE);
+        display.drawCircle(X, Y-4, 4, WHITE);
       break;
   }
 }
@@ -86,7 +93,7 @@ void Display::print(const char* str, short strLength) {
 
 void Display::setCursorRC(short r, short c)
 {
-  display.setCursor(C*10, R*12);
+  display.setCursor(X=C*6, Y=R*9);
 }
 
 bool Display::exec() 
@@ -125,23 +132,19 @@ bool Display::execute(const char* input, ParseException* _pex)
 	char reg = 0;
 	short* preg;
 	short line_reg_count=0; // the number of registers set on this line
-	bool  decimal;	// true if value was a floating point number
 	bool negative;
 	short i = 0;
-	float f = 0;
 	ParseException pex;
 
 	memset(&pex, 0, sizeof(ParseException));
 
-  Serial.print("Display");
-  display.clearDisplay();
-  display.ssd1306_command(SSD1306_SETCONTRAST);
-  display.ssd1306_command(255); // Where arg is a value from 0 to 255 (sets contrast e.g. brightness)
-  display.setTextColor(WHITE);
+  reset();
 
 	while ((c = *input++))
 	{
-		if(c == '\'') {
+    if(c == ' ') {
+      continue;
+	  } else if(c == '\'') {
 			// a string argument, read until end of line
 			str = input;
 
@@ -150,8 +153,7 @@ bool Display::execute(const char* input, ParseException* _pex)
 				input++;
       strLength = input - str;
 			continue;
-		} if(c =='\n') {
-      Serial.print('.');
+		} else if(c =='\n') {
 			if(line_reg_count>0)
 				exec();
 			pex.line++;
@@ -162,9 +164,7 @@ bool Display::execute(const char* input, ParseException* _pex)
 
 		pex.position++;
 		negative = false;
-		decimal = false;
 		i = 0;
-		f = 0.0;
 
 		// expect register name
 		if(!isalpha(c)) {
@@ -211,8 +211,8 @@ bool Display::execute(const char* input, ParseException* _pex)
         break;
       case 'F':
         display.setFont( 
-          (fonts!=NULL && _F > 0 && _F < (sizeof(fonts)/sizeof(fonts[0]))) 
-            ? fonts[_F-1] 
+          (fonts!=NULL && _F > 0 && _F <= nfonts) 
+            ? fonts[_F-1].font
             : NULL
         );
         break;
@@ -231,7 +231,6 @@ syntax_error:
   // can be error or not, we set PEX so caller gets line and position
 	if(_pex) *_pex = pex;
   display.display();
-  Serial.println("  done");
 	return pex.code==0;
 }
 

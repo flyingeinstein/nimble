@@ -163,6 +163,8 @@ Devices::ReadingIterator& Devices::ReadingIterator::After(unsigned long ts)
 
 SensorReading Devices::ReadingIterator::next()
 {
+  if(manager==NULL)
+    return InvalidReading;  // nothing to iterate
   if(device ==NULL) {
     // get first device
     deviceOrdinal=0; slot=0;
@@ -181,7 +183,7 @@ SensorReading Devices::ReadingIterator::next()
       if(r.sensorType!=Invalid && r.valueType!=VT_INVALID &&
         (sensorTypeFilter==Invalid || r.sensorType==sensorTypeFilter) &&
         (valueTypeFilter==0 || r.valueType==valueTypeFilter) &&
-        (r.timestamp >= tsFrom && (tsTo==0) || (r.timestamp < tsTo))) {
+        (r.timestamp >= tsFrom && (tsTo==0 || r.timestamp < tsTo))) {
           return r;
       }
       slot++;
@@ -192,9 +194,8 @@ SensorReading Devices::ReadingIterator::next()
       return InvalidReading;  // only read from one device
     device = manager->devices[++deviceOrdinal];
     slot = 0;
-    if(device==NULL)
-      return InvalidReading;  // end of readings
   }
+  return InvalidReading;  // end of readings
 }
 
 Devices::ReadingIterator Devices::forEach()
@@ -212,6 +213,7 @@ Devices::ReadingIterator Devices::forEach(short deviceId)
       itr.singleDevice = true;
       return itr;
     }
+    return ReadingIterator(NULL);
 }
 
 Devices::ReadingIterator Devices::forEach(SensorType st)
