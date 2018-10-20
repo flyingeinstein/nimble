@@ -19,7 +19,7 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
 Display::Display()
 	: display(OLED_RESET), fonts(NULL), nfonts(0),
 	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
-	  w(0), str(NULL), gx(6), gy(9)
+	  w(0), str(NULL), gx(6), gy(9), relativeCoords(false)
 {
 }
 
@@ -44,6 +44,7 @@ void Display::reset()
   str = NULL;
   strLength=-1;
   gx = 6; gy = 9;
+  relativeCoords = false;
   display.clearDisplay();
   display.setCursor(0,0);
   display.setFont(NULL);
@@ -80,9 +81,9 @@ void Display::print(SensorReading r) {
     case VT_INT: display.print(r.l); break;
     case VT_BOOL: 
       if(r.b)
-        display.fillCircle(X, Y-4, 4, WHITE);
+        display.fillCircle(display.getCursorX(), display.getCursorY()-4, 4, WHITE);
       else
-        display.drawCircle(X, Y-4, 4, WHITE);
+        display.drawCircle(display.getCursorX(), display.getCursorY()-4, 4, WHITE);
       break;
   }
 }
@@ -198,19 +199,43 @@ bool Display::execute(const char* input, ParseException* _pex)
 		// set the register
 		*preg = i;
     switch(reg) {
+      case 'G': // some G codes are instant
+          switch(i) {
+            case 90: relativeCoords = false; break;
+            case 91: relativeCoords = true; break;
+          }
+        break;
       case 'R':
-        display.setCursor(display.getCursorX(), Y=R*gy);
+        if(G<80) {
+          if(relativeCoords)
+            display.setCursor(display.getCursorX(), (display.getCursorY()/gy)*gy + R*gy );
+          else
+            display.setCursor(display.getCursorX(), R*gy);
+        }
         break;
       case 'C':
-        display.setCursor(X=C*gx,display.getCursorY());
+        if(G<80) {
+          if(relativeCoords)
+            display.setCursor((display.getCursorX()/gx)*gx + C*gx, display.getCursorY());
+          else
+            display.setCursor(C*gx, display.getCursorY());
+        }
         break;
       case 'X':
-        if(G<80)
-          display.setCursor(X,display.getCursorY());
+        if(G<80) {
+          if(relativeCoords)
+            display.setCursor(display.getCursorX() + X,display.getCursorY());
+          else
+            display.setCursor(X,display.getCursorY());
+        }
         break;
       case 'Y':
-        if(G<80)
-          display.setCursor(display.getCursorX(),Y);
+        if(G<80) {
+          if(relativeCoords)
+            display.setCursor(display.getCursorX(),display.getCursorY() + Y);
+          else
+            display.setCursor(display.getCursorX(),Y);
+        }
         break;
       case 'T':
         display.setTextSize(T);

@@ -78,6 +78,9 @@ class Display
     // grid size
     short gx, gy;
 
+    // coordinate mode
+    bool relativeCoords;  // default: false
+
     // reset parser and display getting ready for a new page draw
     void reset();
 
