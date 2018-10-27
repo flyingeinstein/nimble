@@ -17,6 +17,31 @@ typedef struct _InfluxTarget {
   String measurement;
 } InfluxTarget;
 
+class SensorAddress {
+  public:
+    short device;
+    short slot;
+
+    inline SensorAddress() : device(0), slot(0) {}
+    inline SensorAddress(short _device, short _slot) : device(_device), slot(_slot) {}
+
+    inline bool operator==(const SensorAddress& sa) const { return sa.device==device && sa.slot==slot; }
+    inline bool operator!=(const SensorAddress& sa) const { return sa.device!=device || sa.slot!=slot; }
+    inline bool operator<(const SensorAddress& sa) const { return (sa.device==device) ? sa.slot<slot : sa.device<device; }
+    inline bool operator>(const SensorAddress& sa) const { return (sa.device==device) ? sa.slot>slot : sa.device>device; }
+
+    String toString() const;
+};
+
+
+#define F_BIT(x) (1<<x)
+
+// Device Flags
+#define DF_BUS           F_BIT(0)
+#define DF_I2C_BUS       (DF_BUS|F_BIT(1))
+#define DF_SERIAL_BUS    (DF_BUS|F_BIT(2))
+
+
 typedef enum SensorType {
   Invalid,
   Numeric,       // general numeric value
@@ -116,7 +141,10 @@ class Devices {
     // clear all devices
     void clearAll();
 
-    short add(Device* dev);
+    short add(Device& dev);
+    
+    void remove(short deviceId);
+    void remove(Device& dev);
 
     // find a device by id
     const Device& find(short deviceId) const;
@@ -124,7 +152,8 @@ class Devices {
 
     // find a reading by device:slot
     // for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
-    SensorReading getReading(short deviceId, unsigned short slotId);
+    SensorReading getReading(short deviceId, unsigned short slotId) const;
+    SensorReading getReading(const SensorAddress& sa) const;
 
     // determine which devices need to interact with their hardware
     void handleUpdate();
@@ -165,12 +194,15 @@ class Device {
     short id;
 
   public:
-    Device(short id, short _slots, unsigned long _updateInterval=1000);
+    Device(short id, short _slots, unsigned long _updateInterval=1000, unsigned long _flags=0);
     Device(const Device& copy);
     virtual ~Device();
     Device& operator=(const Device& copy);
 
-    inline bool isValid() const { return id>=0; }
+    operator bool() const;
+
+    inline unsigned long getFlags() const { return flags; }
+    inline bool hasFlags(unsigned long f) const { return (flags & f)==f; }
 
     virtual DeviceState getState() const;
     
@@ -185,14 +217,18 @@ class Device {
     
     virtual void handleUpdate();
 
+    void delay(unsigned long _delay);
+
     virtual bool isStale(unsigned long long _now=0) const;
 
     // read readings
     SensorReading operator[](unsigned short slotIndex) const;
 
   protected:
+    Devices* owner;
     unsigned short slots;
     SensorReading* readings;
+    unsigned long flags;
 
     unsigned long updateInterval;
     unsigned long nextUpdate;
@@ -237,6 +273,7 @@ class SensorReading
     inline SensorReading() : sensorType(Numeric), valueType(VT_CLEAR), timestamp(millis()), l(0) {}
     inline SensorReading(SensorType st, char vt, long _l) : sensorType(st), valueType(vt), timestamp(millis()), l(_l) {}
     inline SensorReading(SensorType st, float _f) : sensorType(st), valueType('f'), timestamp(millis()), f(_f) {}
+    inline SensorReading(SensorType st, double _f) : sensorType(st), valueType('f'), timestamp(millis()), f((float)_f) {}
     inline SensorReading(SensorType st, long _l) : sensorType(st), valueType('l'), timestamp(millis()), l(_l) {}
     inline SensorReading(SensorType st, int _i) : sensorType(st), valueType('i'), timestamp(millis()), l(_i) {}
     inline SensorReading(SensorType st, bool _b) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
