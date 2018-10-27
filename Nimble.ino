@@ -502,9 +502,9 @@ void setup() {
   ntp.begin();
 
   DeviceManager.begin( ntp );
-  DeviceManager.add( new DHTSensor(2, 12) );      // D6
-  //DeviceManager.add( new OneWireSensor(1, 2) );   // D4
-  DeviceManager.add( new MotionIR(6, 14) );       // D5
+  DeviceManager.add( *new DHTSensor(2, 12) );      // D6
+  //DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
+  DeviceManager.add( *new MotionIR(6, 14) );       // D5
   
   display.begin(DeviceManager, display_fonts);
   setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");

@@ -7,6 +7,17 @@
 
 #include "DeviceManager.h"
 
+
+String SensorAddress::toString() const
+{
+  String s;
+  s += device;
+  s += ':';
+  s += slot;
+  return s;
+}
+
+
 const char* SensorTypeName(SensorType st)
 {
   switch(st) {
@@ -87,17 +98,34 @@ void Devices::begin(NTPClient& client)
   ntp = &client;
 }
 
-short Devices::add(Device* dev)
+short Devices::add(Device& dev)
 {
   for(short i=0; i<slots; i++) 
   {
     // look for a free slot
     if(devices[i]==NULL) {
-      devices[i] = dev;
+      devices[i] = &dev;
+      dev.owner = this;
       return i;
     }
   }
   return -1;
+}
+
+void Devices::remove(short deviceId) {
+  for(short i=0; i<slots; i++) {
+    if(devices[i] && devices[i]->id == deviceId) {
+      devices[i] = NULL;
+    }
+  }
+}
+
+void Devices::remove(Device& dev) {
+  for(short i=0; i<slots; i++) {
+    if(devices[i] && devices[i] == &dev) {
+      devices[i] = NULL;
+    }
+  }
 }
 
 const Device& Devices::find(short deviceId) const
@@ -116,7 +144,12 @@ Device& Devices::find(short deviceId)
   return NullDevice;
 }
 
-SensorReading Devices::getReading(short deviceId, unsigned short slotId)
+SensorReading Devices::getReading(const SensorAddress& sa) const 
+{ 
+  return getReading(sa.device, sa.slot); 
+}
+
+SensorReading Devices::getReading(short deviceId, unsigned short slotId) const
 {
   for(short i=0; i<slots; i++) {
     if(devices[i] && devices[i]->id == deviceId) {
@@ -279,15 +312,15 @@ void Devices::alloc(short n) {
 #endif
 
 
-Device::Device(short _id, short _slots, unsigned long _updateInterval)
-  : id(_id), slots(_slots), readings(NULL), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
+Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
+  : owner(NULL), id(_id), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
   if(_slots>0)
     readings = (SensorReading*)calloc(slots, sizeof(SensorReading));
 }
 
 Device::Device(const Device& copy)
-  : id(copy.id), slots(copy.slots), readings(NULL), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
+  : owner(copy.owner), id(copy.id), slots(copy.slots), readings(NULL), flags(copy.flags), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
 {
   if(slots>0) {
     readings = (SensorReading*)calloc(slots, sizeof(SensorReading));
@@ -297,15 +330,20 @@ Device::Device(const Device& copy)
 
 Device::~Device()
 {
+  // todo: notify our owner we are dying
+  if(owner)
+    owner->remove(*this);
   if(readings)
     free(readings);
 }
 
 Device& Device::operator=(const Device& copy)
 {
+  owner=copy.owner;
   id=copy.id;
   slots=copy.slots;
   readings=NULL;
+  flags=copy.flags;
   updateInterval=copy.updateInterval;
   nextUpdate=0;
   state=copy.state;
@@ -324,6 +362,10 @@ void Device::alloc(unsigned short _slots)
   }
 }
 
+Device::operator bool() const { 
+  return this!=&NullDevice && id>=0; 
+}
+
 void Device::reset()
 {
 }
@@ -334,9 +376,13 @@ void Device::clear()
     readings[i].clear();
 }
 
+void Device::delay(unsigned long _delay)
+{
+  nextUpdate = millis() + _delay;
+}
+
 void Device::handleUpdate()
 {
-  
 }
 
 bool Device::isStale(unsigned long long _now) const
