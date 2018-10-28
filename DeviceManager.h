@@ -54,7 +54,11 @@ typedef enum SensorType {
   Illuminance,   // Lux
   pH,
   ORP,           // unitless
+  DisolvedOxygen, // mg/L
+  Conductivity,  // microS/cm (Atlas Scientific)
+  CO2,           // ppm
   Pressure,      // KPa?
+  Flow,          // liquid or gas flow
   Altitude,      // meters or feet
   AirPressure,
   AirQuality,

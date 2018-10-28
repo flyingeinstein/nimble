@@ -56,6 +56,7 @@ const char* influx_measurement = "walls";
 #include "DHTSensor.h"
 #include "OneWireSensors.h"
 #include "Display.h"
+#include "AtlasScientific.h"
 
 // our fonts
 #include <Fonts/FreeSans9pt7b.h>
@@ -505,6 +506,9 @@ void setup() {
   DeviceManager.add( *new DHTSensor(2, 12) );      // D6
   //DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
+
+  //DeviceManager.add( *new I2CBus(1) );       // Place Wire bus at 1:0
+  DeviceManager.add( *new AtlasScientific::Probe(8, pH) );       // pH probe at 8 using default i2c bus
   
   display.begin(DeviceManager, display_fonts);
   setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");

@@ -14,16 +14,17 @@ namespace AtlasScientific {
   } ProbeResult;
 
   
-  class pHProbe : public I2CDevice
+  class Probe : public I2CDevice
   {
     public:
-      pHProbe(short id, SensorAddress busId, short address=99);
+      Probe(short id, SensorType ptype, short address=0);
      
       virtual void handleUpdate();
 
       unsigned long measurementTime;
 
     protected:
+      SensorType sensorType;
       char ph_data[20];
 
       ProbeResult readResponse();

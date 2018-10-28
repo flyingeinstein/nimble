@@ -26,32 +26,42 @@ void I2CBus::handleUpdate()
 
 
 
+I2CDevice::I2CDevice(short id, short _address, short _slots)
+  : Device(id, _slots, 1000), address(_address), bus(NULL)
+{
+}
 
 I2CDevice::I2CDevice(short id, SensorAddress _busId, short _address, short _slots)
-  : Device(id, _slots, 1000), bus(_busId), address(_address)
+  : Device(id, _slots, 1000), busId(_busId), address(_address), bus(NULL)
 {
 }
 
 I2CDevice::I2CDevice(const I2CDevice& copy)
-  : Device(copy), address(copy.address)
+  : Device(copy), busId(copy.busId), address(copy.address), bus(NULL)
 {
 }
 
 I2CDevice& I2CDevice::operator=(const I2CDevice& copy)
 {
   Device::operator=(copy);
+  busId = copy.busId;
   address = copy.address;
+  bus = NULL;
   return *this;
 }
 
 TwoWire* I2CDevice::getWire()
 {
+  if(bus!=NULL)
+    return bus; // cached value
+    
   if(owner) {
-    I2CBus& i2c = (I2CBus&)owner->find(bus.device);
+    I2CBus& i2c = (I2CBus&)owner->find(busId.device);
     if(i2c) {
       // todo: get the Nth i2c bus based on the slot, for now we only support 1 bus
-      return i2c.wire;
-    }
+      return bus = i2c.wire;
+    } else
+    return bus = &Wire; // return default i2c bus
   }
   return NULL;
 }

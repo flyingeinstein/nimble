@@ -313,14 +313,14 @@ void Devices::alloc(short n) {
 
 
 Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
-  : owner(NULL), id(_id), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
+  : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
   if(_slots>0)
     readings = (SensorReading*)calloc(slots, sizeof(SensorReading));
 }
 
 Device::Device(const Device& copy)
-  : owner(copy.owner), id(copy.id), slots(copy.slots), readings(NULL), flags(copy.flags), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
+  : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
 {
   if(slots>0) {
     readings = (SensorReading*)calloc(slots, sizeof(SensorReading));

@@ -3,43 +3,59 @@
 #define S_MEASUREMENT   1
 #define S_WAITFOR_MEASUREMENT  2
 
+
+//#define DEBUG_PRINT(x)  Serial.println(x)
+#define DEBUG_PRINT(x)
+
+
 namespace AtlasScientific {
 
-  pHProbe::pHProbe(short id, SensorAddress busId, short address)
-    : I2CDevice(id, busId, address, 2), measurementTime(5000)
+  Probe::Probe(short id, SensorType stype, short address)
+    : I2CDevice(id, address, 2), measurementTime(5000), sensorType(stype)
   {
+    switch(stype) {
+      case pH: address = 99; break;
+      case ORP: address = 98; break;
+      case DisolvedOxygen: address = 97; break;
+      case Conductivity: address = 100; break;
+      case CO2: address = 105; break;
+      case Temperature: address = 102; break;
+      // case Flow:   // apparently Atlas Scientific flow meter doesnt support i2c yet although there is an updated EZO
+      default:
+        address = 0;
+    }
      readings[0] = SensorReading(Numeric, 0);       // probe state
-     readings[1] = SensorReading(pH, VT_CLEAR, 0);  // pH value
+     readings[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
   }
 
-  void pHProbe::sendCommand(const char* cmd) {
+  void Probe::sendCommand(const char* cmd) {
     Wire.beginTransmission(address); //call the circuit by its ID number.
     Wire.write(cmd);        //transmit the command that was sent through the serial port.
     Wire.endTransmission();          //end the I2C data transmission.
   }
 
-  ProbeResult pHProbe::readResponse()
+  ProbeResult Probe::readResponse()
   {
     Wire.requestFrom(address, 20, 1); //call the circuit and request 20 bytes (this may be more than we need)
     byte code = Wire.read();               //the first byte is the response code, we read this separately.
 
     switch (code) {                  //switch case based on what the response code is.
       case 1:                        //decimal 1.
-        Serial.println("Success");   //means the command was successful.
+        DEBUG_PRINT("Success");   //means the command was successful.
         break;                       //exits the switch case.
 
       case 2:                        //decimal 2.
-        Serial.println("Failed");    //means the command has failed.
+        DEBUG_PRINT("Failed");    //means the command has failed.
         return Failed;
         break;                       //exits the switch case.
 
       case 254:                      //decimal 254.
-        Serial.println("Pending");   //means the command has not yet been finished calculating.
+        DEBUG_PRINT("Pending");   //means the command has not yet been finished calculating.
         return Pending;
         break;                       //exits the switch case.
 
       case 255:                      //decimal 255.
-        Serial.println("No Data");   //means there is no further data to send.
+        DEBUG_PRINT("No Data");   //means there is no further data to send.
         return NoData;
         break;                       //exits the switch case.
     }
@@ -57,11 +73,10 @@ namespace AtlasScientific {
       }
     }
 
-    Serial.println(ph_data);          //print the data.
     return Success;
   }
 
-  void pHProbe::handleUpdate()
+  void Probe::handleUpdate()
   {
     ProbeResult result;
     long& _state = readings[0].l;
@@ -83,7 +98,7 @@ namespace AtlasScientific {
         result = readResponse();
         switch(result) {
           case Success: 
-            readings[1] = SensorReading(pH, atof(ph_data));
+            readings[1] = SensorReading(sensorType, atof(ph_data));
             _state++;
             break;
           case Failed: 
