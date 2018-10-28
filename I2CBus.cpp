@@ -50,6 +50,12 @@ I2CDevice& I2CDevice::operator=(const I2CDevice& copy)
   return *this;
 }
 
+void I2CDevice::setBus(SensorAddress _busId)
+{
+  busId = _busId;
+}
+
+
 TwoWire* I2CDevice::getWire()
 {
   if(bus!=NULL)

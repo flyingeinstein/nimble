@@ -502,13 +502,23 @@ void setup() {
   // begin the ntp client
   ntp.begin();
 
+  /**
+   *   BEGIN SENSOR CONFIG
+   *   
+   *   todo: Eventually this will be configurable or via probing where possible
+   * 
+   */
   DeviceManager.begin( ntp );
   DeviceManager.add( *new DHTSensor(2, 12) );      // D6
   //DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
 
+  // we can optionally add the I2C bus as a device which enables external control
+  // but without this i2c devices will default to using the system i2c bus
   //DeviceManager.add( *new I2CBus(1) );       // Place Wire bus at 1:0
-  DeviceManager.add( *new AtlasScientific::Probe(8, pH) );       // pH probe at 8 using default i2c bus
+  AtlasScientific::Probe* pHsensor = new AtlasScientific::Probe(8, pH);
+  //pHsensor->setBus( SensorAddress(1,0) );   // attach i2c sensor to a specific bus
+  DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display.begin(DeviceManager, display_fonts);
   setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");

@@ -10,8 +10,8 @@
 
 namespace AtlasScientific {
 
-  Probe::Probe(short id, SensorType stype, short address)
-    : I2CDevice(id, address, 2), measurementTime(5000), sensorType(stype)
+  Probe::Probe(short id, SensorType stype, short _address)
+    : I2CDevice(id, _address, 2), measurementTime(5000), sensorType(stype)
   {
     switch(stype) {
       case pH: address = 99; break;
@@ -109,6 +109,7 @@ namespace AtlasScientific {
             break;
           case NoData:
             readings[1] = NullReading;
+            _state = 0;
             break;
         }
         break;

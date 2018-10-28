@@ -29,6 +29,8 @@ class I2CDevice : public Device
     I2CDevice(const I2CDevice& copy);
     I2CDevice& operator=(const I2CDevice& copy);
 
+    void setBus(SensorAddress _busId);
+
   protected:
     SensorAddress busId;  // i2c bus this device lives on expressed as a device:slot location
     short address;      // i2c bus address
