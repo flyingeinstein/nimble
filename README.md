@@ -1,5 +1,6 @@
 # nimble
-Arduino IoT multi-sensor for the ESP8266
+## Arduino IoT multi-sensor for the ESP8266. 
+Supports a number of popular sensors. Simply wire sensors to the ESP8266 and compile this sketch. Use the Http Rest API (Postman collection provided) to configure and control the sensors and direct sensor data to a number of targets such as Influx for analytics or a home automation controller.
 
 # DO NOT USE
 This project is still under construction. It is currently working and provides a HTTP Rest interface to a number of sensors. I expect to reach a release version around December of 2018.
