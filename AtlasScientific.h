@@ -11,13 +11,13 @@ namespace AtlasScientific {
     Failed,
     Pending,
     NoData
-  } ProbeResult;
+  } EzoProbeResult;
 
   
-  class Probe : public I2CDevice
+  class EzoProbe : public I2CDevice
   {
     public:
-      Probe(short id, SensorType ptype, short address=0);
+      EzoProbe(short id, SensorType ptype, short address=0);
 
       virtual void handleUpdate();
 
@@ -27,7 +27,7 @@ namespace AtlasScientific {
       SensorType sensorType;
       char ph_data[20];
 
-      ProbeResult readResponse();
+      EzoProbeResult readResponse();
       void sendCommand(const char* cmd);
   
   };

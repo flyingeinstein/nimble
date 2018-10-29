@@ -10,7 +10,7 @@
 
 namespace AtlasScientific {
 
-  Probe::Probe(short id, SensorType stype, short _address)
+  EzoProbe::EzoProbe(short id, SensorType stype, short _address)
     : I2CDevice(id, _address, 2), measurementTime(5000), sensorType(stype)
   {
     switch(stype) {
@@ -28,13 +28,13 @@ namespace AtlasScientific {
      readings[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
   }
 
-  void Probe::sendCommand(const char* cmd) {
+  void EzoProbe::sendCommand(const char* cmd) {
     Wire.beginTransmission(address); //call the circuit by its ID number.
     Wire.write(cmd);        //transmit the command that was sent through the serial port.
     Wire.endTransmission();          //end the I2C data transmission.
   }
 
-  ProbeResult Probe::readResponse()
+  EzoProbeResult EzoProbe::readResponse()
   {
     Wire.requestFrom(address, 20, 1); //call the circuit and request 20 bytes (this may be more than we need)
     byte code = Wire.read();               //the first byte is the response code, we read this separately.
@@ -76,9 +76,9 @@ namespace AtlasScientific {
     return Success;
   }
 
-  void Probe::handleUpdate()
+  void EzoProbe::handleUpdate()
   {
-    ProbeResult result;
+    EzoProbeResult result;
     long& _state = readings[0].l;
     switch(_state) {
       case 0:

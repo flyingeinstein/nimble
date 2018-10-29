@@ -517,7 +517,7 @@ void setup() {
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus
   //DeviceManager.add( *new I2CBus(1) );       // Place Wire bus at 1:0
-  AtlasScientific::Probe* pHsensor = new AtlasScientific::Probe(8, pH);
+  AtlasScientific::EzoProbe* pHsensor = new AtlasScientific::EzoProbe(8, pH);
   //pHsensor->setBus( SensorAddress(1,0) );   // attach i2c sensor to a specific bus
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
