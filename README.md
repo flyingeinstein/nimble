@@ -17,7 +17,7 @@ Currently supports the popular SSD1306 OLED LCD (popular 0.96" OLED display) wit
 
 # Data & Communications
 * Simple Web Server
-* REST/Json API
+* REST/Json API   (Postman Collection   https://www.getpostman.com/collections/0c7700f851f84ad10845)
 * Send to Influx DB
 * (soon) MQTT pub/sub model (good for OpenHab)
 
