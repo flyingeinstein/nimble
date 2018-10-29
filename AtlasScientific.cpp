@@ -16,7 +16,7 @@ namespace AtlasScientific {
     switch(stype) {
       case pH: address = 99; break;
       case ORP: address = 98; break;
-      case DisolvedOxygen: address = 97; break;
+      case DissolvedOxygen: address = 97; break;
       case Conductivity: address = 100; break;
       case CO2: address = 105; break;
       case Temperature: address = 102; break;
@@ -26,6 +26,12 @@ namespace AtlasScientific {
     }
      readings[0] = SensorReading(Numeric, 0);       // probe state
      readings[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
+  }
+
+  void Probe::begin()
+  {
+    enableDirect(0, true, false);
+    enableDirect(1, true, false);
   }
 
   void Probe::sendCommand(const char* cmd) {

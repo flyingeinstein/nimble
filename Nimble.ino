@@ -509,6 +509,7 @@ void setup() {
    * 
    */
   DeviceManager.begin( ntp );
+  DeviceManager.setWebServer( server );
   DeviceManager.add( *new DHTSensor(2, 12) );      // D6
   //DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
@@ -521,7 +522,7 @@ void setup() {
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display.begin(DeviceManager, display_fonts);
-  setPageCode(0, "G1R0C0'RH \nG2D2S0\nG1R1C0'T  \nG2S1");
+  setPageCode(0, "G2 F2 R2C0 D2S1 P1\nG1 F0 'F\nG2 F2 R2C14 S0 P0\nG1 F0 Y3C19 '%\nG1 F0 Y12C19 'RH\nG2 F0 R6C0 D2S2\nG1 'F\nG2 R7C20 D6S0\n");
   display.execute(pages[0]);
 
   Serial.print("Host: ");

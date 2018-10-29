@@ -18,7 +18,8 @@ namespace AtlasScientific {
   {
     public:
       Probe(short id, SensorType ptype, short address=0);
-     
+
+      void begin();
       virtual void handleUpdate();
 
       unsigned long measurementTime;

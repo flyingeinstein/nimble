@@ -21,9 +21,28 @@ String SensorAddress::toString() const
 const char* SensorTypeName(SensorType st)
 {
   switch(st) {
+    case Invalid: return "invalid";
+    case Numeric: return "numeric";
+    case Timestamp: return "timestamp";
+    case Milliseconds: return "milliseconds";
     case Humidity: return "humidity";
     case Hygrometer: return "hygrometer";
     case Temperature: return "temperature";
+    case HeatIndex: return "heatindex";
+    case Illuminance: return "illuminance";
+    case pH: return "pH";
+    case ORP: return "ORP";
+    case DissolvedOxygen: return "dissolved oxygen";
+    case Conductivity: return "conductivity";
+    case CO2: return "CO2";
+    case Pressure: return "pressure";
+    case Flow: return "flow";
+    case Altitude: return "altitude";
+    case AirPressure: return "air pressure";
+    case AirQuality: return "air quality";
+    case Voltage: return "voltage";
+    case Current: return "current";
+    case Watts: return "watts";
     case Motion: return "motion";
     default: return "n/a";
   }
@@ -73,7 +92,7 @@ const DeviceDriverInfo* Devices::findDriver(const char* name)
 }
 
 Devices::Devices(short _maxDevices)
-  : slots(_maxDevices), devices(NULL), update_iterator(0), ntp(NULL) {
+  : slots(_maxDevices), devices(NULL), update_iterator(0), ntp(NULL), http(NULL) {
     devices = (Device**)calloc(slots, sizeof(Device*));
 }
 
@@ -98,6 +117,18 @@ void Devices::begin(NTPClient& client)
   ntp = &client;
 }
 
+void Devices::setWebServer(ESP8266WebServer& _http)
+{
+  http = &_http;
+}
+
+ESP8266WebServer& Devices::getWebServer() 
+{ 
+  if(http ==NULL)
+    http = new ESP8266WebServer(80);
+  return *http; 
+}
+
 short Devices::add(Device& dev)
 {
   for(short i=0; i<slots; i++) 
@@ -106,6 +137,7 @@ short Devices::add(Device& dev)
     if(devices[i]==NULL) {
       devices[i] = &dev;
       dev.owner = this;
+      dev.begin();
       return i;
     }
   }
@@ -312,6 +344,14 @@ void Devices::alloc(short n) {
 #endif
 
 
+
+void Devices::attachWebHandlers()
+{
+  
+}
+
+
+
 Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
   : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
@@ -366,6 +406,10 @@ Device::operator bool() const {
   return this!=&NullDevice && id>=0; 
 }
 
+void Device::begin()
+{
+}
+
 void Device::reset()
 {
 }
@@ -379,6 +423,122 @@ void Device::clear()
 void Device::delay(unsigned long _delay)
 {
   nextUpdate = millis() + _delay;
+}
+
+String Device::prefixUri(const String& uri, short slot) const
+{
+  String u;
+  u += "/dev/";
+  u += id;
+  if(slot>=0) {
+    u += "/slot/";
+    u += slot;
+  }
+  if(uri.length() >0) {
+    u += '/';
+    u += uri;
+  }
+  return u;
+}
+
+ESP8266WebServer* Device::getWebServer()
+{
+  return (owner!=NULL)
+    ? &owner->getWebServer()
+    : NULL;
+}
+
+
+void Device::on(const String &uri, ESP8266WebServer::THandlerFunction handler)
+{
+  ESP8266WebServer* http = getWebServer();
+  if(http)
+    http->on( prefixUri(uri), handler);
+}
+
+void Device::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
+{
+  ESP8266WebServer* http = getWebServer();
+  if(http)
+    http->on( prefixUri(uri), method, fn);
+}
+
+void Device::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
+{
+  ESP8266WebServer* http = getWebServer();
+  if(http)
+    http->on( prefixUri(uri), method, fn, ufn);
+}
+
+void Device::httpGetReading(Device* dev, short slot) {
+  ESP8266WebServer* http = dev->getWebServer();
+  if(http!=NULL && slot >=0 && slot < dev->slots) {
+    String value;
+    SensorReading r = (*dev)[slot];
+    value += "{ \"address\": \"";
+    value += dev->id;
+    value += ':';
+    value += slot;
+    value += "\", ";
+    value += " \"type\": \"";
+    value += SensorTypeName(r.sensorType);
+    
+    value += "\", \"valueType\": \"";
+    value += r.valueType;
+
+    value += "\", \"value\": ";
+    value += r.toString();
+    value += " }";
+
+    http->send(200, "application/json", value);
+  } else if(http!=NULL)
+    http->send(400, "text/plain", "invalid slot");
+}
+
+void Device::httpPostValue(Device* dev, short slot) {
+  ESP8266WebServer* http = dev->getWebServer();
+  if(http!=NULL && slot >=0 && slot < dev->slots) {
+    String value = http->arg("plain");
+    SensorReading r = dev->readings[slot];
+    switch(r.valueType) {
+      case 'i': 
+      case 'l': r.l = value.toInt(); break;
+      case 'f': r.l = atof(value.c_str()); break;
+      case 'b': r.b = (value=="true"); break;      
+    }
+    dev->readings[slot] = r;
+
+    // echo back the value
+    httpGetReading(dev, slot);
+  } else if(http!=NULL)
+    http->send(400, "text/plain", "invalid slot");
+}
+
+void Device::enableDirect(short slot, bool _get, bool _post)
+{
+  ESP8266WebServer* http = getWebServer();
+  if(http) {
+    String prefix = prefixUri(String(), slot);
+
+    // attach handler that can get the value
+    if(_get) {
+      Serial.print("GET (direct) ");
+      Serial.println(prefix);
+      http->on(
+        prefix, 
+        HTTP_GET, 
+        std::bind(httpGetReading, this, slot)   // bind instance method to callable THanderFunction (std::function)
+      );
+    }
+
+    // attach a handler that can set a value
+    if(_post)
+      http->on(
+        prefix+"/value", 
+        HTTP_POST, 
+        std::bind(httpPostValue, this, slot)   // bind instance method to callable THanderFunction (std::function)
+      );  
+  }
 }
 
 void Device::handleUpdate()
@@ -414,11 +574,12 @@ void SensorReading::clear()
 
 String SensorReading::toString() const {
     switch(valueType) {
-      default:
-      case 'n': return "null"; break;
       case 'i':
       case 'l': return String(l); break;
       case 'f': return String(f); break;
       case 'b': return String(b ? "true":"false"); break;
+      case 'n':
+      default:
+        return "null"; break;
     }  
 }

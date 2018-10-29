@@ -11,6 +11,7 @@
 #include <WString.h>
 
 #include <NTPClient.h>
+#include <ESP8266WebServer.h>
 
 typedef struct _InfluxTarget {
   String database;
@@ -54,7 +55,7 @@ typedef enum SensorType {
   Illuminance,   // Lux
   pH,
   ORP,           // unitless
-  DisolvedOxygen, // mg/L
+  DissolvedOxygen, // mg/L
   Conductivity,  // microS/cm (Atlas Scientific)
   CO2,           // ppm
   Pressure,      // KPa?
@@ -142,6 +143,9 @@ class Devices {
 
     void begin(NTPClient& client);
 
+    void setWebServer(ESP8266WebServer& _http);
+    ESP8266WebServer& getWebServer();
+
     // clear all devices
     void clearAll();
 
@@ -176,6 +180,7 @@ class Devices {
   protected:
     short update_iterator;  // ordinal of next device update
     NTPClient* ntp;
+    ESP8266WebServer* http;
     
     void alloc(short n);
 
@@ -189,6 +194,9 @@ class Devices {
     static short driversCount;
     
     static const DeviceDriverInfo* findDriver(const char* name);
+
+    // web handlers
+    void attachWebHandlers();
 };
 
 extern Devices DeviceManager;
@@ -204,6 +212,8 @@ class Device {
     Device& operator=(const Device& copy);
 
     operator bool() const;
+
+    virtual void begin();
 
     inline unsigned long getFlags() const { return flags; }
     inline bool hasFlags(unsigned long f) const { return (flags & f)==f; }
@@ -240,6 +250,21 @@ class Device {
     DeviceState state;
     
     void alloc(unsigned short _slots);
+
+    String prefixUri(const String& uri, short slot=-1) const;
+    ESP8266WebServer* getWebServer();
+
+    // same as http's on() methods except uri is prefixed with device specific path
+    void on(const String &uri, ESP8266WebServer::THandlerFunction handler);
+    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
+    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
+
+    // enable direct access to slots via http or mqqt
+    void enableDirect(short slot, bool _get=true, bool _post=true);
+
+    // http handlers
+    static void httpGetReading(Device* dev, short slot);
+    static void httpPostValue(Device* dev, short slot);
 
     friend class Devices;
 };
