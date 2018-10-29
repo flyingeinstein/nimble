@@ -263,8 +263,8 @@ class Device {
     void enableDirect(short slot, bool _get=true, bool _post=true);
 
     // http handlers
-    static void httpGetReading(Device* dev, short slot);
-    static void httpPostValue(Device* dev, short slot);
+    void httpGetReading(short slot);
+    void httpPostValue(short slot);
 
     friend class Devices;
 };

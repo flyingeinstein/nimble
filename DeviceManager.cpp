@@ -470,13 +470,13 @@ void Device::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandler
     http->on( prefixUri(uri), method, fn, ufn);
 }
 
-void Device::httpGetReading(Device* dev, short slot) {
-  ESP8266WebServer* http = dev->getWebServer();
-  if(http!=NULL && slot >=0 && slot < dev->slots) {
+void Device::httpGetReading(short slot) {
+  ESP8266WebServer* http = getWebServer();
+  if(http!=NULL && slot >=0 && slot < slots) {
     String value;
-    SensorReading r = (*dev)[slot];
+    SensorReading r = (*this)[slot];
     value += "{ \"address\": \"";
-    value += dev->id;
+    value += id;
     value += ':';
     value += slot;
     value += "\", ";
@@ -495,21 +495,21 @@ void Device::httpGetReading(Device* dev, short slot) {
     http->send(400, "text/plain", "invalid slot");
 }
 
-void Device::httpPostValue(Device* dev, short slot) {
-  ESP8266WebServer* http = dev->getWebServer();
-  if(http!=NULL && slot >=0 && slot < dev->slots) {
+void Device::httpPostValue(short slot) {
+  ESP8266WebServer* http = getWebServer();
+  if(http!=NULL && slot >=0 && slot < slots) {
     String value = http->arg("plain");
-    SensorReading r = dev->readings[slot];
+    SensorReading r = readings[slot];
     switch(r.valueType) {
       case 'i': 
       case 'l': r.l = value.toInt(); break;
       case 'f': r.l = atof(value.c_str()); break;
       case 'b': r.b = (value=="true"); break;      
     }
-    dev->readings[slot] = r;
+    readings[slot] = r;
 
     // echo back the value
-    httpGetReading(dev, slot);
+    httpGetReading(slot);
   } else if(http!=NULL)
     http->send(400, "text/plain", "invalid slot");
 }
@@ -527,7 +527,7 @@ void Device::enableDirect(short slot, bool _get, bool _post)
       http->on(
         prefix, 
         HTTP_GET, 
-        std::bind(httpGetReading, this, slot)   // bind instance method to callable THanderFunction (std::function)
+        std::bind(&Device::httpGetReading, this, slot)   // bind instance method to callable THanderFunction (std::function)
       );
     }
 
