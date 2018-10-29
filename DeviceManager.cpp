@@ -92,7 +92,7 @@ const DeviceDriverInfo* Devices::findDriver(const char* name)
 }
 
 Devices::Devices(short _maxDevices)
-  : slots(_maxDevices), devices(NULL), update_iterator(0), ntp(NULL), http(NULL) {
+  : slots(_maxDevices), devices(NULL), httpHandler(this), update_iterator(0), ntp(NULL), http(NULL) {
     devices = (Device**)calloc(slots, sizeof(Device*));
 }
 
@@ -120,6 +120,7 @@ void Devices::begin(NTPClient& client)
 void Devices::setWebServer(ESP8266WebServer& _http)
 {
   http = &_http;
+  getWebServer().addHandler(&httpHandler);
 }
 
 ESP8266WebServer& Devices::getWebServer() 
@@ -270,7 +271,7 @@ Devices::ReadingIterator Devices::forEach()
 
 Devices::ReadingIterator Devices::forEach(short deviceId)
 {
-    for(short i=0; i<slots; i++) 
+  for(short i=0; i<slots; i++) {
     if(devices[i] && devices[i]->id == deviceId) {
       ReadingIterator itr = ReadingIterator(this);
       itr.deviceOrdinal = i;
@@ -278,7 +279,8 @@ Devices::ReadingIterator Devices::forEach(short deviceId)
       itr.singleDevice = true;
       return itr;
     }
-    return ReadingIterator(NULL);
+  }
+  return ReadingIterator(NULL);
 }
 
 Devices::ReadingIterator Devices::forEach(SensorType st)
@@ -343,12 +345,166 @@ void Devices::alloc(short n) {
 }
 #endif
 
-
-
-void Devices::attachWebHandlers()
+void Devices::jsonGetDevices(JsonObject& root)
 {
-  
+  // list all devices
+  JsonArray devs = root.createNestedArray("devices");
+  for(short i=0; i < slots; i++) {
+    if(devices[i]) {
+      // get the slot
+      Device* device = devices[i];
+      JsonObject jdev = devs.createNestedObject();
+      jdev["id"] = device->id;
+      JsonArray jslots = jdev.createNestedArray("slots");
+      for(int j=0, _j = device->slotCount(); j<_j; j++) {
+        SensorReading r = (*device)[j];
+        jslots.add( SensorTypeName(r.sensorType) );
+      }
+    }
+  }  
 }
+
+void Devices::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues)
+{
+  SensorReading r;
+  JsonArray groups[LastSensorType];
+  //memset(groups, 0, sizeof(groups));
+  
+  while( (r = itr.next()) ) {
+    if(r.sensorType < FirstSensorType || r.sensorType >= LastSensorType)
+      continue; // guard array bounds
+    
+    // get the group for this sensor
+    JsonArray jgroup = groups[r.sensorType];
+    if(jgroup.isNull())
+      jgroup = groups[r.sensorType] = root.createNestedArray(SensorTypeName(r.sensorType));
+    
+    // add this sensor value
+    if(detailedValues) {
+      JsonObject jr = jgroup.createNestedObject();
+      jr["address"] = SensorAddress(itr.device->id, itr.slot).toString();
+      r.toJson(jr, false);
+    } else {
+      r.addTo(jgroup);
+    }
+  }
+}
+
+void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json)
+{
+  String content;
+  serializeJson(json, content);
+  server.send(responseCode, "application/json", content);
+}
+
+
+template<class T>
+bool expectNumeric(ESP8266WebServer& server, const char*& p, T& n) {
+  auto limits = std::numeric_limits<T>();
+  return expectNumeric<T>(server, p, limits.min, limits.max, n);
+}
+
+template<class T>
+bool expectNumeric(ESP8266WebServer& server, const char*& p, T _min, T _max, T& n) {
+  if(!isdigit(*p)) {
+    String e;
+    e += "expected numeric value near ";
+    e += p;
+    server.send(400, "text/plain", e);
+    return false;
+  }
+
+  // read the number
+  int v = atoi(p);
+  while(*p && isdigit(*p))
+    p++;
+
+  // check limits
+  if(v < _min || v > _max) {
+    String e;
+    e += "value ";
+    e += v;
+    e += " outslide limits, expected numeric between ";
+    e += _min;
+    e += " and ";
+    e += _max;
+    server.send(400, "text/plain", e);
+    return false;
+  } else {
+    // passed limit checks, return numeric
+    n = (T)v;
+    return true;
+  }
+
+  return false;
+}
+
+bool Devices::RequestHandler::expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev) {
+  short id;
+  if(expectNumeric(server, p, (short)0, owner->slots, id)) {
+    dev = &owner->find(id);
+    return (dev!=NULL);
+  } else
+    return false;
+}
+
+
+
+bool Devices::RequestHandler::canHandle(HTTPMethod method, String uri) { 
+  return owner!=NULL && (uri.startsWith("/sensors") || uri.startsWith("/devices") || uri.startsWith("/device/"));
+}
+
+
+bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
+  Device* dev;
+  const char* p = requestUri.c_str();
+  DynamicJsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  if(strncmp(p, "/sensors", 8)==0) {
+    p += 8;
+    if(*p==0 || strcmp(p, "/values")==0) {
+      Devices::ReadingIterator itr = DeviceManager.forEach();
+      owner->jsonForEachBySensorType(root, itr, *p==0);
+      httpSend(server, 200, root);
+      return true;
+    }
+  } else if(strcmp(p, "/devices")==0) {
+    owner->jsonGetDevices(root);
+    httpSend(server, 200, root);
+    return true;
+  } else if(strncmp(p, "/device/", 8)==0) {
+    p += 8;
+    if(!expectDevice(server, p, dev))
+      return true;  // because we sent a response
+
+    if(*p==0) {
+      dev->jsonGetReadings(root);
+      httpSend(server, 200, root);
+      return true;
+    } else if(*p=='/') {
+      // parse device sub-command
+      if(strncmp(p, "/slot/", 6)==0) {
+        p += 6;
+
+        short slot;
+        if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot))
+          return true;
+        
+        if(*p==0) {
+          // get dev:slot value
+          dev->jsonGetReading(root, slot);
+          httpSend(server, 200, root);
+          return true;
+        } else if(*p=='/') {
+          // get dev:slot sub-command
+        }
+      }
+    }
+  }
+  return false;
+}
+
 
 
 
@@ -470,6 +626,25 @@ void Device::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandler
     http->on( prefixUri(uri), method, fn, ufn);
 }
 
+void Device::jsonGetReading(JsonObject& node, short slot)
+{
+  if(slot >=0 && slot < slots) {
+    SensorReading r = (*this)[slot];
+    r.toJson(node);
+  }
+}
+
+void Device::jsonGetReadings(JsonObject& node)
+{
+  JsonArray jslots = node.createNestedArray("slots");
+  for(short i=0, _i=slotCount(); i<_i; i++) {
+    JsonObject jr = jslots.createNestedObject();
+    SensorReading r = (*this)[i];
+    r.toJson(jr);
+  }
+}
+
+#if 0
 void Device::httpGetReading(short slot) {
   ESP8266WebServer* http = getWebServer();
   if(http!=NULL && slot >=0 && slot < slots) {
@@ -536,10 +711,11 @@ void Device::enableDirect(short slot, bool _get, bool _post)
       http->on(
         prefix+"/value", 
         HTTP_POST, 
-        std::bind(httpPostValue, this, slot)   // bind instance method to callable THanderFunction (std::function)
+        std::bind(&Device::httpPostValue, this, slot)   // bind instance method to callable THanderFunction (std::function)
       );  
   }
 }
+#endif
 
 void Device::handleUpdate()
 {
@@ -582,4 +758,31 @@ String SensorReading::toString() const {
       default:
         return "null"; break;
     }  
+}
+
+void SensorReading::addTo(JsonArray& arr) const
+{
+  switch(valueType) {
+    case 'i':
+    case 'l': arr.add(l); break;
+    case 'f': arr.add(f); break;
+    case 'b': arr.add(b); break;
+    case 'n':
+    default:
+      arr.add((char*)NULL); break;
+  }    
+}
+
+void SensorReading::toJson(JsonObject& root, bool showType) const {
+  if(showType)
+    root["type"] = SensorTypeName(sensorType);
+  switch(valueType) {
+    case 'i':
+    case 'l': root["value"] = l; break;
+    case 'f': root["value"] = f; break;
+    case 'b': root["value"] = b; break;
+    case 'n':
+    default:
+      root["value"] = (char*)NULL; break;
+  }
 }

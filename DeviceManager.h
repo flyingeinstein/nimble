@@ -12,6 +12,7 @@
 
 #include <NTPClient.h>
 #include <ESP8266WebServer.h>
+#include <ArduinoJson.h>
 
 typedef struct _InfluxTarget {
   String database;
@@ -66,7 +67,9 @@ typedef enum SensorType {
   Voltage,
   Current,
   Watts,
-  Motion
+  Motion,
+  FirstSensorType=Humidity,   // types before this are considered generic such as configuration values
+  LastSensorType=Motion
 } SensorType;
 
 const char* SensorTypeName(SensorType st);
@@ -133,9 +136,26 @@ class Devices {
         short deviceOrdinal;
 
         ReadingIterator(Devices* manager);
+
+        // web handlers
+        void httpGetDevices();
         
       friend class Devices;
+      friend class DevicesRequestHandler;
     };
+
+  protected:  
+    class RequestHandler : public ::RequestHandler {
+      public:
+        RequestHandler(Devices* _owner) : owner(_owner) {}
+        virtual bool canHandle(HTTPMethod method, String uri);
+        virtual bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri);
+
+        bool expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev);
+      private:
+        Devices* owner;
+    };
+    RequestHandler httpHandler;
     
   public:
     Devices(short maxDevices=32);
@@ -175,6 +195,10 @@ class Devices {
     // get an iterator over a type of reading
     ReadingIterator forEach(SensorType st);
 
+    // json interface
+    void jsonGetDevices(JsonObject& root);
+    void jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues=true);
+
     static void registerDriver(const DeviceDriverInfo* driver);
     
   protected:
@@ -185,8 +209,8 @@ class Devices {
     void alloc(short n);
 
     // do not allow copying
-    Devices(const Devices& copy);
-    Devices& operator=(const Devices& copy);
+    Devices(const Devices& copy) = delete;
+    Devices& operator=(const Devices& copy) = delete;
 
   protected:
     static const DeviceDriverInfo** drivers;
@@ -194,9 +218,6 @@ class Devices {
     static short driversCount;
     
     static const DeviceDriverInfo* findDriver(const char* name);
-
-    // web handlers
-    void attachWebHandlers();
 };
 
 extern Devices DeviceManager;
@@ -238,6 +259,10 @@ class Device {
     // read readings
     SensorReading operator[](unsigned short slotIndex) const;
 
+    // json interface
+    void jsonGetReading(JsonObject& node, short slot);
+    void jsonGetReadings(JsonObject& node);
+
   protected:
     Devices* owner;
     unsigned short slots;
@@ -260,11 +285,11 @@ class Device {
     void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
 
     // enable direct access to slots via http or mqqt
-    void enableDirect(short slot, bool _get=true, bool _post=true);
+    // deprecated: void enableDirect(short slot, bool _get=true, bool _post=true);
 
     // http handlers
-    void httpGetReading(short slot);
-    void httpPostValue(short slot);
+    // deprecated: void httpGetReading(short slot);
+    // deprecated: void httpPostValue(short slot);
 
     friend class Devices;
 };
@@ -298,6 +323,9 @@ class SensorReading
     
     String toString() const;
 
+    void toJson(JsonObject& node, bool showType=true) const;
+    void addTo(JsonArray& array) const;
+
   public:
     inline SensorReading() : sensorType(Numeric), valueType(VT_CLEAR), timestamp(millis()), l(0) {}
     inline SensorReading(SensorType st, char vt, long _l) : sensorType(st), valueType(vt), timestamp(millis()), l(_l) {}
@@ -310,3 +338,5 @@ class SensorReading
 
 extern SensorReading NullReading;
 extern SensorReading InvalidReading;
+
+void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json);

@@ -28,12 +28,6 @@ namespace AtlasScientific {
      readings[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
   }
 
-  void Probe::begin()
-  {
-    enableDirect(0, true, false);
-    enableDirect(1, true, false);
-  }
-
   void Probe::sendCommand(const char* cmd) {
     Wire.beginTransmission(address); //call the circuit by its ID number.
     Wire.write(cmd);        //transmit the command that was sent through the serial port.
