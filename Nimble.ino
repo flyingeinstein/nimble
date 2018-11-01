@@ -100,18 +100,6 @@ InfluxTarget targets[] = {
   { "gem", "motion" }
 };
 
-#if 0
-SensorInfo sensors[] = {
-  {
-    /* type             */ Motion,
-    /* name             */ "hall",
-    /* target           */ targets[1],
-    /* pin              */ 14,
-    /* update frequency */ 1000,
-    /* read function    */ sensor_read_motion
-  }
-};
-#endif
 
 ESP8266WebServer server(80);
 
@@ -122,24 +110,7 @@ AutoConnect Portal(server);
 WiFiUDP ntpUDP;
 NTPClient ntp(ntpUDP);
 
-/*
-class Data {
-  public:
-    bool humidityPresent;
-    float humidity;
-    float heatIndex;
 
-    bool moisturePresent;
-    int moisture;
-
-    int temperatureCount;
-    float temperature[32];
-
-    unsigned long timestamp;
-};
-
-Data data;
-*/
 
 void setPageCode(short page, const char* code)
 {
@@ -161,42 +132,48 @@ void SendHeaders()
 }
 
 void handleRoot() {
-  String status = "<html><head><title>Wireless Wall SensorInfo</title><meta http-equiv=\"refresh\" content=\"30\"></head>";
-  status += "<style>table tbody th { text-align: right; padding-right: 1em }  h4 label { font-size: 80%; }</style>";
-  status += "<body>";
-  status += "<h2>Wireless Wall SensorInfo</h2>";
-  status += "<h3><label>Site</label> ";
-  status += hostname;
-  status += "</h3>";
-#if 0
-  status += "<table><tbody>";
-  status += "<tr><th>Timestamp</th><td>";
-  status += data.timestamp;
-  status += "</td></tr>";
+  String html = "<html><head><title>Wireless Wall SensorInfo</title><meta http-equiv=\"refresh\" content=\"30\"></head>";
+  html += "<style>table tbody th { text-align: right; padding-right: 1em }  h4 label { font-size: 80%; }</style>";
+  html += "<body>";
+  html += "<h2>Nimble Sensor</h2>";
+  html += "<h3><label>Site</label> ";
+  html += hostname;
+  html += "</h3>";
 
-  status += "<tr><th>Humidity</th><td>";
-  status += data.humidity;
-  status += "</td></tr>";
+  html += "<div class='sensors'>";
 
-  status += "<tr><th>Heat Index</th><td>";
-  status += data.heatIndex;
-  status += "</td></tr>";
+  // enumerate through all sensor types, and then iterate all sensors of that type
+  // so that sensors of the same group are grouped together
+  SensorReading r;
+  for(short dt=FirstSensorType; dt <= LastSensorType; dt++) {
+    Devices::ReadingIterator itr = DeviceManager.forEach(dt);
+    short n = 0;
+    
+    while( (r = itr.next()) ) {
+      if(n==0) {
+        // first device, add a header
+        html += "<div class='sensors'><h3>";
+        html += SensorTypeName((SensorType)dt);
+        html += "</h3>";
+      }
 
-  status += "<tr><th>Moisture</th><td>";
-  status += data.moisture;
-  status += "</td></tr>";
+      html += "<div class='sensor'><label>";
+      html += itr.device->id;
+      html += ':';
+      html += itr.slot;
+      html += "</label><span>";
+      html += r.toString();
+      html += "</span></div>";
 
-  for (int i = 0; i < data.temperatureCount; i++) {
-    status += "<tr><th>T";
-    status += i;
-    status += "</th><td>";
-    status += data.temperature[i];
-    status += "</td></tr>";
+      n++;
+    }
+
+    if(n>0)
+      html += "</div>"; // closing tag for the group
   }
-  status += "</tbody></table>";
-  #endif
-  status += "<h6>Copyright 2018, Flying Einstein LLC</h6></body></html>";
-  server.send(200, "text/html", status);
+
+  html += "<h6>Copyright 2018, Flying Einstein LLC</h6></body></html>";
+  server.send(200, "text/html", html);
 }
 
 void handleNotFound() {
@@ -292,114 +269,6 @@ void sendToInflux()
 }
 #endif
 
-#if 0
-void JsonAddSensorReadings(String& json, SensorType st, JsonPart part)
-{
-  Devices::ReadingIterator itr = DeviceManager.forEach(st);
-  json += ",  \"";
-  json += SensorTypeName(st);
-  json += "\": [";
-  SensorReading r;
-  while ( r = itr.next() ) {
-    if (i > 0) json += ", ";
-    if (part == JsonValue) {
-      json += r.toString();
-    //} else if (part == JsonName) {
-    //  json += itr.device ? itr.device->name : "n/a";
-    } else if (part == JsonFull) {
-      json += "{ \"type\": \"";
-      json += SensorTypeName(r.sensorType);
-      json += "\", \"device\": ";
-      json += itr.device->id;
-      json += "\", \"slot\": ";
-      json += itr.slotOrdinal;
-      json += "\", \"ts\": ";
-      json += r.timestamp;
-      json += ", \"value\": ";
-      json += r.toString();
-      json += "}";
-    }
-  }
-  json += "]\n";
-}
-
-void JsonSendStatus() {
-  String status = "{\n  \"site\": \"";
-  status += hostname;
-  status += "\"";
-  if (data.timestamp > TIMESTAMP_MIN) {
-    status += ",  \"timestamp\": ";
-    status += data.timestamp;
-  }
-  if (data.humidityPresent) {
-    status += ",  \"humidity\": ";
-    status += data.humidity;
-    status += ",  \"heatIndex\": ";
-    status += data.heatIndex;
-  }
-  if (data.moisturePresent) {
-    status += ",  \"moisture\": ";
-    status += data.moisture;
-  }
-
-  status += ",  \"temperatures\": [";
-  for (int i = 0; i < data.temperatureCount; i++) {
-    if (i > 0)
-      status += ",";
-    status += data.temperature[i];
-  }
-  status += "]\n";
-
-  JsonAddSensorReadings(status, Motion, JsonValue);
-
-  status += "}";
-  SendHeaders();
-  server.send(200, "text/html", status);
-}
-
-const char* hex = "0123456789ABCDEF";
-
-void JsonSendDevices() {
-  String status = "{\n  \"site\": \"";
-  status += hostname;
-  status += "\",  \"humidity\": ";
-  status += data.humidityPresent ? "true" : "false";
-  status += ",  \"moisture\": \"";
-  status += data.moisturePresent ? "true" : "false";
-  status += "\",";
-
-  status += "  \"temperatureDevices\": [";
-  uint8_t devices = 0;
-  if (data.humidityPresent) {
-    devices++;
-    status += "\"DHT\"";
-  }
-  uint8_t count = DS18B20.getDS18Count();
-  DeviceAddress devaddr;
-  for (int i = 0; i < count; i++) {
-    if (devices > 0)
-      status += ",";
-    if (DS18B20.getAddress(devaddr, i)) {
-      status += "\"";
-      for (int j = 0; j < 8; j++) {
-        if (j > 0)
-          status += ":";
-        status += hex[ devaddr[j] / 16 ];
-        status += hex[ devaddr[j] % 16 ];
-      }
-      status += "\"";
-    }
-    devices++;
-  }
-  status += "]\n";
-
-  JsonAddSensorReadings(status, Motion, JsonName);
-
-  status += "}\n";
-  SendHeaders();
-  server.send(200, "text/html", status);
-}
-#endif
 
 void setup() {
   Serial.begin(230400);
