@@ -4,6 +4,8 @@
 
 #include "DeviceManager.h"
 
+#include <ArduinoJson.h>
+
 // Dallas 1wire temperature sensor resolution
 #define SENSOR_RESOLUTION 9
 
@@ -17,10 +19,16 @@ class OneWireSensor : public Device
     OneWireSensor(const OneWireSensor& copy);
     OneWireSensor& operator=(const OneWireSensor& copy);
 
+    virtual void begin();
+  
     virtual void handleUpdate();
 
   public:
     int pin;
     OneWire oneWire;
     DallasTemperature DS18B20;
+
+  protected:
+    void httpDevices();
+    void getDeviceInfo(JsonObject& node);
 };

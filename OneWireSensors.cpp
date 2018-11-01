@@ -25,6 +25,48 @@ OneWireSensor& OneWireSensor::operator=(const OneWireSensor& copy)
   return *this;
 }
 
+void OneWireSensor::begin()
+{
+  on("devices", std::bind(&OneWireSensor::httpDevices, this));
+}
+
+const char* hex = "0123456789ABCDEF";
+
+void OneWireSensor::httpDevices()
+{
+  DynamicJsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+  
+  getDeviceInfo(root);
+  
+  String content;
+  serializeJson(doc, content);
+  owner->getWebServer().send(200, "application/json", content);
+}
+
+void OneWireSensor::getDeviceInfo(JsonObject& node)
+{
+  JsonArray jdevices = node.createNestedArray("devices");
+  
+  uint8_t count = DS18B20.getDS18Count();
+  DeviceAddress devaddr;
+  for (int i = 0; i < count; i++) {
+    if (DS18B20.getAddress(devaddr, i)) {
+      char addr[32];
+      char *paddr = addr;
+      for (int j = 0; j < 8; j++) {
+        if (j > 0)
+          *paddr++ = ':';
+        *paddr++ = hex[ devaddr[j] / 16 ];
+        *paddr++ = hex[ devaddr[j] % 16 ];
+      }
+      *paddr=0;
+
+      jdevices.add(addr);
+    }
+  }
+}
+
 void OneWireSensor::handleUpdate()
 {
   int good = 0, bad = 0;
