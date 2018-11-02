@@ -27,23 +27,34 @@ Currently supports the popular SSD1306 OLED LCD (popular 0.96" OLED display) wit
 * Supports Over-the-Air (OTA) software updates
 * Registers hostname and services using mDNS
 
-# TODO (to reach version 1.0)
+# Development Plan
+These items remain in development. As items are completed they are removed from this list.
+
+## Version 1.0
 * Support channel names
   * can be set via the Postman
   * can be set via the React web app if included
-* Convert Display to a Device (since it is one on the i2c bus)
-     * Base device class implements the gcode parser, or maybe checkout the Adafruit gfx lib to see how it works with multiple displays and ensure we go on top
+  * also add virtual method to get Driver name
+  * support device names
+  * device name can take place of deviceID in Rest calls (so can specify device:slot as 2:3 or by name humidity:hallway)
+* Display loads/saves page code to SPIFF fs
+* Add Configuration API
+  * Import/Export config via Json API
+  * get/set via direct Rest API
+  * works very much like Sensor values
 * Get Influx working again
   * set config via Rest
      * function to create Line encodings
      * function to send the Line data
-* Support POST for setting Device values
+
+## Version 1.2
 * Atlas Scientific Probes
      * Support calibration
      * Support temperature compensation
      * Support slope
      * Support other status/info calls
 * Add MQMTT support
+* Device/Driver configuration is loaded/saved via Config API
 * Add React web app and store in SPIFFS
    
 # IDEAS
