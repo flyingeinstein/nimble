@@ -421,7 +421,7 @@ void setup() {
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
-  display->addPage( DisplayPage("G2 F2 R2C0 D2S1 P1\nG1 F0 'F\nG2 F2 R2C14 S0 P0\nG1 F0 Y3C19 '%\nG1 F0 Y12C19 'RH\nG2 F0 R6C0 D2S2\nG1 'F\nG2 R7C20 D6S0\n") );
+  display->addPage( DisplayPage("G2 F2 R2C0 D4S1 P1\nG1 F0 'F\nG2 F2 R2C14 S0 P0\nG1 F0 Y3C19 '%\nG1 F0 Y12C19 'RH\nG2 F0 R6C0 D4S2\nG1 'F\nG2 R7C20 D6S0\n") );
 
   Serial.print("Host: ");
   Serial.print(hostname);
@@ -430,34 +430,7 @@ void setup() {
 }
 
 
-void PrintData(SensorType st)
-{
-  int n=0;
-  SensorReading r;
-  Devices::ReadingIterator itr = DeviceManager.forEach(st);
-  while( (r = itr.next()) ) {
-    if(n==0) {
-      Serial.print(SensorTypeName(st));
-      Serial.print(": ");
-    } else {
-      Serial.print(", ");
-    }
-    Serial.print(itr.device->id);
-    Serial.print(':');
-    Serial.print(itr.slot);
-    Serial.print('=');
-    Serial.print(r.toString());
-    
-    n++;
-  }
-  if(n>0) Serial.println();
-}
-
-unsigned long long nextRead = 0;
-unsigned long long nextDisplayUpdate = 0;
-unsigned long long nextPrintUpdate = 0;
 unsigned long nextInfluxWrite = 0;
-uint8_t state = 0;
 
 void loop() {
 
@@ -478,14 +451,6 @@ void loop() {
   ntp.update();
 
   DeviceManager.handleUpdate();
-
-  if (millis() > nextPrintUpdate) {
-    Serial.println();
-    PrintData(Motion);
-    PrintData(Humidity);
-    PrintData(Temperature);
-    nextPrintUpdate = millis() + 1000;
-  }
 
 #ifdef ENABLE_INFLUX
   if (enable_influx && influx_server != NULL && millis() > nextInfluxWrite) {
