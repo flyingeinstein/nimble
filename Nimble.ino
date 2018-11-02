@@ -421,7 +421,6 @@ void setup() {
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
-  display->addPage( DisplayPage("G2 F2 R2C0 D4S1 P1\nG1 F0 'F\nG2 F2 R2C14 S0 P0\nG1 F0 Y3C19 '%\nG1 F0 Y12C19 'RH\nG2 F0 R6C0 D4S2\nG1 'F\nG2 R7C20 D6S0\n") );
 
   Serial.print("Host: ");
   Serial.print(hostname);

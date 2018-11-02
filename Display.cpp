@@ -1,8 +1,8 @@
 
 #include "Display.h"
 
-//#include <string.h>
 #include <ctype.h>
+#include <FS.h>   // Include the SPIFFS library
 
 #define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
 
@@ -41,8 +41,11 @@ void Display::begin()
 #endif
 
   on("fonts", HTTP_GET, std::bind(&Display::httpPageGetFonts, this));
+  on("page/active", HTTP_POST, std::bind(&Display::httpPageSetActivePage, this));
   on("page/code", HTTP_GET, std::bind(&Display::httpPageGetCode, this));
   on("page/code", HTTP_POST, std::bind(&Display::httpPageSetCode, this));
+
+  loadAllPagesFromFS();
 }
 
 void Display::reset()
@@ -72,10 +75,43 @@ short Display::addPage(const DisplayPage& page)
   return -1;
 }
 
+short Display::loadPageFromFS(short page_number)
+{
+  if(page_number<0 || page_number>=npages)
+    return -1;
+    
+  String fname("/display/page/");
+  fname += page_number;
+   
+  File f = SPIFFS.open(fname, "r");
+  if(f) {
+    String contents = f.readString();
+    pages[ page_number ] = DisplayPage(contents);
+  }
+  return page_number;
+}
+
+short Display::loadAllPagesFromFS()
+{
+  short loaded=0;
+  Dir dir = SPIFFS.openDir("/display/page");
+  Serial.print("loading display pages: ");
+  while (dir.next()) {
+    const char* id = strrchr(dir.fileName().c_str(), '/');
+    if(id && isdigit(*++id)) {
+      Serial.print(id);
+      short n = atoi(id);
+      if(loadPageFromFS(n) >=0)
+        loaded++;
+    }
+  }
+  return loaded;
+}
+
 void Display::handleUpdate()
 {
   ParseException pex;
-  if(activePage>=0 && activePage<npages)
+  if(activePage>=0 && activePage<npages && pages[activePage].isValid())
     execute(pages[activePage].code(), &pex);
 }
 
@@ -305,6 +341,19 @@ void Display::httpPageGetFonts() {
   owner->getWebServer().send(200, "application/json", s);
 }
 
+void Display::httpPageSetActivePage() {
+  ESP8266WebServer& server = owner->getWebServer();
+  String pageN = server.arg("n");
+  int n = pageN.toInt();
+  if(n>=0 && n < npages) {
+    activePage = n;
+    server.send(200, "text/plain", String("{ page: ")+n+" }");
+  } else
+    server.send(400, "text/pain", "invalid page");
+}
+
+
+
 void Display::httpPageGetCode() {
   ESP8266WebServer& server = owner->getWebServer();
   String pageN = server.arg("n");
@@ -334,6 +383,11 @@ void Display::httpPageSetCode() {
 
 DisplayPage::DisplayPage()
   : _code(NULL), owns_mem(false)
+{
+}
+
+DisplayPage::DisplayPage(String p)
+  : _code(strdup(p.c_str())), owns_mem(true)
 {
 }
 

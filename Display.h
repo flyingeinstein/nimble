@@ -44,6 +44,7 @@ class DisplayPage
   public:
     DisplayPage();
     DisplayPage(const char* code, bool copy_mem=true);
+    DisplayPage(String p);
     DisplayPage(const DisplayPage& copy);
     virtual ~DisplayPage();
 
@@ -80,6 +81,9 @@ class Display : public Device
   	}
 
     short addPage(const DisplayPage& page);
+
+    short loadPageFromFS(short page_number);
+    short loadAllPagesFromFS();
 
     virtual void handleUpdate();
    
@@ -120,6 +124,7 @@ class Display : public Device
     void setCursorRC(short r, short c);
 
     // Rest interface
+    void httpPageSetActivePage();
     void httpPageGetFonts();
     void httpPageGetCode();
     void httpPageSetCode();
