@@ -29,6 +29,7 @@ const char* influx_measurement = "walls";
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
+#include <FS.h>   // Include the SPIFFS library
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 
@@ -131,40 +132,73 @@ void SendHeaders()
   server.sendHeader("Access-Control-Allow-Methods", "GET");
 }
 
-void handleRoot() {
-  String html = "<html><head><title>Wireless Wall SensorInfo</title><meta http-equiv=\"refresh\" content=\"30\"></head>";
-  html += "<style>table tbody th { text-align: right; padding-right: 1em }  h4 label { font-size: 80%; }</style>";
-  html += "<body>";
-  html += "<h2>Nimble Sensor</h2>";
-  html += "<h3><label>Site</label> ";
-  html += hostname;
-  html += "</h3>";
+String getContentType(String filename) { // convert the file extension to the MIME type
+  if (filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".css")) return "text/css";
+  else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".ico")) return "image/x-icon";
+  return "text/plain";
+}
 
-  html += "<div class='sensors'>";
+bool handleFileRead(String path) { // send the right file to the client (if it exists)
+  Serial.println("handleFileRead: " + path);
+  //if (path.endsWith("/")) path += "index.html";         // If a folder is requested, send the index file
+  String contentType = getContentType(path);            // Get the MIME type
+  if (SPIFFS.exists(path)) {                            // If the file exists
+    File file = SPIFFS.open(path, "r");                 // Open it
+    size_t sent = server.streamFile(file, contentType); // And send it to the client
+    file.close();                                       // Then close the file again
+    return true;
+  }
+  Serial.println("\tFile Not Found");
+  return false;                                         // If the file doesn't exist, return false
+}
+
+void handleRoot() {
+  String html = "<html><head><title>Wireless Wall SensorInfo</title>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+  html += "<link rel='stylesheet' href='css/nimble.css'>";
+  html += "<meta http-equiv=\"refresh\" content=\"30\">";
+  html += "</head>";
+  html += "<body>";
+  // header
+  html += "<div class='header'><h1>Nimble Sensor</h1><span class='copyright'>Copyright 2018, Flying Einstein LLC</span></div>";
+  // title area 
+  html += "<div class='title'><h2><label>Site</label> ";
+  html += hostname;
+  html += "</h2></div>";
+
+  html += "<div class='tiles'>";
 
   // enumerate through all sensor types, and then iterate all sensors of that type
   // so that sensors of the same group are grouped together
   SensorReading r;
   for(short dt=FirstSensorType; dt <= LastSensorType; dt++) {
-    Devices::ReadingIterator itr = DeviceManager.forEach(dt);
+    Devices::ReadingIterator itr = DeviceManager.forEach((SensorType)dt);
     short n = 0;
+    String typeName = SensorTypeName((SensorType)dt);
     
     while( (r = itr.next()) ) {
       if(n==0) {
         // first device, add a header
         html += "<div class='sensors'><h3>";
-        html += SensorTypeName((SensorType)dt);
+        html += typeName;
         html += "</h3>";
       }
 
-      html += "<div class='sensor'><label>";
+      html += "<div id='";
+      html += typeName;
+      html += "' class='sensor'>";
+      html += "<span>";
+      html += r.toString();
+      html += "</span>";      
+      html += "<label>";
       html += itr.device->id;
       html += ':';
       html += itr.slot;
-      html += "</label><span>";
-      html += r.toString();
-      html += "</span></div>";
-
+      html += "</label>";
+      
+      html += "</div>";
       n++;
     }
 
@@ -172,7 +206,7 @@ void handleRoot() {
       html += "</div>"; // closing tag for the group
   }
 
-  html += "<h6>Copyright 2018, Flying Einstein LLC</h6></body></html>";
+  html += "</div></body></html>";
   server.send(200, "text/html", html);
 }
 
@@ -275,6 +309,8 @@ void setup() {
   Serial.println("Nimble Multi-Sensor");
   Serial.println("(c)2018 FlyingEinstein.com");
 
+  SPIFFS.begin();                           // Start the SPI Flash Files System
+ 
   server.addHandler(&optionsRequestHandler);
   server.on("/", handleRoot);
   //server.on("/status", JsonSendStatus);
@@ -283,7 +319,12 @@ void setup() {
   server.on("/display/page/code", HTTP_GET, handlePageGetCode);
   server.on("/display/page/code", HTTP_POST, handlePageSetCode);
 
-  server.onNotFound(handleNotFound);
+  //server.onNotFound(handleNotFound);
+  // our 404 handler tries to load documents from SPIFFS
+  server.onNotFound([]() {                              // If the client requests any URI
+    if (!handleFileRead(server.uri()))                  // send it if it exists
+      handleNotFound();                                 // send the 404 message if it doesnt exist
+  });
   
 #if defined(CAPTIVE_PORTAL)
   AutoConnectConfig  Config("nimble", "chillidog");    // SoftAp name is determined at runtime
@@ -380,7 +421,7 @@ void setup() {
   DeviceManager.begin( ntp );
   DeviceManager.setWebServer( server );
   DeviceManager.add( *new DHTSensor(2, 12) );      // D6
-  //DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
+  DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
 
   // we can optionally add the I2C bus as a device which enables external control

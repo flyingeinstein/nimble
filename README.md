@@ -28,19 +28,23 @@ Currently supports the popular SSD1306 OLED LCD (popular 0.96" OLED display) wit
 * Registers hostname and services using mDNS
 
 # TODO (to reach version 1.0)
-* Support POST for setting Device values
+* Support channel names
+  * can be set via the Postman
+  * can be set via the React web app if included
 * Convert Display to a Device (since it is one on the i2c bus)
      * Base device class implements the gcode parser, or maybe checkout the Adafruit gfx lib to see how it works with multiple displays and ensure we go on top
 * Get Influx working again
   * set config via Rest
      * function to create Line encodings
      * function to send the Line data
+* Support POST for setting Device values
 * Atlas Scientific Probes
      * Support calibration
      * Support temperature compensation
      * Support slope
      * Support other status/info calls
 * Add MQMTT support
+* Add React web app and store in SPIFFS
    
 # IDEAS
 * Convert NTP to be a sensor (time sensor). It has a few timestamps as readings. Also, other sensors can have a slot that outputs a timestamp, such as timestamp since last event.
