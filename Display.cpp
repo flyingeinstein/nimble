@@ -16,17 +16,21 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
   }
 }
 
-Display::Display()
-	: display(OLED_RESET), fonts(NULL), nfonts(0),
+Display::Display(short id)
+	: Device(id, 0, 500, DF_DISPLAY), display(OLED_RESET), fonts(NULL), nfonts(0), pages(NULL), npages(6), activePage(0),
 	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
 	  w(0), str(NULL), gx(6), gy(9), relativeCoords(false)
 {
+  pages = (DisplayPage*)calloc(npages, sizeof(DisplayPage));
 }
 
-void Display::begin(Devices& _devices)
+Display::~Display()
 {
-  devices = &_devices;
-  
+  ::free(pages);
+}
+
+void Display::begin()
+{
   #if (LCD == SSD1306)
   // Initiate the LCD and disply the Splash Screen
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false);  // initialize with the I2C addr 0x3C (for the 128x32)
@@ -35,6 +39,10 @@ void Display::begin(Devices& _devices)
   display.display();
   display.clearDisplay();
 #endif
+
+  on("fonts", HTTP_GET, std::bind(&Display::httpPageGetFonts, this));
+  on("page/code", HTTP_GET, std::bind(&Display::httpPageGetCode, this));
+  on("page/code", HTTP_POST, std::bind(&Display::httpPageSetCode, this));
 }
 
 void Display::reset()
@@ -50,6 +58,25 @@ void Display::reset()
   display.setFont(NULL);
   display.setTextColor(WHITE);
   display.setTextSize(1);
+}
+
+short Display::addPage(const DisplayPage& page)
+{
+  for(int i=0; i<npages; i++) {
+    if(!pages[i].isValid()) {
+      // use this page slot
+      pages[i] = page;
+      return i;
+    }
+  }
+  return -1;
+}
+
+void Display::handleUpdate()
+{
+  ParseException pex;
+  if(activePage>=0 && activePage<npages)
+    execute(pages[activePage].code(), &pex);
 }
 
 short& Display::getRegister(char reg)
@@ -104,7 +131,8 @@ bool Display::exec()
       print( str, strLength );
       break;
 		case 2: // draw reading to X,Y
-      print( devices->getReading(D, S) );
+      if(owner!=NULL)
+        print( owner->getReading(D, S) );
 		  break;
     case 4: // draw line
       break;
@@ -265,100 +293,83 @@ syntax_error:
 	return pex.code==0;
 }
 
-
-
-/***** OLD GARBAGE CODE ******/
-
-
-#define LCD_COL1  45
-#define LCD_COL2  85
-
-//unsigned long long lastMotion = 0;
-
-#if 0
-void OLED_Display()
-{
-  int y = 16;
-  unsigned long alone = millis() - lastMotion;
-
-  if(alone > 30000) {
-    display.clearDisplay();
-    display.display();
-    return;
+void Display::httpPageGetFonts() {
+  String s('[');
+  for(short i=0; i < nfonts; i++) {
+      if(i>0) s+=',';
+      s += '"';
+      s += fonts[i].name;
+      s += '"';
   }
-  display.dim( alone > 15000 );
-
-  //display.ssd1306_command(SSD1306_SETCONTRAST);
-  //display.ssd1306_command(255); // Where arg is a value from 0 to 255 (sets contrast e.g. brightness)
-
-  #if 0
-  // Update OLED values
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-  display.setFont(&TITLE_FONT);
-  display.setTextSize(1);
-  display.setCursor(0, y);
-  display.print(data.temperature[0], 1);
-
-  //display.setTextSize(1);
-  display.setFont(NULL);
-  display.drawCircle(display.getCursorX()+3, 8, 1, WHITE);
-  display.setCursor(display.getCursorX()+1, 8);
-  display.print(" F");
-
-  display.setFont(&FreeSans9pt7b);
-  //display.setTextSize(1);
-  y += FreeSans9pt7b.yAdvance; //LINE_HEIGHT;
-  display.setCursor(0, y);
-  display.print(hostname);
-#endif
-
-  // display motion devices
-  int x=120;
-  SensorReading r;
-  Devices::ReadingIterator itr = DeviceManager.forEach(Motion);
-  while( r = itr.next() ) {
-    if(r.b)
-      display.fillCircle(x, y-4, 4, WHITE);
-    else
-      display.drawCircle(x, y-4, 4, WHITE);
-    x -= 8;
-  }
-  
-  display.setFont(NULL);
-
-#if 0
-#if 0
-  //display.setTextSize(1);
-  y = 64 - LINE_HEIGHT;
-  display.setCursor(0, y);
-  display.print("HI");
-  display.setCursor(LCD_COL1, y);
-  display.print(data.heatIndex, 1);
-  display.print("\xB0C");
-  
-  y -= LINE_HEIGHT;
-  display.setCursor(0, y);
-  display.print("RH");
-  display.setCursor(LCD_COL1, y);
-  display.print(data.humidity, 1);
-  display.print("%");
-#else
-  y = 0;
-  display.setCursor(LCD_COL2, y);
-  display.print("HI");
-  display.setCursor(LCD_COL2+15, y);
-  display.print(data.heatIndex, 1);
-  
-  y += LINE_HEIGHT;
-  display.setCursor(LCD_COL2, y);
-  display.print("RH");
-  display.setCursor(LCD_COL2+15, y);
-  display.print(data.humidity, 1);
-  //display.print("%");  
-#endif
-#endif
-
-  display.display();
+  s += ']';
+  owner->getWebServer().send(200, "application/json", s);
 }
-#endif
+
+void Display::httpPageGetCode() {
+  ESP8266WebServer& server = owner->getWebServer();
+  String pageN = server.arg("n");
+  int n = pageN.toInt();
+  if(n>=0 && n < npages) {
+    const DisplayPage& page = pages[n];
+    server.send(200, "text/plain", page.code());
+  } else
+    server.send(400, "text/pain", "invalid page");
+}
+
+void Display::httpPageSetCode() {
+  ESP8266WebServer& server = owner->getWebServer();
+  String pageN = server.arg("n");
+  int n = pageN.toInt();
+  String code = server.arg("plain");
+  if(n>=0 && n < npages) {
+    DisplayPage& page = pages[n];
+    page = DisplayPage( code.c_str() );
+    server.send(200, "text/plain", page.code());
+  } else
+    server.send(400, "text/pain", "invalid page");
+}
+
+
+
+
+DisplayPage::DisplayPage()
+  : _code(NULL), owns_mem(false)
+{
+}
+
+DisplayPage::DisplayPage(const char* code, bool copy_mem)
+  : _code(copy_mem ? strdup(code) : code), owns_mem(copy_mem)
+{
+}
+
+DisplayPage::DisplayPage(const DisplayPage& copy)
+  : _code(copy._code), owns_mem(copy.owns_mem)
+{
+  // we must copy the memory if our source owns the memory as it may free it
+  if(owns_mem) {
+    _code = strdup(copy._code);
+  }
+}
+
+DisplayPage::~DisplayPage()
+{
+  clear();
+}
+
+void DisplayPage::clear()
+{
+  if(owns_mem && _code) {
+    ::free((void*)_code);
+  }
+}
+
+DisplayPage& DisplayPage::operator=(const DisplayPage& copy)
+{
+  clear();  // ensure we dont already own memory
+  _code = copy._code;
+  owns_mem = copy.owns_mem;
+  if(owns_mem) {
+    _code = strdup(copy._code);
+  }
+  return *this;
+}

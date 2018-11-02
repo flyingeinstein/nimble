@@ -85,8 +85,7 @@ const FontInfo display_fonts[] = {
   FONT(Picopixel),
   FONT(Tiny3x3a2pt7b)
 };
-Display display;
-char* pages[6] = { NULL };
+Display* display;
 
 #define TIMESTAMP_MIN  1500000000   // time must be greater than this to be considered NTP valid time
 
@@ -113,14 +112,6 @@ NTPClient ntp(ntpUDP);
 
 
 
-void setPageCode(short page, const char* code)
-{
-  if(page < (short)(sizeof(pages)/sizeof(pages[0]))) {
-    if(pages[page])
-      free(pages[page]);
-    pages[page] = strdup(code); //malloc(strlen(code)+1);
-  }
-}
 
 /*** Web Server
 
@@ -146,7 +137,7 @@ bool handleFileRead(String path) { // send the right file to the client (if it e
   String contentType = getContentType(path);            // Get the MIME type
   if (SPIFFS.exists(path)) {                            // If the file exists
     File file = SPIFFS.open(path, "r");                 // Open it
-    size_t sent = server.streamFile(file, contentType); // And send it to the client
+    /*size_t sent = */ server.streamFile(file, contentType); // And send it to the client
     file.close();                                       // Then close the file again
     return true;
   }
@@ -315,9 +306,6 @@ void setup() {
   server.on("/", handleRoot);
   //server.on("/status", JsonSendStatus);
   //server.on("/devices", JsonSendDevices);
-  server.on("/display/fonts", HTTP_GET, handlePageGetFonts);
-  server.on("/display/page/code", HTTP_GET, handlePageGetCode);
-  server.on("/display/page/code", HTTP_POST, handlePageSetCode);
 
   //server.onNotFound(handleNotFound);
   // our 404 handler tries to load documents from SPIFFS
@@ -420,20 +408,20 @@ void setup() {
    */
   DeviceManager.begin( ntp );
   DeviceManager.setWebServer( server );
-  DeviceManager.add( *new DHTSensor(2, 12) );      // D6
-  DeviceManager.add( *new OneWireSensor(1, 2) );   // D4
+  DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
+  DeviceManager.add( *new DHTSensor(4, 12) );      // D6
+  DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
 
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus
-  //DeviceManager.add( *new I2CBus(1) );       // Place Wire bus at 1:0
+  //DeviceManager.add( *new I2CBus(2) );       // Place Wire bus at 1:0
   AtlasScientific::EzoProbe* pHsensor = new AtlasScientific::EzoProbe(8, pH);
-  //pHsensor->setBus( SensorAddress(1,0) );   // attach i2c sensor to a specific bus
+  //pHsensor->setBus( SensorAddress(2,0) );   // attach i2c sensor to a specific bus
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
-  display.begin(DeviceManager, display_fonts);
-  setPageCode(0, "G2 F2 R2C0 D2S1 P1\nG1 F0 'F\nG2 F2 R2C14 S0 P0\nG1 F0 Y3C19 '%\nG1 F0 Y12C19 'RH\nG2 F0 R6C0 D2S2\nG1 'F\nG2 R7C20 D6S0\n");
-  display.execute(pages[0]);
+  display->setFontTable(display_fonts);
+  display->addPage( DisplayPage("G2 F2 R2C0 D2S1 P1\nG1 F0 'F\nG2 F2 R2C14 S0 P0\nG1 F0 Y3C19 '%\nG1 F0 Y12C19 'RH\nG2 F0 R6C0 D2S2\nG1 'F\nG2 R7C20 D6S0\n") );
 
   Serial.print("Host: ");
   Serial.print(hostname);
@@ -471,12 +459,6 @@ unsigned long long nextPrintUpdate = 0;
 unsigned long nextInfluxWrite = 0;
 uint8_t state = 0;
 
-enum {
-  STATE_PREAMBLE,
-  STATE_SAVE_DATA,
-  STATE_POST_INFLUX
-};
-
 void loop() {
 
 #if defined(ALLOW_OTA_UPDATE)
@@ -487,14 +469,6 @@ void loop() {
   Portal.handleClient();
 #else
   server.handleClient();
-#endif
-
-#if defined(LCD)
-  if (millis() > nextDisplayUpdate) {
-    if(pages[0])
-      display.execute(pages[0]);
-    nextDisplayUpdate = millis() + 400;
-  }
 #endif
 
   // no further processing if we are not in station mode

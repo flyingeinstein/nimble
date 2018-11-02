@@ -39,9 +39,10 @@ class SensorAddress {
 #define F_BIT(x) (1<<x)
 
 // Device Flags
-#define DF_BUS           F_BIT(0)
-#define DF_I2C_BUS       (DF_BUS|F_BIT(1))
-#define DF_SERIAL_BUS    (DF_BUS|F_BIT(2))
+#define DF_DISPLAY       F_BIT(0)
+#define DF_BUS           F_BIT(1)
+#define DF_I2C_BUS       (DF_BUS|F_BIT(2))
+#define DF_SERIAL_BUS    (DF_BUS|F_BIT(3))
 
 
 typedef enum SensorType {

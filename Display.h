@@ -39,25 +39,49 @@ typedef struct _ParseException {
 const char* ParseExceptionCodeToString(ParseExceptionCode code);
 
 
-class Display
+class DisplayPage
+{
+  public:
+    DisplayPage();
+    DisplayPage(const char* code, bool copy_mem=true);
+    DisplayPage(const DisplayPage& copy);
+    virtual ~DisplayPage();
+
+    DisplayPage& operator=(const DisplayPage& copy);
+
+    void clear();
+
+    inline bool isValid() const { return _code!=NULL; }
+
+    inline const char* code() const { return _code; }
+
+  protected:
+    const char* _code;
+    bool owns_mem;
+};
+
+class Display : public Device
 {
   public:
     Adafruit_SSD1306 display;
-    Devices* devices;
     const FontInfo* fonts;
     short nfonts;
     
   public:
-  	Display();
+  	Display(short id=1);
+    virtual ~Display();
 
-    void begin(Devices& _devices);
+    virtual void begin();
 
   	template<size_t N>
-  	void begin(Devices& _devices, const FontInfo (&_fonts)[N]) { 
-  	  begin(_devices); 
+  	void setFontTable(const FontInfo (&_fonts)[N]) { 
   	  fonts = _fonts; 
   	  nfonts = (short)N; 
   	}
+
+    short addPage(const DisplayPage& page);
+
+    virtual void handleUpdate();
    
   	short& getRegister(char reg);
   
@@ -65,6 +89,10 @@ class Display
   	bool execute(const char* input, ParseException* pex=NULL);
   
 	protected:
+    DisplayPage* pages;
+    short npages;
+    short activePage;
+
 		// list of gcode registers
 		short G, D, S, _F, X, Y, U, P, R, T, C, W, H;
 
@@ -90,4 +118,9 @@ class Display
     void print(const char* str, short strLength);
     void print(SensorReading r);
     void setCursorRC(short r, short c);
+
+    // Rest interface
+    void httpPageGetFonts();
+    void httpPageGetCode();
+    void httpPageSetCode();
 };
