@@ -83,6 +83,8 @@ class Display : public Device
     short addPage(const DisplayPage& page);
 
     short loadPageFromFS(short page_number);
+    short savePageToFS(short page_number);
+    
     short loadAllPagesFromFS();
 
     virtual void handleUpdate();

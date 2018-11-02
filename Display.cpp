@@ -87,6 +87,33 @@ short Display::loadPageFromFS(short page_number)
   if(f) {
     String contents = f.readString();
     pages[ page_number ] = DisplayPage(contents);
+    f.close();
+  }
+  return page_number;
+}
+
+short Display::savePageToFS(short page_number)
+{
+  if(page_number<0 || page_number>=npages)
+    return -1;
+    
+  String fname("/display/page/");
+  fname += page_number;
+
+  const DisplayPage& page = pages[page_number];
+  if(page.isValid()) {
+    File f = SPIFFS.open(fname, "w");
+    if(f) {
+      f.print(page.code());
+      f.close();
+    }
+    Serial.print("saved page file ");
+    Serial.println(fname);
+  } else {
+    // delete the file
+    SPIFFS.remove(fname);
+    Serial.print("removed page file ");
+    Serial.println(fname);
   }
   return page_number;
 }
@@ -95,16 +122,16 @@ short Display::loadAllPagesFromFS()
 {
   short loaded=0;
   Dir dir = SPIFFS.openDir("/display/page");
-  Serial.print("loading display pages: ");
   while (dir.next()) {
     const char* id = strrchr(dir.fileName().c_str(), '/');
     if(id && isdigit(*++id)) {
-      Serial.print(id);
       short n = atoi(id);
       if(loadPageFromFS(n) >=0)
         loaded++;
     }
   }
+  if(loaded==0)
+    Serial.println("no display pages found in SPIFFS://display/page");
   return loaded;
 }
 
@@ -369,10 +396,13 @@ void Display::httpPageSetCode() {
   ESP8266WebServer& server = owner->getWebServer();
   String pageN = server.arg("n");
   int n = pageN.toInt();
+  String fs = server.arg("fs");
   String code = server.arg("plain");
   if(n>=0 && n < npages) {
     DisplayPage& page = pages[n];
     page = DisplayPage( code.c_str() );
+    if(fs!="false" && page.isValid())
+      savePageToFS( n );
     server.send(200, "text/plain", page.code());
   } else
     server.send(400, "text/pain", "invalid page");

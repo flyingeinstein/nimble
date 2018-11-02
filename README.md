@@ -37,7 +37,6 @@ These items remain in development. As items are completed they are removed from 
   * also add virtual method to get Driver name
   * support device names
   * device name can take place of deviceID in Rest calls (so can specify device:slot as 2:3 or by name humidity:hallway)
-* Display loads/saves page code to SPIFF fs
 * Add Configuration API
   * Import/Export config via Json API
   * get/set via direct Rest API
@@ -48,7 +47,7 @@ These items remain in development. As items are completed they are removed from 
      * function to send the Line data
 
 ## Version 1.2
-* Atlas Scientific Probes
+* Atlas Scientific Probes (can already take readings, but no calibration done)
      * Support calibration
      * Support temperature compensation
      * Support slope
