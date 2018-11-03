@@ -324,10 +324,19 @@ void Devices::jsonGetDevices(JsonObject& root)
       Device* device = devices[i];
       JsonObject jdev = devs.createNestedObject();
       jdev["id"] = device->id;
+      if(device->alias.length())
+        jdev["alias"] = device->alias;
       JsonArray jslots = jdev.createNestedArray("slots");
       for(int j=0, _j = device->slotCount(); j<_j; j++) {
         SensorReading r = (*device)[j];
-        jslots.add( SensorTypeName(r.sensorType) );
+        if(r) {
+          JsonObject jslot = jslots.createNestedObject();
+          String alias = device->getSlotAlias(j);
+          if(alias.length())
+            jslot["alias"] = alias;
+          jslot["type"] = SensorTypeName(r.sensorType);
+          //jslots.add( jslot );
+        }
       }
     }
   }  
@@ -435,13 +444,11 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
     if(*p==0 || strcmp(p, "/values")==0) {
       Devices::ReadingIterator itr = DeviceManager.forEach();
       owner->jsonForEachBySensorType(root, itr, *p==0);
-      httpSend(server, 200, root);
-      return true;
+      goto output_doc;
     }
   } else if(strcmp(p, "/devices")==0) {
     owner->jsonGetDevices(root);
-    httpSend(server, 200, root);
-    return true;
+    goto output_doc;
   } else if(strncmp(p, "/device/", 8)==0) {
     p += 8;
     if(!expectDevice(server, p, dev))
@@ -449,12 +456,13 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
 
     if(*p==0) {
       dev->jsonGetReadings(root);
-      httpSend(server, 200, root);
-      return true;
+      goto output_doc;
     } else if(*p=='/') {
       // parse device sub-command
-      if(strncmp(p, "/slot/", 6)==0) {
-        p += 6;
+      p++;
+      
+      if(strncmp(p, "slot/", 5)==0) {
+        p += 5;
 
         short slot;
         if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot))
@@ -463,15 +471,40 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
         if(*p==0) {
           // get dev:slot value
           dev->jsonGetReading(root, slot);
-          httpSend(server, 200, root);
-          return true;
+          goto output_doc;
         } else if(*p=='/') {
           // get dev:slot sub-command
+          p++;
+
+          if(strcmp(p, "alias")==0) {
+            if(requestMethod == HTTP_POST) {
+              // set the slot alias
+              String alias = server.arg("plain");
+              dev->setSlotAlias(slot, alias);
+            }
+
+            // get slot alias
+            root["alias"] = dev->getSlotAlias(slot);
+            goto output_doc;
+          }
         }
-      }
+      } else if(strcmp(p, "alias")==0) {
+            if(requestMethod == HTTP_POST) {
+              // set the slot alias
+              String alias = server.arg("plain");
+              dev->alias = alias;
+            }
+
+            // get slot alias
+            root["alias"] = dev->alias;
+            goto output_doc;
+          }
     }
   }
   return false;
+output_doc:
+  httpSend(server, 200, root);
+  return true;  
 }
 
 
@@ -694,6 +727,19 @@ void Device::enableDirect(short slot, bool _get, bool _post)
   }
 }
 #endif
+
+String Device::getSlotAlias(short slotIndex) const
+{
+  return (slotIndex>=0 && slotIndex < slots)
+    ? readings[slotIndex].alias
+    : "";
+}
+
+void Device::setSlotAlias(short slotIndex, String alias)
+{
+  if (slotIndex>=0 && slotIndex < slots)
+    readings[slotIndex].alias = alias;
+}
 
 void Device::handleUpdate()
 {

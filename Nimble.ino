@@ -180,10 +180,19 @@ void handleRoot() {
       html += "<div id='";
       html += typeName;
       html += "' class='sensor'>";
+
+      String alias = itr.device->getSlotAlias(itr.slot);
+      if(alias.length()) {
+        html += "<label class='alias'>";
+        html += alias;
+        html += "</label>";
+      }
+      
       html += "<span>";
       html += r.toString();
       html += "</span>";      
-      html += "<label>";
+      
+      html += "<label class='address'>";
       html += itr.device->id;
       html += ':';
       html += itr.slot;

@@ -32,10 +32,7 @@ These items remain in development. As items are completed they are removed from 
 
 ## Version 1.0
 * Support channel names
-  * can be set via the Postman
-  * can be set via the React web app if included
   * also add virtual method to get Driver name
-  * support device names
   * device name can take place of deviceID in Rest calls (so can specify device:slot as 2:3 or by name humidity:hallway)
 * DeviceManager on() methods handle Rest URLs and handlers of ArduinoJson type
 * Add Configuration API
@@ -55,7 +52,11 @@ These items remain in development. As items are completed they are removed from 
      * Support other status/info calls
 * Add MQMTT support
 * Device/Driver configuration is loaded/saved via Config API
+
+## Version 1.4 - React App
 * Add React web app and store in SPIFFS
+* Can set aliases and configuration
+* Visual KPIs and Dashboards
    
 # IDEAS
 * Convert NTP to be a sensor (time sensor). It has a few timestamps as readings. Also, other sensors can have a slot that outputs a timestamp, such as timestamp since last event.

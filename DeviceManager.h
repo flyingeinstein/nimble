@@ -304,8 +304,13 @@ class Device {
     // clear the readings
     virtual void clear();
 
+    inline String getAlias() const { return alias; }
+
     // return the number of slots
     inline short slotCount() const { return slots; }
+
+    String getSlotAlias(short slotIndex) const;
+    void setSlotAlias(short slotIndex, String alias);
     
     virtual void handleUpdate();
 
