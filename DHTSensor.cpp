@@ -41,9 +41,9 @@ void DHTSensor::handleUpdate()
     return;
   }
 
-  readings[0] = SensorReading(Humidity, h);
-  readings[1] = SensorReading(Temperature, f);
-  readings[2] = SensorReading(HeatIndex, dht.computeHeatIndex(f, h));
+  (*this)[0] = SensorReading(Humidity, h);
+  (*this)[1] = SensorReading(Temperature, f);
+  (*this)[2] = SensorReading(HeatIndex, dht.computeHeatIndex(f, h));
   
   state = Nominal;
 }

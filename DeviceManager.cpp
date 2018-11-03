@@ -312,38 +312,7 @@ void Devices::handleUpdate()
   }
 }
 
-#if 0
-void Devices::write(const SensorReading& value) { 
-  if(writePos>=size)
-    alloc(size*1.25 + 1);
-  if(writePos < count && values[writePos].sensor==value.sensor) {
-    // update of reading
-    values[writePos++] = value; 
-  } else if(writePos < count) {
-    // sensor is writing more values this time, insert the value
-    if(count>=size)
-      alloc(size*1.25 + 1);
-    memmove(&values[writePos+1], &values[writePos], sizeof(values[0])*(count-writePos));  // make room for new reading
-    count++;  // we expanded by 1
-    values[writePos++] = value; // insert new reading
-  } else {
-    // new reading to append
-    values[writePos] = value; 
-    writePos++;
-    count++;
-  }
-}
 
-void Devices::alloc(short n) {
-  Serial.print("Devices.alloc realloc:"); Serial.println(n);
-  if(values) {
-    values = (SensorReading*)realloc(values, n*sizeof(SensorReading));
-    size = n;
-  } else {
-    values = (SensorReading*)calloc(size, sizeof(SensorReading));
-  }
-}
-#endif
 
 void Devices::jsonGetDevices(JsonObject& root)
 {
@@ -512,15 +481,15 @@ Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned 
   : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
   if(_slots>0)
-    readings = (SensorReading*)calloc(slots, sizeof(SensorReading));
+    readings = (Slot*)calloc(slots, sizeof(Slot));
 }
 
 Device::Device(const Device& copy)
   : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
 {
   if(slots>0) {
-    readings = (SensorReading*)calloc(slots, sizeof(SensorReading));
-    memcpy(readings, copy.readings, slots*sizeof(SensorReading));  
+    readings = (Slot*)calloc(slots, sizeof(Slot));
+    memcpy(readings, copy.readings, slots*sizeof(Slot));  
   }
 }
 
@@ -543,17 +512,26 @@ Device& Device::operator=(const Device& copy)
   updateInterval=copy.updateInterval;
   nextUpdate=0;
   state=copy.state;
-  readings = (SensorReading*)calloc(slots, sizeof(SensorReading));
-  memcpy(readings, copy.readings, slots*sizeof(SensorReading));
+  readings = (Slot*)calloc(slots, sizeof(Slot));
+  memcpy(readings, copy.readings, slots*sizeof(Slot));
   return *this;
 }
 
 void Device::alloc(unsigned short _slots)
 {
+  if(_slots >=MAX_SLOTS) {
+    // essentially crash, an unrealistic number of slots requested
+    Serial.print("internal error: ");
+    Serial.print(_slots);
+    Serial.print(" slots requested, limit is ");
+    Serial.println(MAX_SLOTS);
+    while(1) delay(10);
+  }
+  
   if(_slots != slots || !readings) {
     readings = readings
-      ? (SensorReading*)realloc(readings, _slots*sizeof(SensorReading))
-      : (SensorReading*)calloc(_slots, sizeof(SensorReading));
+      ? (Slot*)realloc(readings, _slots*sizeof(Slot))
+      : (Slot*)calloc(_slots, sizeof(Slot));
     slots = _slots;
   }
 }
@@ -573,7 +551,7 @@ void Device::reset()
 void Device::clear()
 {
   for(int i=0; i<slots; i++)
-    readings[i].clear();
+    (*this)[i].clear();
 }
 
 void Device::delay(unsigned long _delay)
@@ -733,11 +711,11 @@ DeviceState Device::getState() const
   return state;
 }
 
-SensorReading Device::operator[](unsigned short slotIndex) const
+SensorReading& Device::operator[](unsigned short slotIndex)
 {
-  return (slotIndex < slots)
-    ? readings[slotIndex]
-    : InvalidReading;
+  if(slotIndex >= slots)
+    alloc( slotIndex+1 );
+  return readings[slotIndex].reading;
 }
 
 

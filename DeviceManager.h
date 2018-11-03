@@ -14,6 +14,9 @@
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 
+#define MAX_SLOTS     256
+
+
 typedef struct _InfluxTarget {
   String database;
   String measurement;
@@ -223,79 +226,6 @@ class Devices {
 
 extern Devices DeviceManager;
 
-class Device {
-  public:
-    short id;
-
-  public:
-    Device(short id, short _slots, unsigned long _updateInterval=1000, unsigned long _flags=0);
-    Device(const Device& copy);
-    virtual ~Device();
-    Device& operator=(const Device& copy);
-
-    operator bool() const;
-
-    virtual void begin();
-
-    inline unsigned long getFlags() const { return flags; }
-    inline bool hasFlags(unsigned long f) const { return (flags & f)==f; }
-
-    virtual DeviceState getState() const;
-    
-    // reset the device
-    virtual void reset();
-
-    // clear the readings
-    virtual void clear();
-
-    // return the number of slots
-    inline short slotCount() const { return slots; }
-    
-    virtual void handleUpdate();
-
-    void delay(unsigned long _delay);
-
-    virtual bool isStale(unsigned long long _now=0) const;
-
-    // read readings
-    SensorReading operator[](unsigned short slotIndex) const;
-
-    // json interface
-    void jsonGetReading(JsonObject& node, short slot);
-    void jsonGetReadings(JsonObject& node);
-
-  protected:
-    Devices* owner;
-    unsigned short slots;
-    SensorReading* readings;
-    unsigned long flags;
-
-    unsigned long updateInterval;
-    unsigned long nextUpdate;
-
-    DeviceState state;
-    
-    void alloc(unsigned short _slots);
-
-    String prefixUri(const String& uri, short slot=-1) const;
-    ESP8266WebServer* getWebServer();
-
-    // same as http's on() methods except uri is prefixed with device specific path
-    void on(const String &uri, ESP8266WebServer::THandlerFunction handler);
-    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
-    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
-
-    // enable direct access to slots via http or mqqt
-    // deprecated: void enableDirect(short slot, bool _get=true, bool _post=true);
-
-    // http handlers
-    // deprecated: void httpGetReading(short slot);
-    // deprecated: void httpPostValue(short slot);
-
-    friend class Devices;
-};
-
-extern Device NullDevice;
 
 #define VT_NULL  'n'      // null value
 #define VT_CLEAR 'x'      // clear - indicates no measurement
@@ -339,5 +269,88 @@ class SensorReading
 
 extern SensorReading NullReading;
 extern SensorReading InvalidReading;
+
+
+class Device {
+  public:
+    short id;
+    String alias;
+
+  public:
+    class Slot {
+      public:
+      String alias;
+      SensorReading reading;
+    };
+
+  public:
+    Device(short id, short _slots, unsigned long _updateInterval=1000, unsigned long _flags=0);
+    Device(const Device& copy);
+    virtual ~Device();
+    Device& operator=(const Device& copy);
+
+    operator bool() const;
+
+    virtual void begin();
+
+    inline unsigned long getFlags() const { return flags; }
+    inline bool hasFlags(unsigned long f) const { return (flags & f)==f; }
+
+    virtual DeviceState getState() const;
+    
+    // reset the device
+    virtual void reset();
+
+    // clear the readings
+    virtual void clear();
+
+    // return the number of slots
+    inline short slotCount() const { return slots; }
+    
+    virtual void handleUpdate();
+
+    void delay(unsigned long _delay);
+
+    virtual bool isStale(unsigned long long _now=0) const;
+
+    // read readings
+    SensorReading& operator[](unsigned short slotIndex);
+
+    // json interface
+    void jsonGetReading(JsonObject& node, short slot);
+    void jsonGetReadings(JsonObject& node);
+
+  protected:
+    Devices* owner;
+    unsigned short slots;
+    Slot* readings;
+    unsigned long flags;
+
+    unsigned long updateInterval;
+    unsigned long nextUpdate;
+
+    DeviceState state;
+    
+    void alloc(unsigned short _slots);
+
+    String prefixUri(const String& uri, short slot=-1) const;
+    ESP8266WebServer* getWebServer();
+
+    // same as http's on() methods except uri is prefixed with device specific path
+    void on(const String &uri, ESP8266WebServer::THandlerFunction handler);
+    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
+    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
+
+    // enable direct access to slots via http or mqqt
+    // deprecated: void enableDirect(short slot, bool _get=true, bool _post=true);
+
+    // http handlers
+    // deprecated: void httpGetReading(short slot);
+    // deprecated: void httpPostValue(short slot);
+
+    friend class Devices;
+};
+
+extern Device NullDevice;
 
 void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json);

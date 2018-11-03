@@ -86,10 +86,10 @@ void OneWireSensor::handleUpdate()
   for (int i = 0; i < count; i++) {
     float f = DS18B20.getTempFByIndex(i);
     if (f > DEVICE_DISCONNECTED_F) {
-      readings[i] = SensorReading(Temperature, f);
+      (*this)[i] = SensorReading(Temperature, f);
       good++;
     } else {
-      readings[i] = InvalidReading;
+      (*this)[i] = InvalidReading;
       bad++;
     }
   }

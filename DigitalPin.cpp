@@ -22,8 +22,7 @@ DigitalPin& DigitalPin::operator=(const DigitalPin& copy)
 
 void DigitalPin::handleUpdate()
 {
-  readings[0] = SensorReading(pinType, digitalRead(pin) ? true : false);
-  if(reversePolarity)
-    readings[0].b = !readings[0].b;
+  bool v = digitalRead(pin) ? true : false;
+  (*this)[0] = SensorReading(pinType, reversePolarity ? !v : v);
   state = Nominal;
 }

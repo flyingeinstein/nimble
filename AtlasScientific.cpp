@@ -24,8 +24,8 @@ namespace AtlasScientific {
       default:
         address = 0;
     }
-     readings[0] = SensorReading(Numeric, 0);       // probe state
-     readings[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
+     (*this)[0] = SensorReading(Numeric, 0);       // probe state
+     (*this)[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
   }
 
   void EzoProbe::sendCommand(const char* cmd) {
@@ -79,7 +79,7 @@ namespace AtlasScientific {
   void EzoProbe::handleUpdate()
   {
     EzoProbeResult result;
-    long& _state = readings[0].l;
+    long& _state = (*this)[0].l;
     switch(_state) {
       case 0:
         // initialize then proceed to calibrate or measure
@@ -98,17 +98,17 @@ namespace AtlasScientific {
         result = readResponse();
         switch(result) {
           case Success: 
-            readings[1] = SensorReading(sensorType, atof(ph_data));
+            (*this)[1] = SensorReading(sensorType, atof(ph_data));
             _state++;
             break;
           case Failed: 
-            readings[1] = InvalidReading;
+            (*this)[1] = InvalidReading;
             _state = 0;
             break;
           case Pending:
             break;
           case NoData:
-            readings[1] = NullReading;
+            (*this)[1] = NullReading;
             _state = 0;
             break;
         }

@@ -37,6 +37,7 @@ These items remain in development. As items are completed they are removed from 
   * also add virtual method to get Driver name
   * support device names
   * device name can take place of deviceID in Rest calls (so can specify device:slot as 2:3 or by name humidity:hallway)
+* DeviceManager on() methods handle Rest URLs and handlers of ArduinoJson type
 * Add Configuration API
   * Import/Export config via Json API
   * get/set via direct Rest API
