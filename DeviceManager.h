@@ -199,6 +199,12 @@ class Devices {
     // get an iterator over a type of reading
     ReadingIterator forEach(SensorType st);
 
+    // generate a file of all device and slot aliases
+    String getAliasesFile();
+
+    // parse a file of device and/or slot aliases and set where possible
+    short parseAliasesFile(const char* aliases);
+
     // json interface
     void jsonGetDevices(JsonObject& root);
     void jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues=true);

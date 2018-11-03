@@ -312,6 +312,120 @@ void Devices::handleUpdate()
   }
 }
 
+String Devices::getAliasesFile()
+{
+  String out;
+  ReadingIterator itr = forEach();
+  SensorReading r;
+  Device* lastDev = NULL;
+  while( (r = itr.next()) ) {
+    if(lastDev != itr.device) {
+      // check for device alias
+      if(itr.device->alias.length()) {
+        out += itr.device->id;
+        out += '=';
+        out += itr.device->alias;
+        out += '\n';
+      }
+      lastDev = itr.device;
+    }
+    
+    String alias = itr.device->getSlotAlias(itr.slot);
+    if(alias.length()) {
+        out += itr.device->id;
+        out += ':';
+        out += itr.slot;
+        out += '=';
+        out += alias;
+        out += '\n';
+    }
+  }
+  return out;
+}
+
+short Devices::parseAliasesFile(const char* aliases)
+{
+  int parsed = 0;
+  
+  while(*aliases) {
+    short devid=-1, slotid=-1;
+
+    // trim white space
+    while(*aliases && isspace(*aliases))
+      aliases++;
+
+    // ignore extra lines or comments (#)
+    if(*aliases =='\n') {
+      aliases++;
+      continue;
+    } else if(*aliases == '#') {
+      while(*aliases && *aliases++!='\n')
+        ;
+      continue;
+    }
+      
+    
+    // read device ID
+    if(isdigit(*aliases)) {
+      devid = (short)atoi(aliases);
+      while(isdigit(*aliases))
+        aliases++;
+    } else {
+      // bad line, skip
+      while(*aliases && *aliases++!='\n')
+        ;
+      continue;
+    }
+      
+    // optionally read slot
+    if(*aliases == ':') {
+      aliases++;
+      
+      // read slot
+      if(isdigit(*aliases)) {
+        slotid = (short)atoi(aliases);
+        while(isdigit(*aliases))
+          aliases++;
+      } else {
+        // bad line, skip
+        while(*aliases && *aliases++!='\n')
+          ;
+        continue;
+      }
+    }
+
+    // expect =, then read alias
+    if(*aliases == '=') {
+      aliases++;
+
+      // record where we are, then skip to end of line
+      String alias;
+      while(*aliases && *aliases!='\r' && *aliases!='\n') {
+        alias += *aliases;
+        aliases++;
+      }
+      if(*aliases == '\r')
+        aliases++;
+      if(*aliases == '\n')
+        aliases++;
+
+      // now set the alias
+      Device& dev = find(devid);
+      if(dev) {
+        if(slotid>=0) {
+          // set slot alias
+          dev.setSlotAlias(slotid, alias);
+          parsed++;
+        } else {
+          // set device alias
+          dev.alias = alias;
+          parsed++;
+        }
+      }
+    }
+  }
+  return parsed;
+}
 
 
 void Devices::jsonGetDevices(JsonObject& root)
@@ -429,7 +543,7 @@ bool Devices::RequestHandler::expectDevice(ESP8266WebServer& server, const char*
 
 
 bool Devices::RequestHandler::canHandle(HTTPMethod method, String uri) { 
-  return owner!=NULL && (uri.startsWith("/sensors") || uri.startsWith("/devices") || uri.startsWith("/device/"));
+  return owner!=NULL && (uri.startsWith("/aliases") || uri.startsWith("/sensors") || uri.startsWith("/devices") || uri.startsWith("/device/"));
 }
 
 
@@ -500,6 +614,19 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
             goto output_doc;
           }
     }
+  } else if(strcmp(p, "/aliases")==0) {
+    p += 8;
+
+    if(requestMethod == HTTP_POST) {
+      // read an aliases file
+      String aliases = server.arg("plain");
+      owner->parseAliasesFile(aliases.c_str());
+    }
+
+    // output the aliases
+    String aliases = owner->getAliasesFile();
+    server.send(200, "text/plain", aliases);
+    return true;
   }
   return false;
 output_doc:
