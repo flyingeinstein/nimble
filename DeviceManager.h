@@ -203,7 +203,14 @@ class Devices {
     String getAliasesFile();
 
     // parse a file of device and/or slot aliases and set where possible
-    short parseAliasesFile(const char* aliases);
+    int parseAliasesFile(const char* aliases);
+
+    // save alias file to SPIFFS fs
+    bool saveAliasesFile(const char* aliases);
+
+    // load aliases file from SPIFFS fs
+    int restoreAliasesFile();
+
 
     // json interface
     void jsonGetDevices(JsonObject& root);

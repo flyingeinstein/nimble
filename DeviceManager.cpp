@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
+#include <FS.h>
 
 
 #include "DeviceManager.h"
@@ -343,7 +344,7 @@ String Devices::getAliasesFile()
   return out;
 }
 
-short Devices::parseAliasesFile(const char* aliases)
+int Devices::parseAliasesFile(const char* aliases)
 {
   int parsed = 0;
   
@@ -427,6 +428,28 @@ short Devices::parseAliasesFile(const char* aliases)
   return parsed;
 }
 
+int Devices::restoreAliasesFile() {
+  File f = SPIFFS.open("/aliases.txt", "r");
+  if(f) {
+    String aliases = f.readString();
+    int parsed = parseAliasesFile(aliases.c_str());
+    f.close();
+    Serial.println("loaded aliases file");
+    return parsed;
+  }
+  return 0;
+}
+
+bool Devices::saveAliasesFile(const char* aliases)
+{
+  File f = SPIFFS.open("/aliases.txt", "w");
+  if(f) {
+      f.print(aliases);
+      f.close();
+      return true;
+  }
+  return false;
+}
 
 void Devices::jsonGetDevices(JsonObject& root)
 {
@@ -620,7 +643,8 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
     if(requestMethod == HTTP_POST) {
       // read an aliases file
       String aliases = server.arg("plain");
-      owner->parseAliasesFile(aliases.c_str());
+      if(owner->parseAliasesFile(aliases.c_str()) >0)
+        owner->saveAliasesFile(aliases.c_str());
     }
 
     // output the aliases

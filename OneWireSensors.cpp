@@ -69,6 +69,7 @@ void OneWireSensor::getDeviceInfo(JsonObject& node)
 
 void OneWireSensor::handleUpdate()
 {
+  bool updateAliases = false;
   int good = 0, bad = 0;
   int count = DS18B20.getDS18Count();
 
@@ -78,8 +79,10 @@ void OneWireSensor::handleUpdate()
   }
 
   // ensure we have enough slots
-  if(count > slotCount())
+  if(count > slotCount()) {
     alloc(count);
+    updateAliases = true;
+  }
 
   // read temperature sensors
   DS18B20.requestTemperatures();
@@ -99,4 +102,7 @@ void OneWireSensor::handleUpdate()
       ? Degraded
       : Offline
     : Nominal;
+
+    if(updateAliases)
+      owner->restoreAliasesFile();
 }

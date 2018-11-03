@@ -128,6 +128,7 @@ String getContentType(String filename) { // convert the file extension to the MI
   else if (filename.endsWith(".css")) return "text/css";
   else if (filename.endsWith(".js")) return "application/javascript";
   else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".txt")) return "text/plain";
   return "text/plain";
 }
 
@@ -430,6 +431,8 @@ void setup() {
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
+
+  DeviceManager.restoreAliasesFile();
 
   Serial.print("Host: ");
   Serial.print(hostname);
