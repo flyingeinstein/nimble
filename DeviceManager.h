@@ -182,6 +182,10 @@ class Devices {
     const Device& find(short deviceId) const;
     Device& find(short deviceId);
 
+    // find a device by its alias
+    const Device& find(String deviceAlias) const;
+    Device& find(String deviceAlias);
+
     // find a reading by device:slot
     // for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
     SensorReading getReading(short deviceId, unsigned short slotId) const;
@@ -302,6 +306,8 @@ class Device {
     virtual ~Device();
     Device& operator=(const Device& copy);
 
+    virtual const char* getDriverName() const;
+    
     operator bool() const;
 
     virtual void begin();
@@ -324,6 +330,8 @@ class Device {
 
     String getSlotAlias(short slotIndex) const;
     void setSlotAlias(short slotIndex, String alias);
+
+    short findSlotByAlias(String slotAlias) const;
     
     virtual void handleUpdate();
 

@@ -178,6 +178,26 @@ Device& Devices::find(short deviceId)
   return NullDevice;
 }
 
+const Device& Devices::find(String deviceAlias) const
+{
+  if(deviceAlias.length()!=0) {
+    for(short i=0; i<slots; i++) 
+      if(devices[i] && devices[i]->alias == deviceAlias)
+        return *devices[i];
+  }
+  return NullDevice;
+}
+
+Device& Devices::find(String deviceAlias)
+{
+  if(deviceAlias.length()!=0) {
+    for(short i=0; i<slots; i++) 
+      if(devices[i] && devices[i]->alias == deviceAlias)
+        return *devices[i];
+  }
+  return NullDevice;
+}
+
 SensorReading Devices::getReading(const SensorAddress& sa) const 
 { 
   return getReading(sa.device, sa.slot); 
@@ -459,20 +479,34 @@ void Devices::jsonGetDevices(JsonObject& root)
     if(devices[i]) {
       // get the slot
       Device* device = devices[i];
+      const char* driverName = device->getDriverName();
       JsonObject jdev = devs.createNestedObject();
+
+      // id
       jdev["id"] = device->id;
+
+      // driver name
+      if(driverName!=NULL)
+        jdev["driver"] = driverName;
+
+      // alias
       if(device->alias.length())
         jdev["alias"] = device->alias;
+
+      // device slot metadata
       JsonArray jslots = jdev.createNestedArray("slots");
       for(int j=0, _j = device->slotCount(); j<_j; j++) {
         SensorReading r = (*device)[j];
         if(r) {
           JsonObject jslot = jslots.createNestedObject();
+
+          // slot alias
           String alias = device->getSlotAlias(j);
           if(alias.length())
             jslot["alias"] = alias;
+
+          // slot sensor type
           jslot["type"] = SensorTypeName(r.sensorType);
-          //jslots.add( jslot );
         }
       }
     }
@@ -556,9 +590,25 @@ bool expectNumeric(ESP8266WebServer& server, const char*& p, T _min, T _max, T& 
 
 bool Devices::RequestHandler::expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev) {
   short id;
-  if(expectNumeric(server, p, (short)0, owner->slots, id)) {
-    dev = &owner->find(id);
-    return (dev!=NULL);
+  Device* d = &NullDevice;
+  if(isdigit(*p) && expectNumeric(server, p, (short)0, owner->slots, id)) {
+    // got an ID
+    d = &owner->find(id);
+  } else if(isalpha(*p)) {
+    // possibly a device alias
+    String alias;
+    while(*p && *p!='/')
+      alias += *p++;
+
+    // search for alias
+    d = &owner->find(alias);
+  } else
+    return false;
+
+  // see if we found a valid device
+  if(d != &NullDevice) {
+    dev = d;
+    return true;
   } else
     return false;
 }
@@ -602,8 +652,18 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
         p += 5;
 
         short slot;
-        if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot))
-          return true;
+        if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot)) {
+          // test if alias
+          String alias;
+          while(*p && *p!='/')
+            alias += *p++;
+
+          // search for alias
+          slot = dev->findSlotByAlias(alias);
+          if(slot<0)
+            return false;
+        }
+          
         
         if(*p==0) {
           // get dev:slot value
@@ -718,6 +778,11 @@ void Device::alloc(unsigned short _slots)
       : (Slot*)calloc(_slots, sizeof(Slot));
     slots = _slots;
   }
+}
+
+const char* Device::getDriverName() const
+{
+  return NULL; // indicates no name
 }
 
 Device::operator bool() const { 
@@ -890,6 +955,17 @@ void Device::setSlotAlias(short slotIndex, String alias)
 {
   if (slotIndex>=0 && slotIndex < slots)
     readings[slotIndex].alias = alias;
+}
+
+short Device::findSlotByAlias(String slotAlias) const
+{
+  if(slotAlias.length()>0) {
+    for(short i=0, _i=slotCount(); i<_i; i++) {
+      if(readings[i].alias == slotAlias)
+        return i;
+    }
+  }
+  return -1;
 }
 
 void Device::handleUpdate()

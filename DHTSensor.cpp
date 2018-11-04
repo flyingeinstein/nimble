@@ -22,6 +22,11 @@ DHTSensor& DHTSensor::operator=(const DHTSensor& copy)
   return *this;
 }
 
+const char* DHTSensor::getDriverName() const
+{
+  return "DHT";
+}
+
 void DHTSensor::handleUpdate()
 {
   float h = dht.readHumidity();

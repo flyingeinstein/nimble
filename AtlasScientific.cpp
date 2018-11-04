@@ -28,6 +28,11 @@ namespace AtlasScientific {
      (*this)[1] = SensorReading(stype, VT_CLEAR, 0);  // pH value
   }
 
+  const char* EzoProbe::getDriverName() const
+  {
+    return "AtlasScientific-EZO";
+  }
+
   void EzoProbe::sendCommand(const char* cmd) {
     Wire.beginTransmission(address); //call the circuit by its ID number.
     Wire.write(cmd);        //transmit the command that was sent through the serial port.

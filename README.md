@@ -31,20 +31,24 @@ Currently supports the popular SSD1306 OLED LCD (popular 0.96" OLED display) wit
 These items remain in development. As items are completed they are removed from this list.
 
 ## Version 1.0
-* Support channel names
-  * also add virtual method to get Driver name
-  * device name can take place of deviceID in Rest calls (so can specify device:slot as 2:3 or by name humidity:hallway)
 * DeviceManager on() methods handle Rest URLs and handlers of ArduinoJson type
 * Add Configuration API
   * Import/Export config via Json API
   * get/set via direct Rest API
   * works very much like Sensor values
+  * loads drivers from configuration (not hard coded anymore)
 * Get Influx working again
   * set config via Rest
      * function to create Line encodings
      * function to send the Line data
 
 ## Version 1.2
+* I2C bus has its own Devices object, and i2c buses are a child of I2C bus
+     * i2c buses are no longer on the same DeviceManager as i2c bus
+     * API now supports SensorAddresses with multiple levels (i.e 1:96:0 would typically be i2c-bus:ezo:pH)
+     * might need to change Device class so slots are virtual, not backed by real SensorReading array. Can refactor, and make subclass implement a real array (maybe template based)
+     * i2c bus can probe and create devices
+     * ReadingIterator iterates within buses
 * Atlas Scientific Probes (can already take readings, but no calibration done)
      * Support calibration
      * Support temperature compensation

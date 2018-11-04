@@ -25,6 +25,11 @@ OneWireSensor& OneWireSensor::operator=(const OneWireSensor& copy)
   return *this;
 }
 
+const char* OneWireSensor::getDriverName() const
+{
+  return "DallasOneWire";
+}
+
 void OneWireSensor::begin()
 {
   on("devices", std::bind(&OneWireSensor::httpDevices, this));
