@@ -652,7 +652,7 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
         p += 5;
 
         short slot;
-        if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot)) {
+        if(isalpha(*p)) {
           // test if alias
           String alias;
           while(*p && *p!='/')
@@ -662,7 +662,8 @@ bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod reques
           slot = dev->findSlotByAlias(alias);
           if(slot<0)
             return false;
-        }
+        } else if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot))
+          return false;
           
         
         if(*p==0) {
