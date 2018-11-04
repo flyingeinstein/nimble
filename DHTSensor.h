@@ -32,6 +32,8 @@ class DHTSensor : public Device
     DHTSensor(const DHTSensor& copy);
     DHTSensor& operator=(const DHTSensor& copy);
 
+    virtual const char* getDriverName() const;
+
     virtual void handleUpdate();
 
   public:

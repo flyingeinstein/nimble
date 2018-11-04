@@ -289,6 +289,8 @@ class Device {
     virtual ~Device();
     Device& operator=(const Device& copy);
 
+    virtual const char* getDriverName() const;
+    
     operator bool() const;
 
     virtual void begin();

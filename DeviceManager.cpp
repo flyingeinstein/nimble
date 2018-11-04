@@ -322,20 +322,34 @@ void Devices::jsonGetDevices(JsonObject& root)
     if(devices[i]) {
       // get the slot
       Device* device = devices[i];
+      const char* driverName = device->getDriverName();
       JsonObject jdev = devs.createNestedObject();
+
+      // id
       jdev["id"] = device->id;
+
+      // driver name
+      if(driverName!=NULL)
+        jdev["driver"] = driverName;
+
+      // alias
       if(device->alias.length())
         jdev["alias"] = device->alias;
+
+      // device slot metadata
       JsonArray jslots = jdev.createNestedArray("slots");
       for(int j=0, _j = device->slotCount(); j<_j; j++) {
         SensorReading r = (*device)[j];
         if(r) {
           JsonObject jslot = jslots.createNestedObject();
+
+          // slot alias
           String alias = device->getSlotAlias(j);
           if(alias.length())
             jslot["alias"] = alias;
+
+          // slot sensor type
           jslot["type"] = SensorTypeName(r.sensorType);
-          //jslots.add( jslot );
         }
       }
     }
@@ -567,6 +581,11 @@ void Device::alloc(unsigned short _slots)
       : (Slot*)calloc(_slots, sizeof(Slot));
     slots = _slots;
   }
+}
+
+const char* Device::getDriverName() const
+{
+  return NULL; // indicates no name
 }
 
 Device::operator bool() const { 

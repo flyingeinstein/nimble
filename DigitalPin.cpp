@@ -20,6 +20,11 @@ DigitalPin& DigitalPin::operator=(const DigitalPin& copy)
   return *this;
 }
 
+const char* DigitalPin::getDriverName() const
+{
+  return "gpio";
+}
+
 void DigitalPin::handleUpdate()
 {
   bool v = digitalRead(pin) ? true : false;

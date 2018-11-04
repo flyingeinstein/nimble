@@ -32,7 +32,6 @@ These items remain in development. As items are completed they are removed from 
 
 ## Version 1.0
 * Support channel names
-  * also add virtual method to get Driver name
   * device name can take place of deviceID in Rest calls (so can specify device:slot as 2:3 or by name humidity:hallway)
 * DeviceManager on() methods handle Rest URLs and handlers of ArduinoJson type
 * Add Configuration API

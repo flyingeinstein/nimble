@@ -19,6 +19,8 @@ class OneWireSensor : public Device
     OneWireSensor(const OneWireSensor& copy);
     OneWireSensor& operator=(const OneWireSensor& copy);
 
+    virtual const char* getDriverName() const;
+
     virtual void begin();
   
     virtual void handleUpdate();

@@ -13,6 +13,8 @@ class I2CBus : public Device
     I2CBus(const I2CBus& copy);
     I2CBus& operator=(const I2CBus& copy);
 
+    virtual const char* getDriverName() const;
+
     virtual void handleUpdate();
 
   public:

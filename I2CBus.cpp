@@ -12,6 +12,11 @@ I2CBus::I2CBus(const I2CBus& copy)
 {
 }
 
+const char* I2CBus::getDriverName() const
+{
+  return "i2c-bus";
+}
+
 I2CBus& I2CBus::operator=(const I2CBus& copy)
 {
   Device::operator=(copy);

@@ -29,6 +29,11 @@ Display::~Display()
   ::free(pages);
 }
 
+const char* Display::getDriverName() const
+{
+  return "display";
+}
+
 void Display::begin()
 {
   #if (LCD == SSD1306)

@@ -19,6 +19,8 @@ namespace AtlasScientific {
     public:
       EzoProbe(short id, SensorType ptype, short address=0);
 
+      virtual const char* getDriverName() const;
+
       virtual void handleUpdate();
 
       unsigned long measurementTime;

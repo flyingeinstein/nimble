@@ -30,7 +30,9 @@ class AnalogPin : public Device
       pin = copy.pin;
       return *this;
     }
-    
+
+    virtual const char* getDriverName() const { return "adc"; }
+
     virtual void handleUpdate()
     {
       short v = analogRead(pin);

@@ -72,6 +72,8 @@ class Display : public Device
   	Display(short id=1);
     virtual ~Display();
 
+    virtual const char* getDriverName() const;
+
     virtual void begin();
 
   	template<size_t N>

@@ -11,6 +11,8 @@ class DigitalPin : public Device
     DigitalPin(const DigitalPin& copy);
     DigitalPin& operator=(const DigitalPin& copy);
 
+    virtual const char* getDriverName() const;
+
     virtual void handleUpdate();
 
   public:
