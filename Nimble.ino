@@ -16,9 +16,9 @@ const char* hostname = "nimbl";
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
 #if !defined(CAPTIVE_PORTAL)
-const char* ssid = "Yogi";
-const char* password = "cholera0625";
-#endif
+const char* ssid = "MyWifi";
+const char* password = "mypassword";
+
 
 boolean enable_influx = false;
 const char* influx_server = "http://192.168.2.115";
@@ -70,7 +70,7 @@ const char* influx_measurement = "walls";
 #include <Fonts/FreeMono18pt7b.h>
 #include <Fonts/Org_01.h>
 #include <Fonts/Picopixel.h>
-#include <Fonts/Tiny3x3a2pt7b.h>
+//#include <Fonts/Tiny3x3a2pt7b.h>
 
 const FontInfo display_fonts[] = {  
   FONT(FreeSans9pt7b),
@@ -83,7 +83,7 @@ const FontInfo display_fonts[] = {
   FONT(FreeMono18pt7b),
   FONT(Org_01),
   FONT(Picopixel),
-  FONT(Tiny3x3a2pt7b)
+//  FONT(Tiny3x3a2pt7b)
 };
 Display* display;
 
