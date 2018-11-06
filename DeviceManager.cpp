@@ -721,7 +721,6 @@ output_doc:
 
 
 
-
 Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
   : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {

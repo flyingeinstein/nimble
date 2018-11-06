@@ -6,7 +6,7 @@
 // If set, enables a captive portal by creating an access point
 // you can connect to and set the actual Wifi network to connect.
 // Enabling captive portal can take significant program resources.
-#define CAPTIVE_PORTAL
+//#define CAPTIVE_PORTAL
 
 //#define ALLOW_OTA_UPDATE
 
@@ -16,8 +16,8 @@ const char* hostname = "nimbl";
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
 #if !defined(CAPTIVE_PORTAL)
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "Yogi";
+const char* password = "cholera0625";
 #endif
 
 boolean enable_influx = false;
