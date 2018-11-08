@@ -1,8 +1,12 @@
 #pragma once
 
-#include <ESP8266WebServer.h>
-#include <ArduinoJson.h>
 #include <stdint.h>
+#include <string>
+#include <sys/types.h>
+
+
+#include "pool.h"
+#include "binbag.h"
 
 
 // format:    /api/test/:param_name(integer|real|number|string|boolean)/method
@@ -11,11 +15,12 @@
 #define URL_PARTIAL                         (0)
 #define URL_FAIL_NO_ENDPOINT                (-1)
 #define URL_FAIL_NO_HANDLER                 (-2)
-#define URL_FAIL_PARAMETER_TYPE             (-3)
-#define URL_FAIL_MISSING_PARAMETER          (-4)
-#define URL_FAIL_AMBIGUOUS_PARAMETER        (-5)
-#define URL_FAIL_EXPECTED_PATH_SEPARATOR    (-6)
-#define URL_FAIL_EXPECTED_EOF               (-7)
+#define URL_FAIL_DUPLICATE                  (-3)
+#define URL_FAIL_PARAMETER_TYPE             (-4)
+#define URL_FAIL_MISSING_PARAMETER          (-5)
+#define URL_FAIL_AMBIGUOUS_PARAMETER        (-6)
+#define URL_FAIL_EXPECTED_PATH_SEPARATOR    (-7)
+#define URL_FAIL_EXPECTED_EOF               (-8)
 #define URL_FAIL_INVALID_TYPE               (-9)
 #define URL_FAIL_SYNTAX                     (-10)
 #define URL_FAIL_INTERNAL                   (-15)
@@ -27,179 +32,541 @@ const char* uri_result_to_string(short result);
 
 // indicates a default Rest handler that matches any http verb request
 // this enum belongs with the web servers HTTP_GET, HTTP_POST, HTTP_xxx constants
-enum {
-    HTTP_ANY = 1000
-};
+typedef enum {
+    HttpGet=1,
+    HttpPost,
+    HttpPut,
+    HttpPatch,
+    HttpDelete,
+    HttpOptions,   
+    HttpMethodAny = 128
+} HttpMethod;
+
+// Bitmask values for different types
+#define ARG_MASK_INTEGER       ((unsigned short)1)
+#define ARG_MASK_REAL          ((unsigned short)2)
+#define ARG_MASK_BOOLEAN       ((unsigned short)4)
+#define ARG_MASK_STRING        ((unsigned short)8)
+#define ARG_MASK_UNSIGNED      ((unsigned short)16)
+#define ARG_MASK_UINTEGER      (ARG_MASK_UNSIGNED|ARG_MASK_INTEGER)
+#define ARG_MASK_NUMBER        (ARG_MASK_REAL|ARG_MASK_INTEGER)
+#define ARG_MASK_ANY           (ARG_MASK_NUMBER|ARG_MASK_BOOLEAN|ARG_MASK_STRING)
 
 /// \brief Convert a http method enum value to a string.
 const char* uri_method_to_string(uint32_t method);
 
+// simple token IDs
+#define TID_EOF               300
+#define TID_INTEGER           303
+#define TID_FLOAT             305
+#define TID_BOOL              307
 
-typedef class RestRequest;
-typedef std::function<short, RestRequest*> RestMethodHandler;
+// String token IDs
+// the following token types allocate memory for string tokens and so must be freed
+#define TID_ERROR                500
+#define TID_STRING               501
+#define TID_IDENTIFIER           502
 
-/// \group Rest Method Declarations
-/// a block of Rest Method declarations must begin and end with these macros
-#define BEGIN_ENDPOINTS(name)  const UriEndpoint name[] = {
-#define END_ENDPOINTS  };
-
-/// in between the BEGIN/END ENDPOINTS you can add Rest Method endpoints with this macro
-/// you only need to call this once for each distict Uri expression, but you can add multiple
-/// handlers for GET, POST, PUT, PATCH, and DELETE using the related macros in place of the ...
-#define REST_ENDPOINT(uri, ...)  { uri, 0, { __VA_ARGS__ } }
-/// \endgroup
-
-/// \group Http Method Verb Handlers
-/// specify one or more of these as extra arguments to the REST_ENDPOINT macro. The ANY handler
-/// will be called when no other specific method matches. The ANY handler can be placed in any
-/// order and the handler resolution will always try to match a specific handlers first.
-#define ANY(handler) { HTTP_ANY, handler }
-#define GET(handler) { HTTP_GET, handler }
-#define POST(handler) { HTTP_POST, handler }
-#define PUT(handler) { HTTP_PUT, handler }
-#define PATCH(handler) { HTTP_PATCH, handler }
-#define DELETE(handler) { HTTP_DELETE, handler }
-#define OPTIONS(handler) { HTTP_OPTIONS, handler }
-/// \endgroup
+//typedef class RestRequest;
+//typedef std::function<short, RestRequest*> RestMethodHandler;
+//typedef std::function<void, void> RestVoidMethodHandler;
 
 typedef enum {
   HttpHandler,
   RestHandler
 } HandlerPrototype;
 
-/// \brief Links a http method verb with a Rest callback handler
-/// Associates a handler callback with a http method request. Many of these associations can
-/// be attached to a single Endpoint Uri.
-typedef struct _UriEndpointMethodHandler {
-    uint32_t method;
-    HandlerPrototype prototype;
-    union {
-      THandler          httpHandler;  // non-rest handler doesnt prepare json request/response
-      RestMethodHandler restHandler;  // rest handler using Json request/response
-    }
-} UriEndpointMethodHandler;
-
-/// \brief Specification for Rest Uri Endpoint with inline arguments
-/// Specifies a Endpoint Uri expresssion for a Rest method that may contain named arguments
-/// that will be extracted and placed in an arguments json object during evaluation.
-typedef struct _UriEndpoint {
-    const char* uri;
-    uint32_t flags;         // UEF flags
-    UriEndpointMethodHandler handlers[6];
-} UriEndpoint;
-
-class RestError {
-  public:
-    short code;
-    String message;
-};
 
 /// \brief Contains details of a resolved Uri request and the UriExpression that matched it.
 /// Like the UriEndpoint above, but used when an actual http request is matched against an
 /// Endpoint Uri expression. This structure contains information on both the http request
 /// and the matched expression.
-typedef struct _ResolvedUriEndpoint {
+/*typedef struct _ResolvedUriEndpoint {
     uint32_t method;        // GET, POST, PUT, PATCH, DELETE, etc
     const char* name;
     const char* requestUri;
     UriEndpointMethodHandler handler;
     std::map<String, argdddp> arguments;
     uint32_t flags;         // UEF flags
-} ResolvedUriEndpoint;
+} ResolvedUriEndpoint;*/
 
-
-/// \brief Main argument to Rest Callbacks
-/// This structure is created and passed to Rest Method callbacks after the request Uri
-/// and Endpoint has been resolved. Any arguments in the Uri Endpoint expression will be
-/// added to the request json object and merged with POST data or other query parameters.
-class RestRequest {
-public:
-    ResolvedUriEndpoint endpoint;   // information about the endpoint (URI) the request was made
-    short httpStatus;               // return status sent in response
-
-    std::map<String, ff> args;
-
-    /// combined list of parameters by priority: embedded-uri, post, query-string.
-    /// use functions such as query_param_u32, query_param_i64, query_param_bool or query_param_string to retrieve
-    /// parameter values.
-    JsonObject request;
-
-    /// output response object built by Rest method handler.
-    /// This object is empty when the method handler is called and is up to the method handler to populate with the
-    /// exception of standard errors, warnings and status output which is added when the method handler returns.
-    DynamicJsonDocument doc;
-    JsonObject response;
-
-    /// Array of JsonError objects.
-    /// The rest method handler can insert exception objects into this array. This object is an empty json array
-    /// when the method handler is called. If it has at least one error upon exit then it will be added to the
-    /// response object and the method return status will also reflect that an error occured.
-    /// It is recommended that any associated objectids such as stream ID be added to each error element.
-    std::vector<RestError> errors;
-
-    /// content type of the incoming request
-    const char* contentType;
-
-    /// the following Json objects get combined into the 'request' Json object but some Rest handlers may want to get
-    /// parameters specifically from POST or URL query-string.
-    JsonObject* post;              // parsed POST Json object
-    JsonObject* query;             // query string parameters as a Json object
-
-    unsigned long long timestamp;   // timestamp request was received, set by framework
-
-    Esp8266WebServer& server;     // deprecated, may or may not be valid, do not use unless necessary
-
-  protected:
-    DynamicJsonDocument requestDoc;
-};
-
-struct _Endpoint;
-typedef struct _Endpoint Endpoint;
-
-struct _EndpointLiteral;
-typedef struct _EndpointLiteral EndpointLiteral;
-
-struct _EndpointArgument;
-typedef struct _EndpointArgument EndpointArgument;
 
 typedef uint16_t url_opcode_t;
+
+template<class H>
+class MethodHandler {
+public:
+    HttpMethod method;
+    H& handler;
+
+    MethodHandler(HttpMethod _method, H& _handler) : method(_method), handler(_handler) {}
+};
+
+//template<class H> class NullMethodHandler : public MethodHandler<HttpMethodAny, H> { NullMethodHandler() : MethodHandler() {} };
+template<class H>
+class GET : public MethodHandler<H> {
+    public:
+        GET(H& _handler) : MethodHandler<H>(HttpGet, _handler) {}
+};
+template<class H> class POST : public MethodHandler<H> { public: POST(H& _handler) : MethodHandler<H>(HttpPost, _handler) {} };
+template<class H> class PUT : public MethodHandler<H> { public: PUT(H& _handler) : MethodHandler<H>(HttpPut, _handler) {} };
 
 /// \brief Implements a compiled list of Rest Uri Endpoint expressions
 /// Each UriExpression contains one or more Uri Endpoint expressions in a compiled form.
 /// You can store expressions for all Rest methods in the application if desired. This
 /// compiled byte-code machine can optimally compare and match a request Uri to an
 /// Endpoint specification.
-typedef struct _UriExpression {
+class Endpoints {
+public:
+    class Handler;
+
+protected:
+    class Node;
+    class Literal;
+    class Argument;
+    class token;
+
+private:
     // stores the expression as a chain of endpoint nodes
-    Endpoint *ep_head, *ep_tail, *ep_end;
+    Node *ep_head, *ep_tail, *ep_end;
 
     // allocated text strings
     binbag* text;
 
-} UriExpression;
+    // some statistics on the endpoints
+    size_t maxUriArgs;       // maximum number of embedded arguments on any one endpoint expression
 
-/// \brief Initialize an empty UriExpression with a maximum number of code size.
-UriExpression *uri_endpoint_init(int elements);
+public:
+    /// \brief Links a http method verb with a Rest callback handler
+/// Associates a handler callback with a http method request. Many of these associations can
+/// be attached to a single Endpoint Uri.
+    class Handler {
+    public:
+        std::string _name;
 
-/// \brief Parse one or more Uri Endpoint expressions, typically contained in a BEGIN/END ENDPOINTS macro block.
-short rest_add_endpoints(UriExpression *expr, const UriEndpoint *endpoints, int count);
+        Handler() {}
+        Handler(const char* __name) : _name(__name) {}
 
-/// \brief Parse a single Uri Endpoint expressions and merge into the given UriExpression.
-/// The supplied UriExpression does not need to be blank, it can contain previously compiled expressions.
-short rest_add_endpoint(UriExpression *expr, const UriEndpoint *endpoint);
+//    uint32_t method;
+//    HandlerPrototype prototype;
+//    union {
+//      RestVoidMethodHandler    voidHandler;  // non-rest handler doesnt prepare json request/response
+//      RestMethodHandler        restHandler;  // rest handler using Json request/response
+//    }
+    };
 
-/// \brief Match a Uri against the compiled list of Uri expressions.
-/// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
-short rest_uri_resolve_endpoint(UriExpression *expr, uint32_t method, const char *uri,
-                                ResolvedUriEndpoint *endpoint_out);
+protected:
+    class Argument
+    {
+    public:
+        inline Argument() : name(nullptr), typemask(0), next(nullptr) {}
+        Argument(const char* _name, unsigned short _typemask) : name(_name), typemask(_typemask), next(nullptr) {}
 
-/// \brief Print the state machine code for the URL processor.
-yarn *rest_uri_debug_print(UriExpression *expr, yarn *out);
+    public:
+        // if this argument is matched, the value is added to the request object under this field name
+        const char* name;
 
-const char* request_param_string(RestRequest* request, const char* name);
-const char* query_param_string(RestRequest* request, const char* name);
-BOOL query_param_u32(RestRequest* request, const char* name, UINT32* value_out);
-BOOL query_param_i64(RestRequest* request, const char* name, INT64* value_out);
-BOOL query_param_bool(RestRequest* request, const char* name, BOOL default_value);
-//const char* post_param_string(RestRequest* request, const char* name);
-//const char* post_param_numeric(RestRequest* request, const char* name);
+        // collection of ARG_MASK_xxxx bits represent what types are supported for this argument
+        unsigned short typemask;
+
+        // if this is not an endpoint, then we point to the next term in the endpoint
+        Node* next;
+    };
+
+public:
+    class ArgumentValue : protected Argument {
+    public:
+        ArgumentValue() : type(0), ul(0) {}
+        ArgumentValue(const ArgumentValue& copy) : Argument(copy), type(copy.type), ul(copy.ul) {
+            if(type == ARG_MASK_STRING) {
+                s = strdup(copy.s);
+            }
+        }
+
+        ArgumentValue(const Argument& arg) : Argument(arg), type(0), ul(0) {}
+
+        ArgumentValue(const Argument& arg, long _l) : Argument(arg), type(ARG_MASK_INTEGER), l(_l) {}
+        ArgumentValue(const Argument& arg, unsigned long _ul) : Argument(arg), type(ARG_MASK_UINTEGER), ul(_ul) {}
+        ArgumentValue(const Argument& arg, double _d) : Argument(arg), type(ARG_MASK_NUMBER), d(_d) {}
+        ArgumentValue(const Argument& arg, bool _b) : Argument(arg), type(ARG_MASK_BOOLEAN), b(_b) {}
+        ArgumentValue(const Argument& arg, const char* _s) : Argument(arg), type(ARG_MASK_STRING), s(strdup(_s)) {}
+
+        ~ArgumentValue() { if(s && type == ARG_MASK_STRING) ::free(s); }
+
+        ArgumentValue& operator=(const ArgumentValue& copy) {
+            Argument::operator=(copy);
+            type = copy.type;
+            if(type == ARG_MASK_STRING)
+                s = strdup(copy.s);
+            else
+                ul = copy.ul;
+            return *this;
+        }
+
+        template<ssize_t N>
+        ssize_t isOneOf(const char* (&enum_values)[N], bool case_insensitive=true) const {
+            typeof(strcmp) *cmpfunc = case_insensitive
+                     ? &strcasecmp
+                     : &strcmp;
+            for(ssize_t i=0; i<N; i++)
+                if(cmpfunc(s, enum_values[i]) ==0)
+                    return i;
+            return -1;
+        }
+
+        inline operator long() const { assert(type&ARG_MASK_INTEGER); return l; }
+        inline operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
+        inline operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
+        inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
+        inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
+
+#if 0   // ArgumentValues should never change, so use constructor only (and assignment op if needed)
+        void set(long _l) { type = ARG_MASK_INTEGER; l = _l; }
+        void set(unsigned long _ul) { type = ARG_MASK_UINTEGER; l = _ul; }
+        void set(bool _b) { type = ARG_MASK_BOOLEAN; b = _b; }
+        void set(const char* _s) { type = ARG_MASK_STRING; s = strdup(_s); }
+#endif
+        unsigned short type;
+
+        union {
+            long l;
+            unsigned long ul;
+            double d;
+            bool b;
+            char* s;
+        };
+    };
+
+    class Endpoint {
+    public:
+        int status;
+        std::string name;
+        Handler handler;
+
+        ArgumentValue* args;
+        size_t nargs;
+
+        inline Endpoint() :  status(0), args(nullptr), nargs(0) {}
+        inline Endpoint(const Handler& _handler, int _status) :  status(_status), handler(_handler), args(nullptr), nargs(0) {}
+        inline Endpoint(const Endpoint& copy) : status(copy.status), name(copy.name), handler(copy.handler),
+                    args(nullptr), nargs(copy.nargs)
+        {
+            if(nargs>0) {
+                args = new ArgumentValue[nargs];
+                for (int i = 0; i < nargs; i++)
+                    args[i] = copy.args[i];
+            }
+        }
+
+        virtual ~Endpoint() { delete [] args; }
+
+        inline Endpoint& operator=(const Endpoint& copy) {
+            status = copy.status;
+            name = copy.name;
+            handler = copy.handler;
+            nargs = copy.nargs;
+            if(nargs>0) {
+                args = new ArgumentValue[nargs];
+                for (int i = 0; i < nargs; i++)
+                    args[i] = copy.args[i];
+            }
+            return *this;
+        }
+
+        inline operator bool() const { return status==URL_MATCHED; }
+    };
+
+public:
+    Handler defaultHandler; // like a 404 handler
+
+public:
+    /// \brief Initialize an empty UriExpression with a maximum number of code size.
+    explicit Endpoints(int elements);
+
+    /// \brief Destroys the RestUriExpression and releases memory
+    virtual ~Endpoints() {
+        ::free(ep_head);
+        binbag_free(text);
+    }
+
+    /// \brief Parse a single Uri Endpoint expressions and merge into the given UriExpression.
+    /// The supplied UriExpression does not need to be blank, it can contain previously compiled expressions.
+    Endpoint add(HttpMethod method, const char *endpoint_expression, Handler handler);
+
+    inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1 ) {
+        add(h1.method, endpoint_expression, h1.handler);
+        return *this;
+    }
+    inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2 ) {
+        add(endpoint_expression, h1);
+        return add(endpoint_expression, h2);
+    }
+    inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3 ) {
+        add(endpoint_expression, h1, h2);
+        return add(endpoint_expression, h3);
+    }
+
+
+    /// \brief Match a Uri against the compiled list of Uri expressions.
+    /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
+    Endpoint resolve(uint32_t method, const char *uri);
+
+    /// \brief Print the state machine code for the URL processor.
+    //yarn *debugPrint(UriExpression *expr, yarn *out);
+
+    /*
+     * Internal Members
+     */
+
+public:
+    inline Node* newNode()
+    {
+        return new (ep_end++) Node();
+    }
+
+    inline Argument* newArgument(const char* name, unsigned short typemask)
+    {
+        // todo: make this part of paged memory
+        size_t nameid = binbag_insert_distinct(text, name);
+        Argument* arg = new Argument(binbag_get(text, nameid), typemask);  // todo: use our binbag here
+        return arg;
+    }
+
+    Literal* newLiteral(Node* ep, Literal* literal);
+    Literal* addLiteralString(Node* ep, const char* literal_value);
+    Literal* addLiteralNumber(Node* ep, ssize_t literal_value);
+
+protected:
+    class Node
+    {
+    public:
+        // if there is more input in parse stream
+        Literal *literals;    // first try to match one of these literals
+
+        // if no literal matches, then try to match based on token type
+        Argument *string, *numeric, *boolean;
+
+        // if we are at the end of the URI then we can pass to one of the http verb handlers
+        Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
+    };
+
+    class Literal
+    {
+    public:
+        // if this argument is matched, the value is added to the request object under this field name
+        // this id usually indicates an index into an array of text terms (binbag)
+        ssize_t id;
+
+        // true if the id should be take as a numeric value and not a string index ID
+        bool isNumeric;
+
+        // if this is not an endpoint, then we point to the next term in the url path
+        Node* next;
+
+        inline bool isValid() { return isNumeric || (id>=0); }
+    };
+
+
+    class token {
+    private:
+        // seems strange to not allow copy or assignment but we dont need it
+        // we use swap() instead to pass the peek token to the current token (its more efficient)
+        token(const token& copy);
+        token& operator=(const token& copy);
+
+
+    public:
+        short id;
+        char *s;        // todo: we can probably make this use binbag, and store string ID in 'i'
+        int64_t i;
+        double d;
+
+        inline token() : id(0), s(nullptr), i(0), d(0) {}
+
+        ~token() { clear(); }
+
+        void clear()
+        {
+            if(s && id >=500)
+                free(s);
+            id = 0;
+            s = NULL;
+            i = 0;
+            d = 0.0;
+        }
+
+        // swap the values of two tokens, both tokens are modified
+        void swap(token& rhs) {
+            short _id = rhs.id;
+            char *_s = rhs.s;
+            int64_t _i = rhs.i;
+            double _d = rhs.d;
+            rhs.id = id;
+            rhs.s = s;
+            rhs.i = i;
+            rhs.d = d;
+            id = _id;
+            s = _s;
+            i = _i;
+            d = _d;
+        }
+
+        void set(short _id, const char* _begin, const char* _end)
+        {
+            assert(_id >= 500);  // only IDs above 500 can store a string
+            id = _id;
+            // todo: use static buffer here, we reuse tokens anyway
+            if(_end == nullptr) {
+                s = strdup(_begin);
+            } else {
+                s = (char *) calloc(1, _end - _begin + 1);
+                memcpy(s, _begin, _end - _begin);
+            }
+        }
+
+        //short scanner(const char **input, char *token)
+        int scan(const char** pinput, short allow_parameters)
+        {
+            const char* input = *pinput;
+            char error[512];
+
+            clear();
+
+            if(*input==0) {
+                id = TID_EOF;
+                *pinput = input;
+                return 0;
+            }
+
+            // check for single character token
+            // note: if we find a single char token we break and then return, otherwise (default) we jump over
+            // to check for longer token types like keywords and attributes
+            if(strchr("/", *input)!=NULL) {
+                s = NULL;
+                id = *input++;
+                goto done;
+            } else if(allow_parameters && strchr("=:?(|)", *input)!=NULL) {
+                // these symbols are allowed when we are scanning a Rest URL match expression
+                // but are not valid in normal URLs, or at least considered part of normal URL matching below
+                s = NULL;
+                id = *input++;
+                goto done;
+            }
+
+
+            // check for literal float
+            if(input[0]=='.') {
+                if(isdigit(input[1])) {
+                    // decimal number
+                    char *p;
+                    id = TID_FLOAT;
+                    d = strtod(input, &p);
+                    i = (int64_t) d;
+                    input = p;
+                    goto done;
+                } else {
+                    // plain dot symbol
+                    id = '.';
+                    s = NULL;
+                    input++;
+                    goto done;
+                }
+            } else if(input[0]=='0' && input[1]=='x') {
+                // hex constant
+                char* p;
+                id = TID_INTEGER;
+                i = (int64_t)strtoll(input, &p, 16);
+                input = p;
+                goto done;
+            } else if(isdigit(*input)) {
+//scan_number:
+                // integer or float constant
+                char *p;
+                id = TID_INTEGER;
+                i = (int64_t)strtoll(input, &p, 0);
+                if (*p == '.') {
+                    id = TID_FLOAT;
+                    d = strtod(input, &p);
+                    input = p;
+                } else
+                    input = p;
+                goto done;
+            }
+                // check for boolean value
+            else if(strncasecmp(input, "false", 5) ==0 && !isalnum(input[5])) {
+                input += 5;
+                id = TID_BOOL;
+                i = 0;
+                goto done;
+            }
+            else if(strncasecmp(input, "true", 4) ==0 && !isalnum(input[4])) {
+                input += 4;
+                id = TID_BOOL;
+                i = 1;
+                goto done;
+            }
+                // check for identifier
+            else if(isalpha(*input) || *input=='_') {
+                // pull out an identifier match
+                short ident = TID_IDENTIFIER;
+                const char* p = input;
+                while(*input && (*input=='_' || *input=='-' || isalnum(*input))) {
+                    input++;
+                }
+                set(ident, p, input);
+                goto done;
+            }
+
+            sprintf(error, "syntax error, unexpected '%c' in input", *input);
+            input++;
+            set(TID_ERROR, error, NULL);
+
+            done:
+            *pinput = input;
+            return 1;
+        }
+    };
+
+
+    typedef enum {
+        mode_add = 1,           // indicates adding a new endpoint/handler
+        mode_resolve = 2        // indicates we are resolving a URL to a defined handler
+    } eval_mode_e;
+
+    class rest_uri_eval_data {
+    public:
+        eval_mode_e mode;   // indicates if we are parsing to resolve or to add an endpoint
+
+        // parser data
+        const char *uri;    // parser input string (gets eaten as parsing occurs)
+        token t, peek;      // current token 't' and look-ahead token 'peek'
+
+        int state;          // parser state machine current state
+        int level;          // level of evaluation, typically 1 level per path separation
+
+        Node* ep;      // current endpoint evaluated
+//    const UriEndpoint *endpoint;    // static endpoint declaration using macros (only set when adding endpoints)
+
+        // holds the current method name
+        // the name is generated as we are parsing the URL
+        char methodName[2048];
+        char *pmethodName;
+
+        rest_uri_eval_data(Endpoints* expr, const char** _uri);
+
+        // will contain the arguments embedded in the URL
+        // when adding, will contain argument type info
+        // when resolving, will contain argument values
+        Argument** argtypes;
+        ArgumentValue* args;
+        size_t nargs;
+        size_t szargs;
+
+        // todo: json_object* arguments;
+    };
+
+protected:
+    short parse(rest_uri_eval_data* ev);
+
+};
+
