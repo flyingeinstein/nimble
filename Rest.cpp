@@ -32,7 +32,7 @@ typedef enum {
 } url_opcode_e;
 #endif
 
-Endpoints::rest_uri_eval_data::rest_uri_eval_data(Endpoints* _expr, const char** _uri)
+Endpoints::ParseData::ParseData(Endpoints* _expr, const char** _uri)
     : mode(mode_resolve), uri(nullptr), state(0), level(0), ep( _expr->ep_head ),
       pmethodName(methodName), argtypes(nullptr), args(nullptr), nargs(0), szargs(0)
 {
@@ -130,7 +130,7 @@ enum {
     expectEof
 } url_state_e;
 
-short Endpoints::parse(rest_uri_eval_data* ev)
+short Endpoints::parse(ParseData* ev)
 {
     short rv;
     uint64_t ptr;
@@ -442,7 +442,7 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
     if(exception != nullptr)
         return *this;
 
-    rest_uri_eval_data ev(this, &endpoint_expression);
+    ParseData ev(this, &endpoint_expression);
     if(ev.state<0) {
         exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL);
         return *this;
@@ -518,7 +518,7 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
 Endpoints::Endpoint Endpoints::resolve(HttpMethod method, const char *uri)
 {
     short rs;
-    rest_uri_eval_data ev(this, &uri);
+    ParseData ev(this, &uri);
     if(ev.state<0)
         return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
     ev.args = new ArgumentValue[ev.szargs = maxUriArgs];
@@ -557,7 +557,7 @@ Endpoints::Endpoint Endpoints::resolve(HttpMethod method, const char *uri)
 }
 
 #if 0
-yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev, yarn* out, int level)
+yarn* rest_uri_debug_print_internal(UriExpression* expr, ParseData* ev, yarn* out, int level)
 {
     Endpoint* ep = ev->ep;
     Argument* arg;
@@ -683,7 +683,7 @@ yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev,
 
 yarn* rest_uri_debug_print(UriExpression* expr, yarn* out)
 {
-    rest_uri_eval_data ev;
+    ParseData ev;
     if(rest_uri_init_eval_data(expr, &ev, nullptr)!=0)
         return nullptr;
     if(out==nullptr)

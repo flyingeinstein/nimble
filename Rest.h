@@ -132,7 +132,7 @@ protected:
     class Node;
     class Literal;
     class Argument;
-    class token;
+    class Token;
 
 private:
     // stores the expression as a chain of endpoint nodes
@@ -307,6 +307,7 @@ public:
     virtual ~Endpoints() {
         ::free(ep_head);
         binbag_free(text);
+        delete exception;
     }
 
     /// \brief Parse a single Uri Endpoint expressions and merge into the given UriExpression.
@@ -339,8 +340,10 @@ public:
 #endif
 
     inline Endpoints& katch(const std::function<void(Endpoint)>& endpoint_exception_handler) {
-        if(exception != nullptr)
+        if(exception != nullptr) {
             endpoint_exception_handler(*exception);
+            delete exception;
+        }
         return *this;
     }
 
@@ -374,6 +377,9 @@ public:
     Literal* addLiteralNumber(Node* ep, ssize_t literal_value);
 
 protected:
+    /// \brief if an error occurs during an add() this member will be set
+    /// all further add() calls will instantly return without adding Endpoints. Use katch() member to handle this
+    /// exception at some point after one or more add() calls.
     Endpoint* exception;
 
     class Node
@@ -406,12 +412,12 @@ protected:
     };
 
 
-    class token {
+    class Token {
     private:
         // seems strange to not allow copy or assignment but we dont need it
         // we use swap() instead to pass the peek token to the current token (its more efficient)
-        token(const token& copy);
-        token& operator=(const token& copy);
+        Token(const Token& copy);
+        Token& operator=(const Token& copy);
 
 
     public:
@@ -420,10 +426,11 @@ protected:
         int64_t i;
         double d;
 
-        inline token() : id(0), s(nullptr), i(0), d(0) {}
+        inline Token() : id(0), s(nullptr), i(0), d(0) {}
 
-        ~token() { clear(); }
+        ~Token() { clear(); }
 
+        /// \brief clears the token and frees memory if token was a string
         void clear()
         {
             if(s && id >=500)
@@ -434,8 +441,10 @@ protected:
             d = 0.0;
         }
 
-        // swap the values of two tokens, both tokens are modified
-        void swap(token& rhs) {
+        /// \brief swap the values of two tokens
+        /// If using a current and peek token during parsing, this can be more efficient than copying the token
+        /// across by saving a possible string copy and memory allocation.
+        void swap(Token& rhs) {
             short _id = rhs.id;
             char *_s = rhs.s;
             int64_t _i = rhs.i;
@@ -463,7 +472,7 @@ protected:
             }
         }
 
-        //short scanner(const char **input, char *token)
+        /// \brief scans the next token from the URL line
         int scan(const char** pinput, short allow_parameters)
         {
             const char* input = *pinput;
@@ -570,28 +579,27 @@ protected:
     typedef enum {
         mode_add = 1,           // indicates adding a new endpoint/handler
         mode_resolve = 2        // indicates we are resolving a URL to a defined handler
-    } eval_mode_e;
+    } parse_mode_e;
 
-    class rest_uri_eval_data {
+    class ParseData {
     public:
-        eval_mode_e mode;   // indicates if we are parsing to resolve or to add an endpoint
+        parse_mode_e mode;   // indicates if we are parsing to resolve or to add an endpoint
 
         // parser data
         const char *uri;    // parser input string (gets eaten as parsing occurs)
-        token t, peek;      // current token 't' and look-ahead token 'peek'
+        Token t, peek;      // current token 't' and look-ahead token 'peek'
 
         int state;          // parser state machine current state
         int level;          // level of evaluation, typically 1 level per path separation
 
         Node* ep;      // current endpoint evaluated
-//    const UriEndpoint *endpoint;    // static endpoint declaration using macros (only set when adding endpoints)
 
         // holds the current method name
         // the name is generated as we are parsing the URL
         char methodName[2048];
         char *pmethodName;
 
-        rest_uri_eval_data(Endpoints* expr, const char** _uri);
+        ParseData(Endpoints* expr, const char** _uri);
 
         // will contain the arguments embedded in the URL
         // when adding, will contain argument type info
@@ -600,12 +608,10 @@ protected:
         ArgumentValue* args;
         size_t nargs;
         size_t szargs;
-
-        // todo: json_object* arguments;
     };
 
 protected:
-    short parse(rest_uri_eval_data* ev);
+    short parse(ParseData* ev);
 
 };
 
