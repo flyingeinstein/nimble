@@ -14,6 +14,8 @@
 
 // format:    /api/test/:param_name(integer|real|number|string|boolean)/method
 
+namespace Rest {
+
 #define URL_MATCHED                         0
 #define URL_FAIL_NO_ENDPOINT                (-1)
 #define URL_FAIL_NO_HANDLER                 (-2)
@@ -670,6 +672,6 @@ protected:
 
 protected:
     short parse(ParseData* ev);
-
 };
 
+} // ns:Rest

@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Rest.h"
 
+using namespace Rest;
 
 int main(int argc, const char* argv[])
 {

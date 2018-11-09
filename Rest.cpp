@@ -32,6 +32,8 @@ typedef enum {
 } url_opcode_e;
 #endif
 
+namespace Rest {
+
 const Endpoints::Argument Endpoints::Argument::null;
 
 Endpoints::ParseData::ParseData(Endpoints* _expr, const char** _uri)
@@ -744,3 +746,4 @@ Endpoints::Literal* Endpoints::addLiteralNumber(Node* ep, ssize_t literal_value)
 }
 
 
+} // ns: Rest
