@@ -5,6 +5,7 @@
 #include <cstring>
 #include <sys/types.h>
 #include <cassert>
+#include <functional>
 
 
 #include "pool.h"
@@ -13,8 +14,7 @@
 
 // format:    /api/test/:param_name(integer|real|number|string|boolean)/method
 
-#define URL_MATCHED                         1
-#define URL_PARTIAL                         (0)
+#define URL_MATCHED                         0
 #define URL_FAIL_NO_ENDPOINT                (-1)
 #define URL_FAIL_NO_HANDLER                 (-2)
 #define URL_FAIL_DUPLICATE                  (-3)
@@ -95,6 +95,11 @@ typedef enum {
 
 typedef uint16_t url_opcode_t;
 
+/// \defgroup MethodHandlers Associates an http method verb to a handler function
+/// \@{
+/// \brief Class used to associate a http method verb with a handler function
+/// This is used when adding a handler to an endpoint for specific http verbs such as GET, PUT, POST, PATCH, DELETE, etc.
+/// Do not use this class, but instead use the template functions  GET(handler), PUT(handler), POST(handler), etc.
 template<class H>
 class MethodHandler {
 public:
@@ -111,6 +116,8 @@ template<class H> MethodHandler<H> PATCH(H& handler) { return MethodHandler<H>(H
 template<class H> MethodHandler<H> DELETE(H& handler) { return MethodHandler<H>(HttpDelete, handler); }
 template<class H> MethodHandler<H> OPTIONS(H& handler) { return MethodHandler<H>(HttpOptions, handler); }
 template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(HttpMethodAny, handler); }
+/// \@}
+
 
 /// \brief Implements a compiled list of Rest Uri Endpoint expressions
 /// Each UriExpression contains one or more Uri Endpoint expressions in a compiled form.
@@ -215,11 +222,21 @@ public:
             return -1;
         }
 
-        inline operator long() const { assert(type&ARG_MASK_INTEGER); return l; }
-        inline operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
-        inline operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
-        inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
-        inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
+        inline bool isInteger() const { return (type&ARG_MASK_INTEGER)==ARG_MASK_INTEGER; }
+        inline bool isSignedInteger() const { return (type&ARG_MASK_UINTEGER)==ARG_MASK_INTEGER; }
+        inline bool isUnsignedInteger() const { return (type&ARG_MASK_UINTEGER)==ARG_MASK_UINTEGER; }
+        inline bool isNumber() const { return (type&ARG_MASK_NUMBER)==ARG_MASK_NUMBER; }
+        inline bool isBoolean() const { return (type&ARG_MASK_BOOLEAN)==ARG_MASK_BOOLEAN; }
+        inline bool isString() const { return (type&ARG_MASK_STRING)==ARG_MASK_STRING; }
+
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+        // only supported in C++11
+        inline explicit operator long() const { assert(type&ARG_MASK_INTEGER); return l; }
+        inline explicit operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
+        inline explicit operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
+        inline explicit operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
+        inline explicit operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
+#endif
 
 #if 0   // ArgumentValues should never change, so use constructor only (and assignment op if needed)
         void set(long _l) { type = ARG_MASK_INTEGER; l = _l; }
@@ -242,14 +259,15 @@ public:
     public:
         int status;
         std::string name;
+        HttpMethod method;
         Handler handler;
 
         ArgumentValue* args;
         size_t nargs;
 
-        inline Endpoint() :  status(0), args(nullptr), nargs(0) {}
-        inline Endpoint(const Handler& _handler, int _status) :  status(_status), handler(_handler), args(nullptr), nargs(0) {}
-        inline Endpoint(const Endpoint& copy) : status(copy.status), name(copy.name), handler(copy.handler),
+        inline Endpoint() :  status(0), method(HttpMethodAny), args(nullptr), nargs(0) {}
+        inline Endpoint(HttpMethod _method, const Handler& _handler, int _status) :  status(_status), method(_method), handler(_handler), args(nullptr), nargs(0) {}
+        inline Endpoint(const Endpoint& copy) : status(copy.status), name(copy.name), handler(copy.handler), method(copy.method),
                     args(nullptr), nargs(copy.nargs)
         {
             if(nargs>0) {
@@ -264,6 +282,7 @@ public:
         inline Endpoint& operator=(const Endpoint& copy) {
             status = copy.status;
             name = copy.name;
+            method = copy.method;
             handler = copy.handler;
             nargs = copy.nargs;
             if(nargs>0) {
@@ -319,9 +338,15 @@ public:
     }
 #endif
 
+    inline Endpoints& katch(const std::function<void(Endpoint)>& endpoint_exception_handler) {
+        if(exception != nullptr)
+            endpoint_exception_handler(*exception);
+        return *this;
+    }
+
     /// \brief Match a Uri against the compiled list of Uri expressions.
     /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
-    Endpoint resolve(uint32_t method, const char *uri);
+    Endpoint resolve(HttpMethod method, const char *uri);
 
     /// \brief Print the state machine code for the URL processor.
     //yarn *debugPrint(UriExpression *expr, yarn *out);

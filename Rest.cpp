@@ -66,9 +66,9 @@ const char* uri_method_to_string(uint32_t method) {
 const char* uri_result_to_string(short result) {
     switch(result) {
         case URL_MATCHED: return "matched";
-        case URL_PARTIAL: return "partial match";
         case URL_FAIL_NO_ENDPOINT: return "no matching endpoint";
         case URL_FAIL_NO_HANDLER: return "endpoint doesnt support requests for given http verb";
+        case URL_FAIL_DUPLICATE: return "endpoint already exists";
         case URL_FAIL_PARAMETER_TYPE: return "parameter type mismatch";
         case URL_FAIL_MISSING_PARAMETER: return "missing expected parameter";
         case URL_FAIL_AMBIGUOUS_PARAMETER: return "ambiguous parameter type in endpoint declaration";
@@ -160,16 +160,6 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                     // add seperator to method name
                     if(ev->pmethodName > ev->methodName && *(ev->pmethodName-1)!='/')
                         *ev->pmethodName++ = '/';
-
-                    // recursively call parse so we can add more code at the end of this match
-#if 0 // another case of not having to recurse
-                    SCAN;
-                    if((rv=parse(ev))!=0)
-                        return rv;
-
-                    // we can post-evaluate the branch we just parsed here
-                    return 0;
-#endif
                 } else if(ev->t.id == TID_EOF) {
                     // safe place to end
                     goto done;
@@ -215,13 +205,6 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                     // add component to method name
                     strcpy(ev->pmethodName, ev->t.s);
                     ev->pmethodName += strlen(ev->t.s);
-
-#if 0   // todo: validate: we recursed in iq, but we didt do a scan first (either add SCAN, or dont recurse because we are no longer doing anything after)
-                    // recursively call parse so we can add more code at the end of this match
-                    if((rv=parse(ev))!=0)
-                        return rv;
-                    return 0;   // inner recursive call would have completed call, so we are done too
-#endif
                 } else if(ev->mode==mode_resolve) {
                     GOTO_STATE(expectParameterValue);
                 } else
@@ -237,25 +220,21 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                     // we can match by string argument type (parameter match)
                     assert(ev->args);
                     ev->args[ev->nargs++] = ArgumentValue(*epc->string, ev->t.s);
-                    //json_object_object_add(ev->arguments, epc->string->name, json_object_new_string(ev->t.s));
                     ev->ep = epc->string->next;
                     _typename = "string";
                 } else if(ev->t.id==TID_INTEGER && epc->numeric!=NULL) {
                     // numeric argument
                     ev->args[ev->nargs++] = ArgumentValue(*epc->numeric, (long)ev->t.i);
-                    //json_object_object_add(ev->arguments, epc->numeric->name, json_object_new_int64(ev->t.i));
                     ev->ep = epc->numeric->next;
                     _typename = "int";
                 } else if(ev->t.id==TID_FLOAT && epc->numeric!=NULL) {
                     // numeric argument
                     ev->args[ev->nargs++] = ArgumentValue(*epc->numeric, ev->t.d);
-                    //json_object_object_add(ev->arguments, epc->numeric->name, json_object_new_double(ev->t.d));
                     ev->ep = epc->numeric->next;
                     _typename = "float";
                 } else if(ev->t.id==TID_BOOL && epc->boolean!=NULL) {
                     // numeric argument
                     ev->args[ev->nargs++] = ArgumentValue(*epc->boolean, ev->t.i>0);
-                    //json_object_object_add(ev->arguments, epc->boolean->name, json_object_new_boolean(ev->t.i>0));
                     ev->ep = epc->boolean->next;
                     _typename = "boolean";
                 } else
@@ -355,7 +334,7 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                             }
                         }
 
-                        if(x!=NULL) {
+                        if(x != nullptr) {
                             uint16_t _typemask = (uint16_t)(((typemask & ARG_MASK_NUMBER)>0) ? typemask | ARG_MASK_NUMBER : typemask);
                             assert(tm>0); // must have gotten at least some typemask then
                             if(tm == _typemask) {
@@ -374,7 +353,7 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                     }
 
 
-                    if(arg==NULL) {
+                    if(arg == nullptr) {
                         // add the argument to the Endpoint
                         arg = newArgument(name, typemask);
                         if(ev->argtypes) {
@@ -385,27 +364,20 @@ short Endpoints::parse(rest_uri_eval_data* ev)
 
                         if ((typemask & ARG_MASK_NUMBER) > 0) {
                             // int or real
-                            if (epc->numeric == NULL)
+                            if (epc->numeric == nullptr)
                                 epc->numeric = arg;
                         }
                         if ((typemask & ARG_MASK_BOOLEAN) > 0) {
                             // boolean
-                            if (epc->boolean == NULL)
+                            if (epc->boolean == nullptr)
                                 epc->boolean = arg;
                         }
                         if ((typemask & ARG_MASK_STRING) > 0) {
                             // string
-                            if (epc->string == NULL)
+                            if (epc->string == nullptr)
                                 epc->string = arg;
                         }
                     }
-
-#if 0   // i dont think it makes sense to accept defaults...how would that really work in URLs
-                    // read a default if given
-                    if(peek.id=='=') {
-                        // read default value
-                    }
-#endif
 
                     NEXT_STATE( expectPathSep );
 
@@ -419,30 +391,25 @@ short Endpoints::parse(rest_uri_eval_data* ev)
 
             case expectEof:
                 return (ev->t.id !=TID_EOF)
-                        ? URL_FAIL_NO_ENDPOINT
-                        : 0;
+                        ? (short)URL_FAIL_NO_ENDPOINT
+                        : (short)0;
             case errorExpectedIdentifier:
                 return -2;
-                break;
             case errorExpectedIdentifierOrString:
                 return -3;
-                break;
         }
 
         // next token
         SCAN;
     }
 
-    {
-        // set the method name
-        if (*(ev->pmethodName - 1) == '/')
-            ev->pmethodName--;
-        *ev->pmethodName = 0;
-    }
-
+    // set the method name
+    if (*(ev->pmethodName - 1) == '/')
+        ev->pmethodName--;
+    *ev->pmethodName = 0;
 
 done:
-    return 0;
+    return URL_MATCHED;
 }
 
 #if 0
@@ -477,7 +444,6 @@ json_object* json_object_from_token(token t)
 Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler> methodHandler )
 {
     short rs;
-    const char* uri = endpoint_expression;
 
     // if exception was set, abort
     if(exception != nullptr)
@@ -485,7 +451,7 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
 
     rest_uri_eval_data ev(this, &endpoint_expression);
     if(ev.state<0) {
-        exception = new Endpoint(defaultHandler, URL_FAIL_INTERNAL);
+        exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL);
         return *this;
     }
 
@@ -493,9 +459,10 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
     ev.argtypes = (Argument**)calloc(ev.szargs = 20, sizeof(Argument));
     ev.mode = mode_add;         // tell the parser we are adding this endpoint
 
-    if((rs = parse(&ev)) !=0) {
-        printf("parse-eval-error %d   %s\n", rs, ev.uri);
-        exception = new Endpoint(defaultHandler, rs);
+    if((rs = parse(&ev)) !=URL_MATCHED) {
+        //printf("parse-eval-error %d   %s\n", rs, ev.uri);
+        exception = new Endpoint(methodHandler.method, defaultHandler, rs);
+        exception->name = endpoint_expression;
         return *this;
     } else {
         // if we encountered more args than we did before, then save the new value
@@ -532,16 +499,18 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
                 case HttpDelete: target = &epc->DELETE; break;
                 case HttpOptions: target = &epc->OPTIONS; break;
                 default:
-                    exception = new Endpoint(defaultHandler, URL_FAIL_INTERNAL); // unknown method type
+                    exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL); // unknown method type
+                    exception->name = endpoint_expression;
                     return *this;
             }
 
             if(target !=nullptr) {
                 // set the target method handler but error if it was already set by a previous endpoint declaration
                 if(*target !=nullptr ) {
-                    fprintf(stderr, "fatal: endpoint %s %s was previously set to a different handler\n",
-                            uri_method_to_string(methodHandler.method), endpoint_expression);
-                    exception = new Endpoint(defaultHandler, URL_FAIL_DUPLICATE);
+                    //fprintf(stderr, "fatal: endpoint %s %s was previously set to a different handler\n",
+                    //        uri_method_to_string(methodHandler.method), endpoint_expression);
+                    exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_DUPLICATE);
+                    exception->name = endpoint_expression;
                     return *this;
                 } else {
                     *target = new Handler(methodHandler.handler);
@@ -553,16 +522,16 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
     return *this;
 }
 
-Endpoints::Endpoint Endpoints::resolve(uint32_t method, const char *uri)
+Endpoints::Endpoint Endpoints::resolve(HttpMethod method, const char *uri)
 {
     short rs;
     rest_uri_eval_data ev(this, &uri);
     if(ev.state<0)
-        return Endpoint(defaultHandler, URL_FAIL_INTERNAL);
+        return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
     ev.args = new ArgumentValue[ev.szargs = maxUriArgs];
 
     // parse the input
-    if((rs=parse( &ev )) ==0) {
+    if((rs=parse( &ev )) ==URL_MATCHED) {
         // successfully resolved the endpoint
         Endpoint endpoint;
         Handler* handler;
@@ -588,9 +557,8 @@ Endpoints::Endpoint Endpoints::resolve(uint32_t method, const char *uri)
         }
         return endpoint;
     } else {
-        // todo: we shouldnt print the error
-        printf("parse-eval-error %d   %s\n", rs, ev.uri);
-        return Endpoint(defaultHandler, URL_FAIL_NO_ENDPOINT);
+        // cannot resolve
+        return Endpoint(method, defaultHandler, rs);
     }
     // todo: we need to release memory from EV struct
 }
