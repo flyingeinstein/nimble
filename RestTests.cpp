@@ -35,8 +35,12 @@ int main(int argc, const char* argv[])
     Endpoints::Endpoint rb1 = endpoints.resolve(HttpGet, "/api/devices/5/slots");
     Endpoints::Endpoint rb2 = endpoints.resolve(HttpGet, "/api/devices/i2c/slots");
     Endpoints::Endpoint rc1 = endpoints.resolve(HttpPut, "/api/devices/i2c/slot/96/meta");
+    const char* devid = rc1["dev"];
+    unsigned long slotid = rc1["slot"];
 
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpPut, "/api/bus/i2c/3/devices");
+    unsigned long busid = r_1["bus"];
+
     Endpoints::Endpoint r_1f = endpoints.resolve(HttpPut, "/api/bus/i2c");
 
     return 0;

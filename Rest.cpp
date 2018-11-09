@@ -32,6 +32,8 @@ typedef enum {
 } url_opcode_e;
 #endif
 
+const Endpoints::Argument Endpoints::Argument::null;
+
 Endpoints::ParseData::ParseData(Endpoints* _expr, const char** _uri)
     : mode(mode_resolve), uri(nullptr), state(0), level(0), ep( _expr->ep_head ),
       pmethodName(methodName), argtypes(nullptr), args(nullptr), nargs(0), szargs(0)
@@ -137,7 +139,7 @@ short Endpoints::parse(ParseData* ev)
     long wid;
     Node* epc = ev->ep;
     Literal* lit;
-    Argument* arg;
+    ArgumentType* arg;
 
     // read datatype or decl type
     while(ev->t.id!=TID_EOF) {
@@ -166,7 +168,7 @@ short Endpoints::parse(ParseData* ev)
                 }
             } break;
             case expectHtmlSuffix: {
-                if(ev->t.is(TID_STRING , TID_IDENTIFIER) {
+                if(ev->t.is(TID_STRING , TID_IDENTIFIER)) {
                     if(strcasecmp(ev->t.s, "html") !=0) {
                         return URL_FAIL_NO_ENDPOINT;    // only supports no suffix, or html suffix
                     } else
@@ -216,25 +218,25 @@ short Endpoints::parse(ParseData* ev)
                 assert(ev->nargs < ev->szargs);
 
                 // try to match a parameter by type
-                if((ev->t.is(TID_STRING, TID_IDENTIFIER) && epc->string!=nullptr) {
+                if(ev->t.is(TID_STRING, TID_IDENTIFIER) && epc->string!=nullptr) {
                     // we can match by string argument type (parameter match)
                     assert(ev->args);
-                    ev->args[ev->nargs++] = ArgumentValue(*epc->string, ev->t.s);
+                    ev->args[ev->nargs++] = Argument(*epc->string, ev->t.s);
                     ev->ep = epc->string->next;
                     _typename = "string";
                 } else if(ev->t.id==TID_INTEGER && epc->numeric!=nullptr) {
                     // numeric argument
-                    ev->args[ev->nargs++] = ArgumentValue(*epc->numeric, (long)ev->t.i);
+                    ev->args[ev->nargs++] = Argument(*epc->numeric, (long)ev->t.i);
                     ev->ep = epc->numeric->next;
                     _typename = "int";
                 } else if(ev->t.id==TID_FLOAT && epc->numeric!=nullptr) {
                     // numeric argument
-                    ev->args[ev->nargs++] = ArgumentValue(*epc->numeric, ev->t.d);
+                    ev->args[ev->nargs++] = Argument(*epc->numeric, ev->t.d);
                     ev->ep = epc->numeric->next;
                     _typename = "float";
                 } else if(ev->t.id==TID_BOOL && epc->boolean!=nullptr) {
                     // numeric argument
-                    ev->args[ev->nargs++] = ArgumentValue(*epc->boolean, ev->t.i>0);
+                    ev->args[ev->nargs++] = Argument(*epc->boolean, ev->t.i>0);
                     ev->ep = epc->boolean->next;
                     _typename = "boolean";
                 } else
@@ -296,7 +298,7 @@ short Endpoints::parse(ParseData* ev)
                     // we cannot have two different handlers that handle the same type, but if the typemask
                     // exactly matches we can just consider a match and jump to that endpoint.
                     uint16_t tm_values[3] = { ARG_MASK_NUMBER, ARG_MASK_STRING, ARG_MASK_BOOLEAN };
-                    Argument* tm_handlers[3] = { epc->numeric, epc->string, epc->boolean };
+                    ArgumentType* tm_handlers[3] = { epc->numeric, epc->string, epc->boolean };
 
                     // we loop through our list of handlers, we save the first non-nullptr handler encountered and
                     // then find more instances of that handler and build a typemask. We set the handlers in our
@@ -306,7 +308,7 @@ short Endpoints::parse(ParseData* ev)
                     while(arg==nullptr && (tm_handlers[0]!=nullptr || tm_handlers[1]!=nullptr || tm_handlers[2]!=nullptr)) {
                         int i;
                         uint16_t tm=0;
-                        Argument *x=nullptr, *y=nullptr;
+                        ArgumentType *x=nullptr, *y=nullptr;
                         for(i=0; i<sizeof(tm_handlers)/sizeof(tm_handlers[0]); i++) {
                             if(tm_handlers[i]!=nullptr) {
                                 if(x==nullptr) {
@@ -444,7 +446,7 @@ Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler
     }
 
     //ev.endpoint = endpoint;     // the endpoint constant we are adding
-    ev.argtypes = (Argument**)calloc(ev.szargs = 20, sizeof(Argument));
+    ev.argtypes = (ArgumentType**)calloc(ev.szargs = 20, sizeof(ArgumentType));
     ev.mode = mode_add;         // tell the parser we are adding this endpoint
 
     if((rs = parse(&ev)) !=URL_MATCHED) {
@@ -516,7 +518,7 @@ Endpoints::Endpoint Endpoints::resolve(HttpMethod method, const char *uri)
     ParseData ev(this, &uri);
     if(ev.state<0)
         return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
-    ev.args = new ArgumentValue[ev.szargs = maxUriArgs];
+    ev.args = new Argument[ev.szargs = maxUriArgs];
 
     // parse the input
     if((rs=parse( &ev )) ==URL_MATCHED) {

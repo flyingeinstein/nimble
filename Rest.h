@@ -131,7 +131,7 @@ public:
 protected:
     class Node;
     class Literal;
-    class Argument;
+    class ArgumentType;
     class Token;
 
 private:
@@ -164,11 +164,11 @@ public:
     };
 
 protected:
-    class Argument
+    class ArgumentType
     {
     public:
-        inline Argument() : name(nullptr), typemask(0), next(nullptr) {}
-        Argument(const char* _name, unsigned short _typemask) : name(_name), typemask(_typemask), next(nullptr) {}
+        inline ArgumentType() : name(nullptr), typemask(0), next(nullptr) {}
+        ArgumentType(const char* _name, unsigned short _typemask) : name(_name), typemask(_typemask), next(nullptr) {}
 
     public:
         // if this argument is matched, the value is added to the request object under this field name
@@ -182,27 +182,27 @@ protected:
     };
 
 public:
-    class ArgumentValue : protected Argument {
+    class Argument : protected ArgumentType {
     public:
-        ArgumentValue() : type(0), ul(0) {}
-        ArgumentValue(const ArgumentValue& copy) : Argument(copy), type(copy.type), ul(copy.ul) {
+        Argument() : type(0), ul(0) {}
+        Argument(const Argument& copy) : ArgumentType(copy), type(copy.type), ul(copy.ul) {
             if(type == ARG_MASK_STRING) {
                 s = strdup(copy.s);
             }
         }
 
-        ArgumentValue(const Argument& arg) : Argument(arg), type(0), ul(0) {}
+        Argument(const ArgumentType& arg) : ArgumentType(arg), type(0), ul(0) {}
 
-        ArgumentValue(const Argument& arg, long _l) : Argument(arg), type(ARG_MASK_INTEGER), l(_l) {}
-        ArgumentValue(const Argument& arg, unsigned long _ul) : Argument(arg), type(ARG_MASK_UINTEGER), ul(_ul) {}
-        ArgumentValue(const Argument& arg, double _d) : Argument(arg), type(ARG_MASK_NUMBER), d(_d) {}
-        ArgumentValue(const Argument& arg, bool _b) : Argument(arg), type(ARG_MASK_BOOLEAN), b(_b) {}
-        ArgumentValue(const Argument& arg, const char* _s) : Argument(arg), type(ARG_MASK_STRING), s(strdup(_s)) {}
+        Argument(const ArgumentType& arg, long _l) : ArgumentType(arg), type(ARG_MASK_INTEGER), l(_l) {}
+        Argument(const ArgumentType& arg, unsigned long _ul) : ArgumentType(arg), type(ARG_MASK_UINTEGER), ul(_ul) {}
+        Argument(const ArgumentType& arg, double _d) : ArgumentType(arg), type(ARG_MASK_NUMBER), d(_d) {}
+        Argument(const ArgumentType& arg, bool _b) : ArgumentType(arg), type(ARG_MASK_BOOLEAN), b(_b) {}
+        Argument(const ArgumentType& arg, const char* _s) : ArgumentType(arg), type(ARG_MASK_STRING), s(strdup(_s)) {}
 
-        ~ArgumentValue() { if(s && type == ARG_MASK_STRING) ::free(s); }
+        ~Argument() { if(s && type == ARG_MASK_STRING) ::free(s); }
 
-        ArgumentValue& operator=(const ArgumentValue& copy) {
-            Argument::operator=(copy);
+        Argument& operator=(const Argument& copy) {
+            ArgumentType::operator=(copy);
             type = copy.type;
             if(type == ARG_MASK_STRING)
                 s = strdup(copy.s);
@@ -210,6 +210,8 @@ public:
                 ul = copy.ul;
             return *this;
         }
+
+        inline const char* name() const { return ArgumentType::name; }
 
         int isOneOf(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
             typeof(strcmp) *cmpfunc = case_insensitive
@@ -233,14 +235,12 @@ public:
         inline bool isBoolean() const { return (type&ARG_MASK_BOOLEAN)==ARG_MASK_BOOLEAN; }
         inline bool isString() const { return (type&ARG_MASK_STRING)==ARG_MASK_STRING; }
 
-#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
         // only supported in C++11
-        inline explicit operator long() const { assert(type&ARG_MASK_INTEGER); return l; }
-        inline explicit operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
-        inline explicit operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
-        inline explicit operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
-        inline explicit operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
-#endif
+        inline operator long() const { assert(type&ARG_MASK_INTEGER); return l; }
+        inline operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
+        inline operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
+        inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
+        inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
 
 #if 0   // ArgumentValues should never change, so use constructor only (and assignment op if needed)
         void set(long _l) { type = ARG_MASK_INTEGER; l = _l; }
@@ -257,6 +257,9 @@ public:
             bool b;
             char* s;
         };
+
+    public:
+        static const Argument null;
     };
 
     class Endpoint {
@@ -266,16 +269,13 @@ public:
         HttpMethod method;
         Handler handler;
 
-        ArgumentValue* args;
-        size_t nargs;
-
         inline Endpoint() :  status(0), method(HttpMethodAny), args(nullptr), nargs(0) {}
         inline Endpoint(HttpMethod _method, const Handler& _handler, int _status) :  status(_status), method(_method), handler(_handler), args(nullptr), nargs(0) {}
         inline Endpoint(const Endpoint& copy) : status(copy.status), name(copy.name), handler(copy.handler), method(copy.method),
                     args(nullptr), nargs(copy.nargs)
         {
             if(nargs>0) {
-                args = new ArgumentValue[nargs];
+                args = new Argument[nargs];
                 for (int i = 0; i < nargs; i++)
                     args[i] = copy.args[i];
             }
@@ -290,14 +290,34 @@ public:
             handler = copy.handler;
             nargs = copy.nargs;
             if(nargs>0) {
-                args = new ArgumentValue[nargs];
+                args = new Argument[nargs];
                 for (int i = 0; i < nargs; i++)
                     args[i] = copy.args[i];
             }
             return *this;
         }
 
-        inline operator bool() const { return status==URL_MATCHED; }
+        inline explicit operator bool() const { return status==URL_MATCHED; }
+
+        const Argument& operator[](int idx) const {
+            return (idx>=0 && idx<nargs)
+                ? args[idx]
+                : Argument::null;
+        }
+
+        const Argument& operator[](const char* _name) const {
+            for(int i=0; i<nargs; i++) {
+                if (strcmp(_name, args[i].name()) == 0)
+                    return args[i];
+            }
+            return Argument::null;
+        }
+
+    protected:
+        Argument* args;
+        size_t nargs;
+
+        friend Endpoints;
     };
 
 public:
@@ -361,11 +381,11 @@ public:
         return new (ep_end++) Node();
     }
 
-    inline Argument* newArgument(const char* name, unsigned short typemask)
+    inline ArgumentType* newArgument(const char* name, unsigned short typemask)
     {
         // todo: make this part of paged memory
         size_t nameid = binbag_insert_distinct(text, name);
-        Argument* arg = new Argument(binbag_get(text, nameid), typemask);  // todo: use our binbag here
+        ArgumentType* arg = new ArgumentType(binbag_get(text, nameid), typemask);  // todo: use our binbag here
         return arg;
     }
 
@@ -386,7 +406,7 @@ protected:
         Literal *literals;    // first try to match one of these literals
 
         // if no literal matches, then try to match based on token type
-        Argument *string, *numeric, *boolean;
+        ArgumentType *string, *numeric, *boolean;
 
         // if we are at the end of the URI then we can pass to one of the http verb handlers
         Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
@@ -642,8 +662,8 @@ protected:
         // will contain the arguments embedded in the URL
         // when adding, will contain argument type info
         // when resolving, will contain argument values
-        Argument** argtypes;
-        ArgumentValue* args;
+        ArgumentType** argtypes;
+        Argument* args;
         size_t nargs;
         size_t szargs;
     };
