@@ -166,7 +166,7 @@ short Endpoints::parse(ParseData* ev)
                 }
             } break;
             case expectHtmlSuffix: {
-                if(ev->t.id==TID_STRING || ev->t.id==TID_IDENTIFIER) {
+                if(ev->t.is(TID_STRING , TID_IDENTIFIER) {
                     if(strcasecmp(ev->t.s, "html") !=0) {
                         return URL_FAIL_NO_ENDPOINT;    // only supports no suffix, or html suffix
                     } else
@@ -174,7 +174,7 @@ short Endpoints::parse(ParseData* ev)
                 }
             } break;
             case expectPathPart: {
-                if(ev->t.id==TID_STRING || ev->t.id==TID_IDENTIFIER) {
+                if(ev->t.is(TID_STRING, TID_IDENTIFIER)) {
                     // we must see if we already have a literal with this name
                     lit = nullptr;
                     wid = binbag_find_nocase(text, ev->t.s);
@@ -216,7 +216,7 @@ short Endpoints::parse(ParseData* ev)
                 assert(ev->nargs < ev->szargs);
 
                 // try to match a parameter by type
-                if((ev->t.id==TID_STRING || ev->t.id==TID_IDENTIFIER) && epc->string!=nullptr) {
+                if((ev->t.is(TID_STRING, TID_IDENTIFIER) && epc->string!=nullptr) {
                     // we can match by string argument type (parameter match)
                     assert(ev->args);
                     ev->args[ev->nargs++] = ArgumentValue(*epc->string, ev->t.s);

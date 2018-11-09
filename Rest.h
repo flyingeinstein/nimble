@@ -211,16 +211,20 @@ public:
             return *this;
         }
 
-        template<ssize_t N>
-        ssize_t isOneOf(const char* (&enum_values)[N], bool case_insensitive=true) const {
+        int isOneOf(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
             typeof(strcmp) *cmpfunc = case_insensitive
-                     ? &strcasecmp
-                     : &strcmp;
-            for(ssize_t i=0; i<N; i++)
-                if(cmpfunc(s, enum_values[i]) ==0)
-                    return i;
+                                      ? &strcasecmp
+                                      : &strcmp;
+            if((type&ARG_MASK_STRING)!=ARG_MASK_STRING)
+                return -2;
+            int j=0;
+            for(std::initializer_list<const char*>::const_iterator x=enum_values.begin(), _x=enum_values.end(); x!=_x; x++,j++) {
+                if (cmpfunc(s, *x) == 0)
+                    return j;
+            }
             return -1;
         }
+
 
         inline bool isInteger() const { return (type&ARG_MASK_INTEGER)==ARG_MASK_INTEGER; }
         inline bool isSignedInteger() const { return (type&ARG_MASK_UINTEGER)==ARG_MASK_INTEGER; }
@@ -465,9 +469,18 @@ protected:
             }
         }
 
+        inline bool is(short _id) const {
+            return id == _id;
+        }
+
+        template<typename... Targs>
+        inline bool is(short _id, Targs... args) const {
+            return id == _id || is(args...);
+        }
+
         int isOneOf(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
             if(id<=500)
-                return -1;
+                return -2;
             typeof(strcmp) *cmpfunc = case_insensitive
                                       ? &strcasecmp
                                       : &strcmp;
@@ -481,7 +494,7 @@ protected:
 
         int toEnum(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
             if(id<=500)
-                return -1;
+                return -2;
             typeof(strcmp) *cmpfunc = case_insensitive
                                       ? &strcasecmp
                                       : &strcmp;
