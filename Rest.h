@@ -480,14 +480,14 @@ protected:
             // check for single character token
             // note: if we find a single char token we break and then return, otherwise (default) we jump over
             // to check for longer token types like keywords and attributes
-            if(strchr("/", *input)!=NULL) {
-                s = NULL;
+            if(strchr("/", *input)!=nullptr) {
+                s = nullptr;
                 id = *input++;
                 goto done;
-            } else if(allow_parameters && strchr("=:?(|)", *input)!=NULL) {
+            } else if(allow_parameters && strchr("=:?(|)", *input)!=nullptr) {
                 // these symbols are allowed when we are scanning a Rest URL match expression
                 // but are not valid in normal URLs, or at least considered part of normal URL matching below
-                s = NULL;
+                s = nullptr;
                 id = *input++;
                 goto done;
             }
@@ -506,7 +506,7 @@ protected:
                 } else {
                     // plain dot symbol
                     id = '.';
-                    s = NULL;
+                    s = nullptr;
                     input++;
                     goto done;
                 }
@@ -558,7 +558,7 @@ protected:
 
             sprintf(error, "syntax error, unexpected '%c' in input", *input);
             input++;
-            set(TID_ERROR, error, NULL);
+            set(TID_ERROR, error, nullptr);
 
             done:
             *pinput = input;

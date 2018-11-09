@@ -87,14 +87,14 @@ const UriEndpointMethodHandler* uri_find_handler(const UriEndpoint* ep, uint32_t
 {
     // try to find an exact match, otherwise accept the ANY handler if supplied
     int i=0;
-    const UriEndpointMethodHandler *any=NULL, *handler=NULL;
+    const UriEndpointMethodHandler *any=nullptr, *handler=nullptr;
     for(; i<sizeof(ep->handlers)/sizeof(UriEndpointMethodHandler); i++) {
         if(MG_ANY==ep->handlers[i].method)
             any = &ep->handlers[i];
-        else if(ep->handlers[i].handler!=NULL && ep->handlers[i].method == method)
+        else if(ep->handlers[i].handler!=nullptr && ep->handlers[i].method == method)
             return &ep->handlers[i];
     }
-    return (handler!=NULL) ? handler : any;
+    return (handler!=nullptr) ? handler : any;
 }
 #endif
 
@@ -176,7 +176,7 @@ short Endpoints::parse(rest_uri_eval_data* ev)
             case expectPathPart: {
                 if(ev->t.id==TID_STRING || ev->t.id==TID_IDENTIFIER) {
                     // we must see if we already have a literal with this name
-                    lit = NULL;
+                    lit = nullptr;
                     wid = binbag_find_nocase(text, ev->t.s);
                     if(wid>=0 && epc->literals) {
                         // word exists in dictionary, see if it is a literal of current endpoint
@@ -184,16 +184,16 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                         while(lit->isValid() && lit->id!=wid)
                             lit++;
                         if(lit->id!=wid)
-                            lit=NULL;
+                            lit=nullptr;
                     }
 
                     // add the new literal if we didnt find an existing one
-                    if(lit==NULL) {
+                    if(lit==nullptr) {
                         if(ev->mode == mode_add) {
                             // regular URI word, add to lexicon and generate code
                             lit = addLiteralString(ev->ep, ev->t.s);
                             ev->ep = lit->next = newNode();
-                        } else if(ev->mode == mode_resolve && epc->string!=NULL) {
+                        } else if(ev->mode == mode_resolve && epc->string!=nullptr) {
                             GOTO_STATE(expectParameterValue);
                         } else
                             return URL_FAIL_NO_ENDPOINT;
@@ -211,28 +211,28 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                     NEXT_STATE( errorExpectedIdentifierOrString );
             } break;
             case expectParameterValue: {
-                const char* _typename=NULL;
+                const char* _typename=nullptr;
                 assert(ev->args);   // must have collection of args
                 assert(ev->nargs < ev->szargs);
 
                 // try to match a parameter by type
-                if((ev->t.id==TID_STRING || ev->t.id==TID_IDENTIFIER) && epc->string!=NULL) {
+                if((ev->t.id==TID_STRING || ev->t.id==TID_IDENTIFIER) && epc->string!=nullptr) {
                     // we can match by string argument type (parameter match)
                     assert(ev->args);
                     ev->args[ev->nargs++] = ArgumentValue(*epc->string, ev->t.s);
                     ev->ep = epc->string->next;
                     _typename = "string";
-                } else if(ev->t.id==TID_INTEGER && epc->numeric!=NULL) {
+                } else if(ev->t.id==TID_INTEGER && epc->numeric!=nullptr) {
                     // numeric argument
                     ev->args[ev->nargs++] = ArgumentValue(*epc->numeric, (long)ev->t.i);
                     ev->ep = epc->numeric->next;
                     _typename = "int";
-                } else if(ev->t.id==TID_FLOAT && epc->numeric!=NULL) {
+                } else if(ev->t.id==TID_FLOAT && epc->numeric!=nullptr) {
                     // numeric argument
                     ev->args[ev->nargs++] = ArgumentValue(*epc->numeric, ev->t.d);
                     ev->ep = epc->numeric->next;
                     _typename = "float";
-                } else if(ev->t.id==TID_BOOL && epc->boolean!=NULL) {
+                } else if(ev->t.id==TID_BOOL && epc->boolean!=nullptr) {
                     // numeric argument
                     ev->args[ev->nargs++] = ArgumentValue(*epc->boolean, ev->t.i>0);
                     ev->ep = epc->boolean->next;
@@ -249,13 +249,6 @@ short Endpoints::parse(rest_uri_eval_data* ev)
 
                 // successful match, jump to next endpoint node
                 NEXT_STATE( expectPathSep );
-                SCAN;
-
-                // recursively call parse so we can add more code at the end of this match
-                if((rv=parse(ev))!=0)
-                    return rv;
-                return 0;   // inner recursive call would have completed call, so we are done too
-
             } break;
             case expectPathPartOrParam: {
                 if(ev->t.id==':')
@@ -310,18 +303,18 @@ short Endpoints::parse(rest_uri_eval_data* ev)
                     uint16_t tm_values[3] = { ARG_MASK_NUMBER, ARG_MASK_STRING, ARG_MASK_BOOLEAN };
                     Argument* tm_handlers[3] = { epc->numeric, epc->string, epc->boolean };
 
-                    // we loop through our list of handlers, we save the first non-NULL handler encountered and
+                    // we loop through our list of handlers, we save the first non-nullptr handler encountered and
                     // then find more instances of that handler and build a typemask. We set the handlers in our
-                    // list of handlers to NULL for each matching one so eventually we will have all NULL handlers
+                    // list of handlers to nullptr for each matching one so eventually we will have all nullptr handlers
                     // and each distinct handler will have been checked.
-                    arg = NULL;
-                    while(arg==NULL && (tm_handlers[0]!=NULL || tm_handlers[1]!=NULL || tm_handlers[2]!=NULL)) {
+                    arg = nullptr;
+                    while(arg==nullptr && (tm_handlers[0]!=nullptr || tm_handlers[1]!=nullptr || tm_handlers[2]!=nullptr)) {
                         int i;
                         uint16_t tm=0;
-                        Argument *x=NULL, *y=NULL;
+                        Argument *x=nullptr, *y=nullptr;
                         for(i=0; i<sizeof(tm_handlers)/sizeof(tm_handlers[0]); i++) {
-                            if(tm_handlers[i]!=NULL) {
-                                if(x==NULL) {
+                            if(tm_handlers[i]!=nullptr) {
+                                if(x==nullptr) {
                                     // captured the first non-NULL element
                                     x = tm_handlers[i];
                                     tm |= tm_values[i];
@@ -437,7 +430,7 @@ json_object* json_object_from_token(token t)
         return json_object_new_boolean(t.i>0);
     if(t.id==TID_STRING || t.id==TID_IDENTIFIER)
         return json_object_new_string(t.s);
-    return NULL;
+    return nullptr;
 }
 #endif
 
@@ -570,15 +563,15 @@ yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev,
     Argument* arg;
     {
         // print what method handlers are attached to this endpoint, if any
-        if(ep->GET!=NULL | ep->POST!=NULL | ep->PUT!=NULL | ep->PATCH!=NULL | ep->DELETE!=NULL | ep->OPTIONS!=NULL) {
+        if(ep->GET!=nullptr | ep->POST!=nullptr | ep->PUT!=nullptr | ep->PATCH!=nullptr | ep->DELETE!=nullptr | ep->OPTIONS!=nullptr) {
             yarn_printf(out, "[");
             yarn_join(out, ',', (const char* []){
-                    ep->GET?"GET":NULL,
-                    ep->POST?"POST":NULL,
-                    ep->PUT?"PUT":NULL,
-                    ep->PATCH?"PATCH":NULL,
-                    ep->DELETE?"DELETE":NULL,
-                    ep->OPTIONS?"OPTIONS":NULL
+                    ep->GET?"GET":nullptr,
+                    ep->POST?"POST":nullptr,
+                    ep->PUT?"PUT":nullptr,
+                    ep->PATCH?"PATCH":nullptr,
+                    ep->DELETE?"DELETE":nullptr,
+                    ep->OPTIONS?"OPTIONS":nullptr
             }, 6);
             yarn_printf(out, "]");
         }
@@ -615,19 +608,19 @@ yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev,
         uint16_t tm_values[3] = { ARG_MASK_NUMBER, ARG_MASK_STRING, ARG_MASK_BOOLEAN };
         Argument* tm_handlers[3] = { ep->numeric, ep->string, ep->boolean };
 
-        // we loop through our list of handlers, we save the first non-NULL handler encountered and
+        // we loop through our list of handlers, we save the first non-nullptr handler encountered and
         // then find more instances of that handler and build a typemask. We set the handlers in our
-        // list of handlers to NULL for each matching one so eventually we will have all NULL handlers
+        // list of handlers to nullptr for each matching one so eventually we will have all nullptr handlers
         // and each distinct handler will have been checked.
-        arg = NULL;
-        while(arg==NULL && (tm_handlers[0]!=NULL || tm_handlers[1]!=NULL || tm_handlers[2]!=NULL)) {
+        arg = nullptr;
+        while(arg==nullptr && (tm_handlers[0]!=nullptr || tm_handlers[1]!=nullptr || tm_handlers[2]!=nullptr)) {
             int i;
             uint16_t tm=0;
-            Argument *x=NULL, *y=NULL;
+            Argument *x=nullptr, *y=nullptr;
             for(i=0; i<sizeof(tm_handlers)/sizeof(tm_handlers[0]); i++) {
-                if(tm_handlers[i]!=NULL) {
-                    if(x==NULL) {
-                        // captured the first non-NULL element
+                if(tm_handlers[i]!=nullptr) {
+                    if(x==nullptr) {
+                        // captured the first non-nullptr element
                         x = tm_handlers[i];
                         tm |= tm_values[i];
                         tm_handlers[i]=0;
@@ -639,7 +632,7 @@ yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev,
                 }
             }
 
-            if(x!=NULL) {
+            if(x!=nullptr) {
                 size_t i;
                 char s[128];
                 char* types[3] = {0};
@@ -671,7 +664,7 @@ yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev,
                 yarn_printf(out, ">");
 
                 for(i=0; i<sizeof(types)/sizeof(types[0]); i++)
-                    if(types[i]!=NULL)
+                    if(types[i]!=nullptr)
                         free(types[i]);
 
                 // recurse if we have more endpoints to travel
@@ -691,9 +684,9 @@ yarn* rest_uri_debug_print_internal(UriExpression* expr, rest_uri_eval_data* ev,
 yarn* rest_uri_debug_print(UriExpression* expr, yarn* out)
 {
     rest_uri_eval_data ev;
-    if(rest_uri_init_eval_data(expr, &ev, NULL)!=0)
-        return NULL;
-    if(out==NULL)
+    if(rest_uri_init_eval_data(expr, &ev, nullptr)!=0)
+        return nullptr;
+    if(out==nullptr)
         out = yarn_create(1000);
     return rest_uri_debug_print_internal(expr, &ev, out, 0);
 }
@@ -728,7 +721,7 @@ Endpoints::Literal* Endpoints::newLiteral(Node* ep, Literal* literal)
     p = &_new[_insert + 1];
     p->id = -1;
     p->isNumeric = false;
-    p->next = NULL;
+    p->next = nullptr;
 
     return _new + _insert;
 }
@@ -740,7 +733,7 @@ Endpoints::Literal* Endpoints::addLiteralString(Node* ep, const char* literal_va
     lit.isNumeric = false;
     if((lit.id = binbag_find_nocase(text, literal_value)) <0)
         lit.id = binbag_insert(text, literal_value);  // insert value into the binbag, and record the index into the id field
-    lit.next = NULL;
+    lit.next = nullptr;
     return newLiteral(ep, &lit);
 }
 
@@ -749,7 +742,7 @@ Endpoints::Literal* Endpoints::addLiteralNumber(Node* ep, ssize_t literal_value)
     Literal lit;
     lit.isNumeric = true;
     lit.id = literal_value;
-    lit.next = NULL;
+    lit.next = nullptr;
     return newLiteral(ep, &lit);
 }
 
