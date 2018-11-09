@@ -205,6 +205,19 @@ public:
         friend Endpoints;
     };
 
+protected:
+    class Node {
+    public:
+        // if there is more input in parse stream
+        Literal *literals;    // first try to match one of these literals
+
+        // if no literal matches, then try to match based on token type
+        ArgumentType *string, *numeric, *boolean;
+
+        // if we are at the end of the URI then we can pass to one of the http verb handlers
+        Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
+    };
+
 public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
     Endpoints()
@@ -253,32 +266,30 @@ public:
     /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
     Endpoint resolve(HttpMethod method, const char *uri);
 
+public:
+    Handler defaultHandler; // like a 404 handler
+
+protected:
+    /// \brief if an error occurs during an add() this member will be set
+    /// all further add() calls will instantly return without adding Endpoints. Use katch() member to handle this
+    /// exception at some point after one or more add() calls.
+    Endpoint* exception;
+
+
+protected:
     /*
      * Internal Members
      */
 
-protected:
-    class Node
-    {
-    public:
-        // if there is more input in parse stream
-        Literal *literals;    // first try to match one of these literals
-
-        // if no literal matches, then try to match based on token type
-        ArgumentType *string, *numeric, *boolean;
-
-        // if we are at the end of the URI then we can pass to one of the http verb handlers
-        Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
-    };
-
-    typedef enum {
-        mode_add = 1,           // indicates adding a new endpoint/handler
-        mode_resolve = 2        // indicates we are resolving a URL to a defined handler
-    } parse_mode_e;
-
+    /// \brief Contains state for resolving or expanding a Url expression tree
     class ParseData {
     public:
-        parse_mode_e mode;   // indicates if we are parsing to resolve or to add an endpoint
+        typedef enum {
+            expand = 1,           // indicates adding a new endpoint/handler
+            resolve = 2        // indicates we are resolving a URL to a defined handler
+        } mode_e;
+
+        mode_e mode;   // indicates if we are parsing to resolve or to add an endpoint
 
         // parser data
         const char *uri;    // parser input string (gets eaten as parsing occurs)
@@ -294,8 +305,6 @@ protected:
         char methodName[2048];
         char *pmethodName;
 
-        ParseData(Endpoints* expr, const char** _uri);
-
         // will contain the arguments embedded in the URL.
         // when adding, will contain argument type info
         // when resolving, will contain argument values
@@ -303,16 +312,25 @@ protected:
         Argument* args;
         size_t nargs;
         size_t szargs;
+
+        ParseData(Endpoints* _expr, const char** _uri)
+                : mode(resolve), uri(nullptr), state(0), level(0), ep( _expr->root ),
+                  pmethodName(methodName), argtypes(nullptr), args(nullptr), nargs(0), szargs(0)
+        {
+            methodName[0]=0;
+            if(_uri != nullptr) {
+                // scan first token
+                if (!t.scan(_uri, 1))
+                    goto bad_eval;
+                if (!peek.scan(_uri, 1))
+                    goto bad_eval;
+            }
+            uri = *_uri;
+            return;
+            bad_eval:
+            state = -1;
+        }
     };
-
-public:
-    Handler defaultHandler; // like a 404 handler
-
-protected:
-    /// \brief if an error occurs during an add() this member will be set
-    /// all further add() calls will instantly return without adding Endpoints. Use katch() member to handle this
-    /// exception at some point after one or more add() calls.
-    Endpoint* exception;
 
     /// \brief Parses a url and either adds or resolves within the expression tree
     /// The Url and parse mode are set in ParseData and determine if parse() returns when expression tree hits a dead-end

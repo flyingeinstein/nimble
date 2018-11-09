@@ -36,24 +36,6 @@ namespace Rest {
 
 const Endpoints::Argument Endpoints::Argument::null;
 
-Endpoints::ParseData::ParseData(Endpoints* _expr, const char** _uri)
-    : mode(mode_resolve), uri(nullptr), state(0), level(0), ep( _expr->root ),
-      pmethodName(methodName), argtypes(nullptr), args(nullptr), nargs(0), szargs(0)
-{
-    methodName[0]=0;
-    if(_uri != nullptr) {
-        // scan first token
-        if (!t.scan(_uri, 1))
-            goto bad_eval;
-        if (!peek.scan(_uri, 1))
-            goto bad_eval;
-    }
-    uri = *_uri;
-    return;
-bad_eval:
-    state = -1;
-}
-
 const char* uri_method_to_string(uint32_t method) {
     switch(method) {
         case HttpGet: return "GET";
@@ -132,7 +114,7 @@ short Endpoints::parse(ParseData* ev)
             case expectPathSep: {
                 // expect a slash or end of URL
                 if(ev->t.id=='/') {
-                    NEXT_STATE( (ev->mode==mode_resolve) ? expectPathPart : expectPathPartOrParam);
+                    NEXT_STATE( (ev->mode==ParseData::resolve) ? expectPathPart : expectPathPartOrParam);
 
                     // add seperator to method name
                     if(ev->pmethodName > ev->methodName && *(ev->pmethodName-1)!='/')
@@ -166,11 +148,11 @@ short Endpoints::parse(ParseData* ev)
 
                     // add the new literal if we didnt find an existing one
                     if(lit==nullptr) {
-                        if(ev->mode == mode_add) {
+                        if(ev->mode == ParseData::expand) {
                             // regular URI word, add to lexicon and generate code
                             lit = pool.addLiteralString(ev->ep, ev->t.s);
                             ev->ep = lit->next = pool.newNode();
-                        } else if(ev->mode == mode_resolve && epc->string!=nullptr) {
+                        } else if(ev->mode == ParseData::resolve && epc->string!=nullptr) {
                             GOTO_STATE(expectParameterValue);
                         } else
                             return URL_FAIL_NO_ENDPOINT;
@@ -182,7 +164,7 @@ short Endpoints::parse(ParseData* ev)
                     // add component to method name
                     strcpy(ev->pmethodName, ev->t.s);
                     ev->pmethodName += strlen(ev->t.s);
-                } else if(ev->mode==mode_resolve) {
+                } else if(ev->mode==ParseData::resolve) {
                     GOTO_STATE(expectParameterValue);
                 } else
                     NEXT_STATE( errorExpectedIdentifierOrString );
@@ -422,7 +404,7 @@ Endpoints& Endpoints::on(const char *endpoint_expression, MethodHandler<Handler>
 
     //ev.endpoint = endpoint;     // the endpoint constant we are adding
     ev.argtypes = (ArgumentType**)calloc(ev.szargs = 20, sizeof(ArgumentType));
-    ev.mode = mode_add;         // tell the parser we are adding this endpoint
+    ev.mode = ParseData::expand;         // tell the parser we are adding this endpoint
 
     if((rs = parse(&ev)) !=URL_MATCHED) {
         //printf("parse-eval-error %d   %s\n", rs, ev.uri);
@@ -493,6 +475,7 @@ Endpoints::Endpoint Endpoints::resolve(HttpMethod method, const char *uri)
     ParseData ev(this, &uri);
     if(ev.state<0)
         return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
+    ev.mode = ParseData::resolve;
     ev.args = new Argument[ev.szargs = maxUriArgs];
 
     // parse the input
