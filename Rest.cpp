@@ -433,7 +433,7 @@ json_object* json_object_from_token(token t)
 }
 #endif
 
-Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler> methodHandler )
+Endpoints& Endpoints::on(const char *endpoint_expression, MethodHandler<Handler> methodHandler )
 {
     short rs;
 

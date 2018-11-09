@@ -14,7 +14,7 @@ TEST(endpoints_simple)
     Endpoints::Handler devices("devices");
 
     // add some endpoints
-    endpoints.add("/api/devices", GET(devices));
+    endpoints.on("/api/devices", GET(devices));
     Endpoints::Endpoint res = endpoints.resolve(HttpGet, "/api/devices");
     return res.method==HttpGet && res.handler==devices && res.status==URL_MATCHED;
 }
@@ -22,7 +22,7 @@ TEST(endpoints_simple)
 TEST(endpoints_partial_match_returns_no_handler) {
     Endpoints endpoints(100);
     Endpoints::Handler devices("devices"), slots("dev:slots"), slot("dev:slot"), getbus("get i2c-bus"), putbus("put i2c-bus");
-    endpoints.add("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
+    endpoints.on("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
     Endpoints::Endpoint r = endpoints.resolve(HttpGet, "/api/bus/i2c");
     return r.status==URL_FAIL_NO_HANDLER;
 }
@@ -31,7 +31,7 @@ TEST(endpoints_int_argument)
 {
     Endpoints endpoints(100);
     Endpoints::Handler getbus("get i2c-bus");
-    endpoints.add("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
+    endpoints.on("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpGet, "/api/bus/i2c/3/devices");
     return (r_1.status==URL_MATCHED && r_1["bus"].isInteger() && 3==(long)r_1["bus"])
        ? OK
@@ -42,7 +42,7 @@ TEST(endpoints_real_argument)
 {
     Endpoints endpoints(100);
     Endpoints::Handler getbus("get i2c-bus");
-    endpoints.add("/api/bus/i2c/:bus(real)/devices", GET(getbus));
+    endpoints.on("/api/bus/i2c/:bus(real)/devices", GET(getbus));
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpGet, "/api/bus/i2c/3.14/devices");
     return (r_1.status==URL_MATCHED && r_1["bus"].isNumber() && 3.14==(double)r_1["bus"])
         ? OK
@@ -53,7 +53,7 @@ TEST(endpoints_string_argument)
 {
     Endpoints endpoints(100);
     Endpoints::Handler getbus("get i2c-bus");
-    endpoints.add("/api/bus/i2c/:bus(string)/devices", GET(getbus));
+    endpoints.on("/api/bus/i2c/:bus(string)/devices", GET(getbus));
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpGet, "/api/bus/i2c/default/devices");
     return (r_1.status==URL_MATCHED && r_1["bus"].isString() && strcmp("default", r_1["bus"])==0)
         ? OK
@@ -67,10 +67,10 @@ TEST(endpoints_many)
 
     // add some endpoints
 	endpoints
-	    .add("/api/devices", GET(devices))
-	    .add("/api/devices/:dev(integer|string)/slots", GET(slots))
-        .add("/api/devices/:dev(integer|string)/slot/:slot(integer)/meta", PUT(slot))
-        .add("/api/bus/i2c/:bus(integer)/devices",
+	    .on("/api/devices", GET(devices))
+	    .on("/api/devices/:dev(integer|string)/slots", GET(slots))
+        .on("/api/devices/:dev(integer|string)/slot/:slot(integer)/meta", PUT(slot))
+        .on("/api/bus/i2c/:bus(integer)/devices",
                   GET(getbus),
                   PUT(putbus),
                   PATCH(putbus),

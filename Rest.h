@@ -152,9 +152,6 @@ public:
 //    }
     };
 
-protected:
-
-
 public:
     class Endpoint {
     public:
@@ -215,9 +212,6 @@ public:
     };
 
 public:
-    Handler defaultHandler; // like a 404 handler
-
-public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
     explicit Endpoints(int elements);
 
@@ -229,7 +223,7 @@ public:
     }
 
     /// \brief Parse and add single Uri Endpoint expressions to our list of Endpoints
-    Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> methodHandler );
+    Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> methodHandler );
 
 #if __cplusplus < 201103L || (defined(_MSC_VER) && _MSC_VER < 1900)
     // for pre-c++11 support we have to specify a number of add handler methods
@@ -244,9 +238,9 @@ public:
 #else
     // c++11 using parameter pack expressions to recursively call add()
     template<class T, class... Targs>
-    Endpoints& add(const char *endpoint_expression, T h1, Targs... rest ) {
-        add(endpoint_expression, h1);   // add first argument
-        return add(endpoint_expression, rest...);   // add the rest (recursively)
+    Endpoints& on(const char *endpoint_expression, T h1, Targs... rest ) {
+        on(endpoint_expression, h1);   // add first argument
+        return on(endpoint_expression, rest...);   // add the rest (recursively)
     }
 #endif
 
@@ -261,9 +255,6 @@ public:
     /// \brief Match a Uri against the compiled list of Uri expressions.
     /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
     Endpoint resolve(HttpMethod method, const char *uri);
-
-    /// \brief Print the state machine code for the URL processor.
-    //yarn *debugPrint(UriExpression *expr, yarn *out);
 
     /*
      * Internal Members
@@ -288,11 +279,6 @@ public:
     Literal* addLiteralNumber(Node* ep, ssize_t literal_value);
 
 protected:
-    /// \brief if an error occurs during an add() this member will be set
-    /// all further add() calls will instantly return without adding Endpoints. Use katch() member to handle this
-    /// exception at some point after one or more add() calls.
-    Endpoint* exception;
-
     class Node
     {
     public:
@@ -305,10 +291,6 @@ protected:
         // if we are at the end of the URI then we can pass to one of the http verb handlers
         Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
     };
-
-
-
-
 
     typedef enum {
         mode_add = 1,           // indicates adding a new endpoint/handler
@@ -344,7 +326,18 @@ protected:
         size_t szargs;
     };
 
+public:
+    Handler defaultHandler; // like a 404 handler
+
 protected:
+    /// \brief if an error occurs during an add() this member will be set
+    /// all further add() calls will instantly return without adding Endpoints. Use katch() member to handle this
+    /// exception at some point after one or more add() calls.
+    Endpoint* exception;
+
+    /// \brief Parses a url and either adds or resolves within the expression tree
+    /// The Url and parse mode are set in ParseData and determine if parse() returns when expression tree hits a dead-end
+    /// or if it starts expanding the expression tree.
     short parse(ParseData* ev);
 };
 
