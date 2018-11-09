@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 #include <string>
+#include <cstring>
 #include <sys/types.h>
+#include <cassert>
 
 
 #include "pool.h"
@@ -102,14 +104,13 @@ public:
     MethodHandler(HttpMethod _method, H& _handler) : method(_method), handler(_handler) {}
 };
 
-//template<class H> class NullMethodHandler : public MethodHandler<HttpMethodAny, H> { NullMethodHandler() : MethodHandler() {} };
-template<class H>
-class GET : public MethodHandler<H> {
-    public:
-        GET(H& _handler) : MethodHandler<H>(HttpGet, _handler) {}
-};
-template<class H> class POST : public MethodHandler<H> { public: POST(H& _handler) : MethodHandler<H>(HttpPost, _handler) {} };
-template<class H> class PUT : public MethodHandler<H> { public: PUT(H& _handler) : MethodHandler<H>(HttpPut, _handler) {} };
+template<class H> MethodHandler<H> GET(H& handler) { return MethodHandler<H>(HttpGet, handler); }
+template<class H> MethodHandler<H> PUT(H& handler) { return MethodHandler<H>(HttpPut, handler); }
+template<class H> MethodHandler<H> POST(H& handler) { return MethodHandler<H>(HttpPost, handler); }
+template<class H> MethodHandler<H> PATCH(H& handler) { return MethodHandler<H>(HttpPatch, handler); }
+template<class H> MethodHandler<H> DELETE(H& handler) { return MethodHandler<H>(HttpDelete, handler); }
+template<class H> MethodHandler<H> OPTIONS(H& handler) { return MethodHandler<H>(HttpOptions, handler); }
+template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(HttpMethodAny, handler); }
 
 /// \brief Implements a compiled list of Rest Uri Endpoint expressions
 /// Each UriExpression contains one or more Uri Endpoint expressions in a compiled form.
@@ -291,12 +292,16 @@ public:
 
     /// \brief Parse a single Uri Endpoint expressions and merge into the given UriExpression.
     /// The supplied UriExpression does not need to be blank, it can contain previously compiled expressions.
-    Endpoint add(HttpMethod method, const char *endpoint_expression, Handler handler);
+    //Endpoint add(HttpMethod method, const char *endpoint_expression, Handler handler);
 
-    inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1 ) {
+    /*Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1 ) {
         add(h1.method, endpoint_expression, h1.handler);
         return *this;
-    }
+    }*/
+    Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> methodHandler );
+
+#if __cplusplus < 201103L || (defined(_MSC_VER) && _MSC_VER < 1900)
+    // for pre-c++11 support we have to specify a number of add handler methods
     inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2 ) {
         add(endpoint_expression, h1);
         return add(endpoint_expression, h2);
@@ -305,7 +310,14 @@ public:
         add(endpoint_expression, h1, h2);
         return add(endpoint_expression, h3);
     }
-
+#else
+    // c++11 using parameter pack expressions to recursively call add()
+    template<class T, class... Targs>
+    Endpoints& add(const char *endpoint_expression, T h1, Targs... rest ) {
+        add(endpoint_expression, h1);   // add first argument
+        return add(endpoint_expression, rest...);   // add the rest (recursively)
+    }
+#endif
 
     /// \brief Match a Uri against the compiled list of Uri expressions.
     /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
@@ -337,6 +349,8 @@ public:
     Literal* addLiteralNumber(Node* ep, ssize_t literal_value);
 
 protected:
+    Endpoint* exception;
+
     class Node
     {
     public:
@@ -390,7 +404,7 @@ protected:
             if(s && id >=500)
                 free(s);
             id = 0;
-            s = NULL;
+            s = nullptr;
             i = 0;
             d = 0.0;
         }

@@ -103,7 +103,7 @@ const UriEndpointMethodHandler* uri_find_handler(const UriEndpoint* ep, uint32_t
 
 
 Endpoints::Endpoints(int elements)
-    : text( binbag_create(1000, 1.5) ), maxUriArgs(0)
+    : text( binbag_create(1000, 1.5) ), maxUriArgs(0), exception(nullptr)
 {
     ep_head = ep_tail = ep_end =  (Node*)calloc(elements, sizeof(Node));
     Node* root = newNode(); // create root endpoint
@@ -474,15 +474,20 @@ json_object* json_object_from_token(token t)
 }
 #endif
 
-Endpoints::Endpoint Endpoints::add(HttpMethod method, const char *endpoint_expression, Handler handler)
-//short rest_add_endpoint(UriExpression *expr, const UriEndpoint *endpoint)
+Endpoints& Endpoints::add(const char *endpoint_expression, MethodHandler<Handler> methodHandler )
 {
     short rs;
     const char* uri = endpoint_expression;
 
+    // if exception was set, abort
+    if(exception != nullptr)
+        return *this;
+
     rest_uri_eval_data ev(this, &endpoint_expression);
-    if(ev.state<0)
-        return Endpoint(defaultHandler, URL_FAIL_INTERNAL);
+    if(ev.state<0) {
+        exception = new Endpoint(defaultHandler, URL_FAIL_INTERNAL);
+        return *this;
+    }
 
     //ev.endpoint = endpoint;     // the endpoint constant we are adding
     ev.argtypes = (Argument**)calloc(ev.szargs = 20, sizeof(Argument));
@@ -490,7 +495,8 @@ Endpoints::Endpoint Endpoints::add(HttpMethod method, const char *endpoint_expre
 
     if((rs = parse(&ev)) !=0) {
         printf("parse-eval-error %d   %s\n", rs, ev.uri);
-        return Endpoint(defaultHandler, rs);
+        exception = new Endpoint(defaultHandler, rs);
+        return *this;
     } else {
         // if we encountered more args than we did before, then save the new value
         if(ev.nargs > maxUriArgs)
@@ -501,9 +507,9 @@ Endpoints::Endpoint Endpoints::add(HttpMethod method, const char *endpoint_expre
         Endpoint endpoint;
         endpoint.name = ev.methodName;
 
-        if(method == HttpMethodAny) {
+        if(methodHandler.method == HttpMethodAny) {
             // attach to all remaining method handlers
-            Handler* h = new Handler(handler);
+            Handler* h = new Handler(methodHandler.handler);
             short matched = 0;
             if(!epc->GET) { epc->GET = h; matched++; }
             if(!epc->POST) { epc->POST = h; matched++; }
@@ -511,14 +517,14 @@ Endpoints::Endpoint Endpoints::add(HttpMethod method, const char *endpoint_expre
             if(!epc->PATCH) { epc->PATCH = h; matched++; }
             if(!epc->DELETE) { epc->DELETE = h; matched++; }
             if(!epc->GET) { epc->GET = h; matched++; }
-            endpoint.handler = *h;
-            endpoint.status = matched ? URL_MATCHED : URL_FAIL_NO_HANDLER;
-            return endpoint; // successfully added
+            if(matched ==0)
+                delete h;   // no unset methods, but not considered an error
+            return *this; // successfully added
         } else {
             Handler** target = nullptr;
 
             // get a pointer to the Handler member variable from the node
-            switch(method) {
+            switch(methodHandler.method) {
                 case HttpGet: target = &epc->GET; break;
                 case HttpPost: target = &epc->POST; break;
                 case HttpPut: target = &epc->PUT; break;
@@ -526,25 +532,25 @@ Endpoints::Endpoint Endpoints::add(HttpMethod method, const char *endpoint_expre
                 case HttpDelete: target = &epc->DELETE; break;
                 case HttpOptions: target = &epc->OPTIONS; break;
                 default:
-                    return Endpoint(defaultHandler, URL_FAIL_INTERNAL); // unknown method type
+                    exception = new Endpoint(defaultHandler, URL_FAIL_INTERNAL); // unknown method type
+                    return *this;
             }
 
             if(target !=nullptr) {
                 // set the target method handler but error if it was already set by a previous endpoint declaration
                 if(*target !=nullptr ) {
                     fprintf(stderr, "fatal: endpoint %s %s was previously set to a different handler\n",
-                            uri_method_to_string(method), endpoint_expression);
-                    return Endpoint(defaultHandler, URL_FAIL_DUPLICATE);
+                            uri_method_to_string(methodHandler.method), endpoint_expression);
+                    exception = new Endpoint(defaultHandler, URL_FAIL_DUPLICATE);
+                    return *this;
                 } else {
-                    *target = new Handler(handler);
-                    endpoint.handler = **target;
-                    endpoint.status = URL_MATCHED;
-                    return endpoint; // successfully added
+                    *target = new Handler(methodHandler.handler);
+                    return *this; // successfully added
                 }
-            } else
-                return Endpoint(defaultHandler, URL_FAIL_NO_HANDLER);
+            }
         }
     }
+    return *this;
 }
 
 Endpoints::Endpoint Endpoints::resolve(uint32_t method, const char *uri)
