@@ -4,8 +4,10 @@ project(Nimble)
 
 include(CMakeChecks.txt)
 
-set(SOURCE_FILES Rest.h Rest.cpp RestTests.cpp pool.h pool.cc binbag.h binbag.cc)
+# package up the Nimble files into a static library
+set(SOURCE_FILES Rest.h Rest.cpp pool.h pool.cc binbag.h binbag.cc)
+add_library(nimble STATIC ${SOURCE_FILES})
+set_property(TARGET nimble PROPERTY CXX_STANDARD 11)
 
-add_executable(rest-tests ${SOURCE_FILES})
-set_property(TARGET rest-tests PROPERTY CXX_STANDARD 11)
 
+add_subdirectory(tests)

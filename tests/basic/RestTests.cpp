@@ -2,11 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include "Rest.h"
+
+#include <tests.h>
+#include "../../Rest.h"
 
 using namespace Rest;
 
-int main(int argc, const char* argv[])
+TEST(Endpoints)
 {
 	Endpoints endpoints(100);
 	Endpoints::Handler devices("devices"), slots("dev:slots"), slot("dev:slot"), getbus("get i2c-bus"), putbus("put i2c-bus");
