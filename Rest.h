@@ -8,9 +8,6 @@
 #include <functional>
 
 
-#include "pool.h"
-#include "binbag.h"
-
 #include "Token.h"
 #include "Argument.h"
 #include "Literal.h"
@@ -122,11 +119,8 @@ protected:
 
 
 private:
-    // stores the expression as a chain of endpoint nodes
-    Node *ep_head, *ep_tail, *ep_end;
-
-    // allocated text strings
-    binbag* text;
+    Pool<Node, Literal, ArgumentType> pool;
+    Node* root;
 
     // some statistics on the endpoints
     size_t maxUriArgs;       // maximum number of embedded arguments on any one endpoint expression
@@ -213,12 +207,14 @@ public:
 
 public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
-    explicit Endpoints(int elements);
+    Endpoints()
+            : root(pool.newNode()), maxUriArgs(0), exception(nullptr)
+    {
+    }
+
 
     /// \brief Destroys the RestUriExpression and releases memory
     virtual ~Endpoints() {
-        ::free(ep_head);
-        binbag_free(text);
         delete exception;
     }
 
@@ -248,6 +244,7 @@ public:
         if(exception != nullptr) {
             endpoint_exception_handler(*exception);
             delete exception;
+            exception = nullptr;
         }
         return *this;
     }
@@ -259,24 +256,6 @@ public:
     /*
      * Internal Members
      */
-
-public:
-    inline Node* newNode()
-    {
-        return new (ep_end++) Node();
-    }
-
-    inline ArgumentType* newArgument(const char* name, unsigned short typemask)
-    {
-        // todo: make this part of paged memory
-        size_t nameid = binbag_insert_distinct(text, name);
-        ArgumentType* arg = new ArgumentType(binbag_get(text, nameid), typemask);  // todo: use our binbag here
-        return arg;
-    }
-
-    Literal* newLiteral(Node* ep, Literal* literal);
-    Literal* addLiteralString(Node* ep, const char* literal_value);
-    Literal* addLiteralNumber(Node* ep, ssize_t literal_value);
 
 protected:
     class Node
@@ -317,7 +296,7 @@ protected:
 
         ParseData(Endpoints* expr, const char** _uri);
 
-        // will contain the arguments embedded in the URL
+        // will contain the arguments embedded in the URL.
         // when adding, will contain argument type info
         // when resolving, will contain argument values
         ArgumentType** argtypes;

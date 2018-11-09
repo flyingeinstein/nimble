@@ -37,7 +37,7 @@ namespace Rest {
 const Endpoints::Argument Endpoints::Argument::null;
 
 Endpoints::ParseData::ParseData(Endpoints* _expr, const char** _uri)
-    : mode(mode_resolve), uri(nullptr), state(0), level(0), ep( _expr->ep_head ),
+    : mode(mode_resolve), uri(nullptr), state(0), level(0), ep( _expr->root ),
       pmethodName(methodName), argtypes(nullptr), args(nullptr), nargs(0), szargs(0)
 {
     methodName[0]=0;
@@ -86,33 +86,6 @@ const char* uri_result_to_string(short result) {
     }
 }
 
-#if 0
-const UriEndpointMethodHandler* uri_find_handler(const UriEndpoint* ep, uint32_t method)
-{
-    // try to find an exact match, otherwise accept the ANY handler if supplied
-    int i=0;
-    const UriEndpointMethodHandler *any=nullptr, *handler=nullptr;
-    for(; i<sizeof(ep->handlers)/sizeof(UriEndpointMethodHandler); i++) {
-        if(MG_ANY==ep->handlers[i].method)
-            any = &ep->handlers[i];
-        else if(ep->handlers[i].handler!=nullptr && ep->handlers[i].method == method)
-            return &ep->handlers[i];
-    }
-    return (handler!=nullptr) ? handler : any;
-}
-#endif
-
-
-
-
-
-Endpoints::Endpoints(int elements)
-    : text( binbag_create(1000, 1.5) ), maxUriArgs(0), exception(nullptr)
-{
-    ep_head = ep_tail = ep_end =  (Node*)calloc(elements, sizeof(Node));
-    Node* root = newNode(); // create root endpoint
-    //root->
-}
 
 #define GOTO_STATE(st) { ev->state = st; goto rescan; }
 #define NEXT_STATE(st) { ev->state = st; }
@@ -181,7 +154,7 @@ short Endpoints::parse(ParseData* ev)
                 if(ev->t.is(TID_STRING, TID_IDENTIFIER)) {
                     // we must see if we already have a literal with this name
                     lit = nullptr;
-                    wid = binbag_find_nocase(text, ev->t.s);
+                    wid = binbag_find_nocase(pool.text, ev->t.s);
                     if(wid>=0 && epc->literals) {
                         // word exists in dictionary, see if it is a literal of current endpoint
                         lit = epc->literals;
@@ -195,8 +168,8 @@ short Endpoints::parse(ParseData* ev)
                     if(lit==nullptr) {
                         if(ev->mode == mode_add) {
                             // regular URI word, add to lexicon and generate code
-                            lit = addLiteralString(ev->ep, ev->t.s);
-                            ev->ep = lit->next = newNode();
+                            lit = pool.addLiteralString(ev->ep, ev->t.s);
+                            ev->ep = lit->next = pool.newNode();
                         } else if(ev->mode == mode_resolve && epc->string!=nullptr) {
                             GOTO_STATE(expectParameterValue);
                         } else
@@ -347,12 +320,12 @@ short Endpoints::parse(ParseData* ev)
 
                     if(arg == nullptr) {
                         // add the argument to the Endpoint
-                        arg = newArgument(name, typemask);
+                        arg = pool.newArgumentType(name, typemask);
                         if(ev->argtypes) {
                             assert(ev->nargs < ev->szargs);
                             ev->argtypes[ev->nargs++] = arg;    // add to list of args we encountered
                         }
-                        ev->ep = arg->next = newNode();
+                        ev->ep = arg->next = pool.newNode();
 
                         if ((typemask & ARG_MASK_NUMBER) > 0) {
                             // int or real
@@ -692,58 +665,6 @@ yarn* rest_uri_debug_print(UriExpression* expr, yarn* out)
 #endif
 
 
-Endpoints::Literal* Endpoints::newLiteral(Node* ep, Literal* literal)
-{
-    Literal* _new, *p;
-    int _bb_text;
-    int _insert;
-    if(ep->literals) {
-        // todo: this kind of realloc every Literal insert will cause memory fragmentation, use Endpoints shared mem
-        // find the end of this list
-        Literal *_list = ep->literals;
-        while (_list->isValid())
-            _list++;
-        _insert = (int)(_list - ep->literals);
-
-        // allocate a new list
-        _new = (Literal*)realloc(ep->literals, (_insert + 2) * sizeof(Literal));
-        //memset(_new+_insert+1, 0, sizeof(Literal));
-    } else {
-        _new = (Literal*)calloc(2, sizeof(Literal));
-        _insert = 0;
-    };
-
-    // insert the new literal
-    memcpy(_new + _insert, literal, sizeof(Literal));
-    ep->literals = _new;
-
-    p = &_new[_insert + 1];
-    p->id = -1;
-    p->isNumeric = false;
-    p->next = nullptr;
-
-    return _new + _insert;
-}
-
-
-Endpoints::Literal* Endpoints::addLiteralString(Node* ep, const char* literal_value)
-{
-    Literal lit;
-    lit.isNumeric = false;
-    if((lit.id = binbag_find_nocase(text, literal_value)) <0)
-        lit.id = binbag_insert(text, literal_value);  // insert value into the binbag, and record the index into the id field
-    lit.next = nullptr;
-    return newLiteral(ep, &lit);
-}
-
-Endpoints::Literal* Endpoints::addLiteralNumber(Node* ep, ssize_t literal_value)
-{
-    Literal lit;
-    lit.isNumeric = true;
-    lit.id = literal_value;
-    lit.next = nullptr;
-    return newLiteral(ep, &lit);
-}
 
 
 } // ns: Rest

@@ -10,7 +10,7 @@ using namespace Rest;
 
 TEST(endpoints_simple)
 {
-    Endpoints endpoints(100);
+    Endpoints endpoints;
     Endpoints::Handler devices("devices");
 
     // add some endpoints
@@ -20,7 +20,7 @@ TEST(endpoints_simple)
 }
 
 TEST(endpoints_partial_match_returns_no_handler) {
-    Endpoints endpoints(100);
+    Endpoints endpoints;
     Endpoints::Handler devices("devices"), slots("dev:slots"), slot("dev:slot"), getbus("get i2c-bus"), putbus("put i2c-bus");
     endpoints.on("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
     Endpoints::Endpoint r = endpoints.resolve(HttpGet, "/api/bus/i2c");
@@ -29,7 +29,7 @@ TEST(endpoints_partial_match_returns_no_handler) {
 
 TEST(endpoints_int_argument)
 {
-    Endpoints endpoints(100);
+    Endpoints endpoints;
     Endpoints::Handler getbus("get i2c-bus");
     endpoints.on("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpGet, "/api/bus/i2c/3/devices");
@@ -40,7 +40,7 @@ TEST(endpoints_int_argument)
 
 TEST(endpoints_real_argument)
 {
-    Endpoints endpoints(100);
+    Endpoints endpoints;
     Endpoints::Handler getbus("get i2c-bus");
     endpoints.on("/api/bus/i2c/:bus(real)/devices", GET(getbus));
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpGet, "/api/bus/i2c/3.14/devices");
@@ -51,7 +51,7 @@ TEST(endpoints_real_argument)
 
 TEST(endpoints_string_argument)
 {
-    Endpoints endpoints(100);
+    Endpoints endpoints;
     Endpoints::Handler getbus("get i2c-bus");
     endpoints.on("/api/bus/i2c/:bus(string)/devices", GET(getbus));
     Endpoints::Endpoint r_1 = endpoints.resolve(HttpGet, "/api/bus/i2c/default/devices");
@@ -62,7 +62,7 @@ TEST(endpoints_string_argument)
 
 TEST(endpoints_many)
 {
-	Endpoints endpoints(100);
+	Endpoints endpoints;
 	Endpoints::Handler devices("devices"), slots("dev:slots"), slot("dev:slot"), getbus("get i2c-bus"), putbus("put i2c-bus");
 
     // add some endpoints
