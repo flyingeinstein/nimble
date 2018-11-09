@@ -147,6 +147,8 @@ public:
         Handler() {}
         Handler(const char* __name) : _name(__name) {}
 
+        inline bool operator==(const Handler& rhs) const { return _name==rhs._name; }
+
 //    uint32_t method;
 //    HandlerPrototype prototype;
 //    union {
@@ -178,9 +180,12 @@ public:
     public:
         Argument() : type(0), ul(0) {}
         Argument(const Argument& copy) : ArgumentType(copy), type(copy.type), ul(copy.ul) {
-            if(type == ARG_MASK_STRING) {
+            if(type == ARG_MASK_STRING)
                 s = strdup(copy.s);
-            }
+            else if((type & ARG_MASK_REAL) >0)
+                d = copy.d;
+            else
+                ul = copy.ul;
         }
 
         Argument(const ArgumentType& arg) : ArgumentType(arg), type(0), ul(0) {}
@@ -198,6 +203,8 @@ public:
             type = copy.type;
             if(type == ARG_MASK_STRING)
                 s = strdup(copy.s);
+            else if((type & ARG_MASK_REAL) >0)
+                d = copy.d;
             else
                 ul = copy.ul;
             return *this;
