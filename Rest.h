@@ -13,6 +13,8 @@
 
 #include "Token.h"
 #include "Argument.h"
+#include "Literal.h"
+#include "Link.h"
 
 // format:    /api/test/:param_name(integer|real|number|string|boolean)/method
 
@@ -114,19 +116,10 @@ public:
 
 protected:
     class Node;
-    class Literal;
+    typedef Link<Rest::Literal, Node> Literal;
+    typedef Link<Rest::Type, Node> ArgumentType;
     typedef ::Rest::Token Token;
 
-    class ArgumentType : public ::Rest::Type {
-        public:
-            inline ArgumentType() : next(nullptr) {}
-            ArgumentType(const char* _name, unsigned short _typemask)
-                : ::Rest::Type(_name, _typemask), next(nullptr)
-            {}
-
-            // if this is not an endpoint, then we point to the next term in the endpoint
-            Node* next;
-    };
 
 private:
     // stores the expression as a chain of endpoint nodes
@@ -313,21 +306,6 @@ protected:
         Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
     };
 
-    class Literal
-    {
-    public:
-        // if this argument is matched, the value is added to the request object under this field name
-        // this id usually indicates an index into an array of text terms (binbag)
-        ssize_t id;
-
-        // true if the id should be take as a numeric value and not a string index ID
-        bool isNumeric;
-
-        // if this is not an endpoint, then we point to the next term in the url path
-        Node* next;
-
-        inline bool isValid() { return isNumeric || (id>=0); }
-    };
 
 
 
