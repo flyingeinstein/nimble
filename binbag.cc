@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <cstring>
 
 
 #if defined(HAS_STRINGS_H)
@@ -22,6 +23,28 @@
 #undef inline
 #endif
 #include <algorithm>
+
+#if !defined(HAS_STPNCPY)
+char* stpncpy(char* dest, const char* src, size_t n) {
+    while(*src && --n)
+        *dest++ = *src++;
+//    if(n==0) {
+//        dest--; // back up one byte
+//        *dest = 0;
+//    } else
+        *dest = 0;
+    return dest;
+}
+#endif
+
+#if !defined(HAS_STPCPY)
+char* stpcpy(char* dest, const char* src) {
+    while(*src)
+        *dest++ = *src++;
+    *dest = 0;
+    return dest;
+}
+#endif
 
 #define binbag_elements_end
 
