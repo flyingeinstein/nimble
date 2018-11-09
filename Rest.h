@@ -310,14 +310,7 @@ public:
         delete exception;
     }
 
-    /// \brief Parse a single Uri Endpoint expressions and merge into the given UriExpression.
-    /// The supplied UriExpression does not need to be blank, it can contain previously compiled expressions.
-    //Endpoint add(HttpMethod method, const char *endpoint_expression, Handler handler);
-
-    /*Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1 ) {
-        add(h1.method, endpoint_expression, h1.handler);
-        return *this;
-    }*/
+    /// \brief Parse and add single Uri Endpoint expressions to our list of Endpoints
     Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> methodHandler );
 
 #if __cplusplus < 201103L || (defined(_MSC_VER) && _MSC_VER < 1900)
@@ -470,6 +463,38 @@ protected:
                 s = (char *) calloc(1, _end - _begin + 1);
                 memcpy(s, _begin, _end - _begin);
             }
+        }
+
+        int isOneOf(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
+            if(id<=500)
+                return -1;
+            typeof(strcmp) *cmpfunc = case_insensitive
+                                      ? &strcasecmp
+                                      : &strcmp;
+            int j=0;
+            for(std::initializer_list<const char*>::const_iterator x=enum_values.begin(), _x=enum_values.end(); x!=_x; x++,j++) {
+                if (cmpfunc(s, *x) == 0)
+                    return j;
+            }
+            return -1;
+        }
+
+        int toEnum(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
+            if(id<=500)
+                return -1;
+            typeof(strcmp) *cmpfunc = case_insensitive
+                                      ? &strcasecmp
+                                      : &strcmp;
+            int j=0;
+            for(std::initializer_list<const char*>::const_iterator x=enum_values.begin(), _x=enum_values.end(); x!=_x; x++,j++) {
+                if (cmpfunc(s, *x) == 0) {
+                    clear();
+                    id = TID_INTEGER;
+                    i = j;
+                    return j;
+                }
+            }
+            return -1;
         }
 
         /// \brief scans the next token from the URL line

@@ -273,21 +273,16 @@ short Endpoints::parse(ParseData* ev)
                             if(ev->t.id!=TID_IDENTIFIER)
                                 return URL_FAIL_SYNTAX;
 
-                            // scan the parameter typename
-                            if(strcmp(ev->t.s, "integer")==0 || strcmp(ev->t.s, "int")==0)
-                                typemask |= ARG_MASK_INTEGER;
-                            else if(strcmp(ev->t.s, "real")==0)
-                                typemask |= ARG_MASK_REAL;
-                            else if(strcmp(ev->t.s, "number")==0)
-                                typemask |= ARG_MASK_NUMBER;
-                            else if(strcmp(ev->t.s, "string")==0)
-                                typemask |= ARG_MASK_STRING;
-                            else if(strcmp(ev->t.s, "boolean")==0 || strcmp(ev->t.s, "bool")==0)
-                                typemask |= ARG_MASK_BOOLEAN;
-                            else if(strcmp(ev->t.s, "any")==0)
-                                typemask |= ARG_MASK_ANY;
-                            else
-                                return URL_FAIL_INVALID_TYPE;
+                            // convert the string identifier into a typemask
+                            switch(ev->t.toEnum({"integer","real","number","string","boolean","any"}, true)) {
+                                case 0: typemask |= ARG_MASK_INTEGER; break;
+                                case 1: typemask |= ARG_MASK_REAL; break;
+                                case 2: typemask |= ARG_MASK_NUMBER; break;
+                                case 3: typemask |= ARG_MASK_STRING; break;
+                                case 4: typemask |= ARG_MASK_BOOLEAN; break;
+                                case 5: typemask |= ARG_MASK_ANY; break;
+                                default: return URL_FAIL_INVALID_TYPE;
+                            }
 
                             SCAN;
                         } while(ev->t.id=='|');

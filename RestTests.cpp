@@ -21,7 +21,7 @@ int main(int argc, const char* argv[])
                   PATCH(putbus),
                   POST(putbus),
                   DELETE(putbus),
-                  //GET(putbus),
+                  //GET(putbus),         // will cause a duplicate endpoint error
                   OPTIONS(putbus)
                   )
         // any errors produced in the above sentences will get caught here
