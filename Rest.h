@@ -12,6 +12,7 @@
 #include "binbag.h"
 
 #include "Token.h"
+#include "Argument.h"
 
 // format:    /api/test/:param_name(integer|real|number|string|boolean)/method
 
@@ -46,16 +47,6 @@ typedef enum {
     HttpOptions,   
     HttpMethodAny = 128
 } HttpMethod;
-
-// Bitmask values for different types
-#define ARG_MASK_INTEGER       ((unsigned short)1)
-#define ARG_MASK_REAL          ((unsigned short)2)
-#define ARG_MASK_BOOLEAN       ((unsigned short)4)
-#define ARG_MASK_STRING        ((unsigned short)8)
-#define ARG_MASK_UNSIGNED      ((unsigned short)16)
-#define ARG_MASK_UINTEGER      (ARG_MASK_UNSIGNED|ARG_MASK_INTEGER)
-#define ARG_MASK_NUMBER        (ARG_MASK_REAL|ARG_MASK_INTEGER)
-#define ARG_MASK_ANY           (ARG_MASK_NUMBER|ARG_MASK_BOOLEAN|ARG_MASK_STRING)
 
 /// \brief Convert a http method enum value to a string.
 const char* uri_method_to_string(uint32_t method);
@@ -119,12 +110,23 @@ template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(Htt
 class Endpoints {
 public:
     class Handler;
+    typedef ::Rest::Argument Argument;
 
 protected:
     class Node;
     class Literal;
-    class ArgumentType;
     typedef ::Rest::Token Token;
+
+    class ArgumentType : public ::Rest::Type {
+        public:
+            inline ArgumentType() : next(nullptr) {}
+            ArgumentType(const char* _name, unsigned short _typemask)
+                : ::Rest::Type(_name, _typemask), next(nullptr)
+            {}
+
+            // if this is not an endpoint, then we point to the next term in the endpoint
+            Node* next;
+    };
 
 private:
     // stores the expression as a chain of endpoint nodes
@@ -158,109 +160,9 @@ public:
     };
 
 protected:
-    class ArgumentType
-    {
-    public:
-        inline ArgumentType() : name(nullptr), typemask(0), next(nullptr) {}
-        ArgumentType(const char* _name, unsigned short _typemask) : name(_name), typemask(_typemask), next(nullptr) {}
 
-    public:
-        // if this argument is matched, the value is added to the request object under this field name
-        const char* name;
-
-        // collection of ARG_MASK_xxxx bits represent what types are supported for this argument
-        unsigned short typemask;
-
-        // if this is not an endpoint, then we point to the next term in the endpoint
-        Node* next;
-    };
 
 public:
-    class Argument : protected ArgumentType {
-    public:
-        Argument() : type(0), ul(0) {}
-        Argument(const Argument& copy) : ArgumentType(copy), type(copy.type), ul(copy.ul) {
-            if(type == ARG_MASK_STRING)
-                s = strdup(copy.s);
-            else if((type & ARG_MASK_REAL) >0)
-                d = copy.d;
-            else
-                ul = copy.ul;
-        }
-
-        Argument(const ArgumentType& arg) : ArgumentType(arg), type(0), ul(0) {}
-
-        Argument(const ArgumentType& arg, long _l) : ArgumentType(arg), type(ARG_MASK_INTEGER), l(_l) {}
-        Argument(const ArgumentType& arg, unsigned long _ul) : ArgumentType(arg), type(ARG_MASK_UINTEGER), ul(_ul) {}
-        Argument(const ArgumentType& arg, double _d) : ArgumentType(arg), type(ARG_MASK_NUMBER), d(_d) {}
-        Argument(const ArgumentType& arg, bool _b) : ArgumentType(arg), type(ARG_MASK_BOOLEAN), b(_b) {}
-        Argument(const ArgumentType& arg, const char* _s) : ArgumentType(arg), type(ARG_MASK_STRING), s(strdup(_s)) {}
-
-        ~Argument() { if(s && type == ARG_MASK_STRING) ::free(s); }
-
-        Argument& operator=(const Argument& copy) {
-            ArgumentType::operator=(copy);
-            type = copy.type;
-            if(type == ARG_MASK_STRING)
-                s = strdup(copy.s);
-            else if((type & ARG_MASK_REAL) >0)
-                d = copy.d;
-            else
-                ul = copy.ul;
-            return *this;
-        }
-
-        inline const char* name() const { return ArgumentType::name; }
-
-        int isOneOf(std::initializer_list<const char*> enum_values, bool case_insensitive=true) {
-            typeof(strcmp) *cmpfunc = case_insensitive
-                                      ? &strcasecmp
-                                      : &strcmp;
-            if((type&ARG_MASK_STRING)!=ARG_MASK_STRING)
-                return -2;
-            int j=0;
-            for(std::initializer_list<const char*>::const_iterator x=enum_values.begin(), _x=enum_values.end(); x!=_x; x++,j++) {
-                if (cmpfunc(s, *x) == 0)
-                    return j;
-            }
-            return -1;
-        }
-
-
-        inline bool isInteger() const { return (type&ARG_MASK_INTEGER)==ARG_MASK_INTEGER; }
-        inline bool isSignedInteger() const { return (type&ARG_MASK_UINTEGER)==ARG_MASK_INTEGER; }
-        inline bool isUnsignedInteger() const { return (type&ARG_MASK_UINTEGER)==ARG_MASK_UINTEGER; }
-        inline bool isNumber() const { return (type&ARG_MASK_NUMBER)==ARG_MASK_NUMBER; }
-        inline bool isBoolean() const { return (type&ARG_MASK_BOOLEAN)==ARG_MASK_BOOLEAN; }
-        inline bool isString() const { return (type&ARG_MASK_STRING)==ARG_MASK_STRING; }
-
-        // only supported in C++11
-        inline operator long() const { assert(type&ARG_MASK_INTEGER); return l; }
-        inline operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
-        inline operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
-        inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
-        inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
-
-#if 0   // ArgumentValues should never change, so use constructor only (and assignment op if needed)
-        void set(long _l) { type = ARG_MASK_INTEGER; l = _l; }
-        void set(unsigned long _ul) { type = ARG_MASK_UINTEGER; l = _ul; }
-        void set(bool _b) { type = ARG_MASK_BOOLEAN; b = _b; }
-        void set(const char* _s) { type = ARG_MASK_STRING; s = strdup(_s); }
-#endif
-        unsigned short type;
-
-        union {
-            long l;
-            unsigned long ul;
-            double d;
-            bool b;
-            char* s;
-        };
-
-    public:
-        static const Argument null;
-    };
-
     class Endpoint {
     public:
         int status;
