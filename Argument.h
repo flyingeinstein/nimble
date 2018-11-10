@@ -37,6 +37,8 @@ namespace Rest {
 
     class Argument : protected Type {
     public:
+        typedef Type Type;
+
         Argument() : type(0), ul(0) {}
         Argument(const Argument& copy) : Type(copy), type(copy.type), ul(copy.ul) {
             if(type == ARG_MASK_STRING)

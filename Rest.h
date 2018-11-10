@@ -12,24 +12,12 @@
 #include "Argument.h"
 #include "Literal.h"
 #include "Link.h"
+#include "Parser.h"
 
 // format:    /api/test/:param_name(integer|real|number|string|boolean)/method
 
 namespace Rest {
 
-#define URL_MATCHED                         0
-#define URL_FAIL_NO_ENDPOINT                (-1)
-#define URL_FAIL_NO_HANDLER                 (-2)
-#define URL_FAIL_DUPLICATE                  (-3)
-#define URL_FAIL_PARAMETER_TYPE             (-4)
-#define URL_FAIL_MISSING_PARAMETER          (-5)
-#define URL_FAIL_AMBIGUOUS_PARAMETER        (-6)
-#define URL_FAIL_EXPECTED_PATH_SEPARATOR    (-7)
-#define URL_FAIL_EXPECTED_EOF               (-8)
-#define URL_FAIL_INVALID_TYPE               (-9)
-#define URL_FAIL_SYNTAX                     (-10)
-#define URL_FAIL_INTERNAL                   (-15)
-#define URL_FAIL_INTERNAL_BAD_STRING        (-16)
 
 /// \brief Convert a return value to a string.
 /// Typically use this to get a human readable string for an error result.
@@ -116,19 +104,12 @@ protected:
     typedef Link<Rest::Literal, Node> Literal;
     typedef Link<Rest::Type, Node> ArgumentType;
     typedef ::Rest::Token Token;
-
-
-private:
-    Pool<Node, Literal, ArgumentType> pool;
-    Node* root;
-
-    // some statistics on the endpoints
-    size_t maxUriArgs;       // maximum number of embedded arguments on any one endpoint expression
+    typedef Parser<Node, Rest::Literal, Rest::Argument, Token> Parser;
 
 public:
     /// \brief Links a http method verb with a Rest callback handler
-/// Associates a handler callback with a http method request. Many of these associations can
-/// be attached to a single Endpoint Uri.
+    /// Associates a handler callback with a http method request. Many of these associations can
+    /// be attached to a single Endpoint Uri.
     class Handler {
     public:
         std::string _name;
@@ -146,7 +127,6 @@ public:
 //    }
     };
 
-public:
     class Endpoint {
     public:
         int status;
@@ -221,10 +201,9 @@ protected:
 public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
     Endpoints()
-            : root(pool.newNode()), maxUriArgs(0), exception(nullptr)
+            : maxUriArgs(0), exception(nullptr)
     {
     }
-
 
     /// \brief Destroys the RestUriExpression and releases memory
     virtual ~Endpoints() {
@@ -270,72 +249,17 @@ public:
     Handler defaultHandler; // like a 404 handler
 
 protected:
+    // some statistics on the endpoints
+    size_t maxUriArgs;       // maximum number of embedded arguments on any one endpoint expression
+
+        /// \brief The parser splits the URL into a tree expression where handlers can be atttached to any branch
+        /// or endpoint in the tree.
+    Parser parser;
+
     /// \brief if an error occurs during an add() this member will be set
     /// all further add() calls will instantly return without adding Endpoints. Use katch() member to handle this
     /// exception at some point after one or more add() calls.
     Endpoint* exception;
-
-
-protected:
-    /*
-     * Internal Members
-     */
-
-    /// \brief Contains state for resolving or expanding a Url expression tree
-    class ParseData {
-    public:
-        typedef enum {
-            expand = 1,           // indicates adding a new endpoint/handler
-            resolve = 2        // indicates we are resolving a URL to a defined handler
-        } mode_e;
-
-        mode_e mode;   // indicates if we are parsing to resolve or to add an endpoint
-
-        // parser data
-        const char *uri;    // parser input string (gets eaten as parsing occurs)
-        Token t, peek;      // current token 't' and look-ahead token 'peek'
-
-        int state;          // parser state machine current state
-        int level;          // level of evaluation, typically 1 level per path separation
-
-        Node* ep;      // current endpoint evaluated
-
-        // holds the current method name
-        // the name is generated as we are parsing the URL
-        char methodName[2048];
-        char *pmethodName;
-
-        // will contain the arguments embedded in the URL.
-        // when adding, will contain argument type info
-        // when resolving, will contain argument values
-        ArgumentType** argtypes;
-        Argument* args;
-        size_t nargs;
-        size_t szargs;
-
-        ParseData(Endpoints* _expr, const char** _uri)
-                : mode(resolve), uri(nullptr), state(0), level(0), ep( _expr->root ),
-                  pmethodName(methodName), argtypes(nullptr), args(nullptr), nargs(0), szargs(0)
-        {
-            methodName[0]=0;
-            if(_uri != nullptr) {
-                // scan first token
-                if (!t.scan(_uri, 1))
-                    goto bad_eval;
-                if (!peek.scan(_uri, 1))
-                    goto bad_eval;
-            }
-            uri = *_uri;
-            return;
-            bad_eval:
-            state = -1;
-        }
-    };
-
-    /// \brief Parses a url and either adds or resolves within the expression tree
-    /// The Url and parse mode are set in ParseData and determine if parse() returns when expression tree hits a dead-end
-    /// or if it starts expanding the expression tree.
-    short parse(ParseData* ev);
 };
 
 } // ns:Rest
