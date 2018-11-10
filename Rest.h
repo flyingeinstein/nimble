@@ -48,7 +48,7 @@ typedef enum {
 } HttpMethod;
 
 /// \brief Convert a http method enum value to a string.
-const char* uri_method_to_string(uint32_t method);
+const char* uri_method_to_string(HttpMethod method);
 
 
 //typedef class RestRequest;

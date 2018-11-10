@@ -36,7 +36,7 @@ namespace Rest {
 
 const Endpoints::Argument Endpoints::Argument::null;
 
-const char* uri_method_to_string(uint32_t method) {
+const char* uri_method_to_string(HttpMethod method) {
     switch(method) {
         case HttpGet: return "GET";
         case HttpPost: return "POST";
