@@ -34,7 +34,7 @@ typedef enum {
 
 namespace Rest {
 
-const Endpoints::Argument Endpoints::Argument::null;
+    const Argument Argument::null;
 
 const char* uri_method_to_string(HttpMethod method) {
     switch(method) {

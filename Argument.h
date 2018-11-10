@@ -122,6 +122,5 @@ namespace Rest {
         static const Argument null;
     };
 
-
 } // ns: Rest
 

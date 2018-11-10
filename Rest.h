@@ -89,9 +89,10 @@ template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(Htt
 /// You can store expressions for all Rest methods in the application if desired. This
 /// compiled byte-code machine can optimally compare and match a request Uri to an
 /// Endpoint specification.
+template<class THandler>
 class Endpoints {
 public:
-    class Handler;
+    typedef THandler Handler;
     typedef ::Rest::Argument Argument;
 
 protected:
@@ -102,25 +103,6 @@ protected:
     typedef Parser<Node, Rest::Literal, Rest::Argument, Token> Parser;
 
 public:
-    /// \brief Links a http method verb with a Rest callback handler
-    /// Associates a handler callback with a http method request. Many of these associations can
-    /// be attached to a single Endpoint Uri.
-    class Handler {
-    public:
-        std::string _name;
-
-        Handler() {}
-        Handler(const char* __name) : _name(__name) {}
-
-        inline bool operator==(const Handler& rhs) const { return _name==rhs._name; }
-
-//    uint32_t method;
-//    HandlerPrototype prototype;
-//    union {
-//      RestVoidMethodHandler    voidHandler;  // non-rest handler doesnt prepare json request/response
-//      RestMethodHandler        restHandler;  // rest handler using Json request/response
-//    }
-    };
 
     class Endpoint {
     public:
@@ -213,7 +195,7 @@ public:
         if(exception != nullptr)
             return *this;
 
-        Parser::EvalState ev(&parser, &endpoint_expression);
+        typename Parser::EvalState ev(&parser, &endpoint_expression);
         if(ev.state<0) {
             exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL);
             return *this;
@@ -317,7 +299,7 @@ public:
     /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
     Endpoints::Endpoint resolve(HttpMethod method, const char *uri) {
         short rs;
-        Parser::EvalState ev(&parser, &uri);
+        typename Parser::EvalState ev(&parser, &uri);
         if(ev.state<0)
             return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
         ev.mode = Parser::resolve;
