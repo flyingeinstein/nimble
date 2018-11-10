@@ -34,10 +34,12 @@ int report(const char* testname, int result)
 {
 	const char* status;
 	switch (result) {
+        case 1: status = "OK+"; break;
 		case OK: status = "OK"; break;
 		case FAIL: status = "FAIL"; break;
 		case LEAKY: status = "LEAKY"; break;
 		case CORRUPT_HEAP: status = "!HEAP"; break;
+        default: status = "N/A"; break;
 	}
     if (enable_reporting)
         std::cout << "  " << std::left << std::setw(8) << status << std::setw(8) << testname << std::endl;

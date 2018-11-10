@@ -24,7 +24,9 @@ TEST(endpoints_partial_match_returns_no_handler) {
     Endpoints::Handler devices("devices"), slots("dev:slots"), slot("dev:slot"), getbus("get i2c-bus"), putbus("put i2c-bus");
     endpoints.on("/api/bus/i2c/:bus(integer)/devices", GET(getbus));
     Endpoints::Endpoint r = endpoints.resolve(HttpGet, "/api/bus/i2c");
-    return r.status==URL_FAIL_NO_HANDLER;
+    return (r.status==URL_FAIL_NO_HANDLER)
+        ? OK
+        : FAIL;
 }
 
 TEST(endpoints_int_argument)
