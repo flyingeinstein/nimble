@@ -22,6 +22,10 @@
 
 namespace Rest {
 
+    /// \brief Convert a return value to a string.
+    /// Typically use this to get a human readable string for an error result.
+    const char* uri_result_to_string(short result);
+
     // list of possible states
     enum {
         expectPathPartOrSep,        // first token only

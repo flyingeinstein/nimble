@@ -18,11 +18,6 @@
 
 namespace Rest {
 
-
-/// \brief Convert a return value to a string.
-/// Typically use this to get a human readable string for an error result.
-const char* uri_result_to_string(short result);
-
 // indicates a default Rest handler that matches any http verb request
 // this enum belongs with the web servers HTTP_GET, HTTP_POST, HTTP_xxx constants
 typedef enum {
@@ -211,7 +206,84 @@ public:
     }
 
     /// \brief Parse and add single Uri Endpoint expressions to our list of Endpoints
-    Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> methodHandler );
+    Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> methodHandler ) {
+        short rs;
+
+        // if exception was set, abort
+        if(exception != nullptr)
+            return *this;
+
+        Parser::EvalState ev(&parser, &endpoint_expression);
+        if(ev.state<0) {
+            exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL);
+            return *this;
+        }
+
+        ev.szargs = 20;
+        ev.mode = Parser::expand;         // tell the parser we are adding this endpoint
+
+        if((rs = parser.parse(&ev)) !=URL_MATCHED) {
+            //printf("parse-eval-error %d   %s\n", rs, ev.uri);
+            exception = new Endpoint(methodHandler.method, defaultHandler, rs);
+            exception->name = endpoint_expression;
+            return *this;
+        } else {
+            // if we encountered more args than we did before, then save the new value
+            if(ev.nargs > maxUriArgs)
+                maxUriArgs = ev.nargs;
+
+            // attach the handler to this endpoint
+            Node* epc = ev.ep;
+            Endpoint endpoint;
+            endpoint.name = ev.methodName;
+
+            if(methodHandler.method == HttpMethodAny) {
+                // attach to all remaining method handlers
+                Handler* h = new Handler(methodHandler.handler);
+                short matched = 0;
+                if(!epc->GET) { epc->GET = h; matched++; }
+                if(!epc->POST) { epc->POST = h; matched++; }
+                if(!epc->PUT) { epc->PUT = h; matched++; }
+                if(!epc->PATCH) { epc->PATCH = h; matched++; }
+                if(!epc->DELETE) { epc->DELETE = h; matched++; }
+                if(!epc->GET) { epc->GET = h; matched++; }
+                if(matched ==0)
+                    delete h;   // no unset methods, but not considered an error
+                return *this; // successfully added
+            } else {
+                Handler** target = nullptr;
+
+                // get a pointer to the Handler member variable from the node
+                switch(methodHandler.method) {
+                    case HttpGet: target = &epc->GET; break;
+                    case HttpPost: target = &epc->POST; break;
+                    case HttpPut: target = &epc->PUT; break;
+                    case HttpPatch: target = &epc->PATCH; break;
+                    case HttpDelete: target = &epc->DELETE; break;
+                    case HttpOptions: target = &epc->OPTIONS; break;
+                    default:
+                        exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL); // unknown method type
+                        exception->name = endpoint_expression;
+                        return *this;
+                }
+
+                if(target !=nullptr) {
+                    // set the target method handler but error if it was already set by a previous endpoint declaration
+                    if(*target !=nullptr ) {
+                        //fprintf(stderr, "fatal: endpoint %s %s was previously set to a different handler\n",
+                        //        uri_method_to_string(methodHandler.method), endpoint_expression);
+                        exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_DUPLICATE);
+                        exception->name = endpoint_expression;
+                        return *this;
+                    } else {
+                        *target = new Handler(methodHandler.handler);
+                        return *this; // successfully added
+                    }
+                }
+            }
+        }
+        return *this;
+    }
 
 #if __cplusplus < 201103L || (defined(_MSC_VER) && _MSC_VER < 1900)
     // for pre-c++11 support we have to specify a number of add handler methods
@@ -243,7 +315,46 @@ public:
 
     /// \brief Match a Uri against the compiled list of Uri expressions.
     /// If a match is found with an associated http method handler, the resolved UriEndpoint object is filled in.
-    Endpoint resolve(HttpMethod method, const char *uri);
+    Endpoints::Endpoint resolve(HttpMethod method, const char *uri) {
+        short rs;
+        Parser::EvalState ev(&parser, &uri);
+        if(ev.state<0)
+            return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
+        ev.mode = Parser::resolve;
+        ev.args = new Argument[ev.szargs = maxUriArgs];
+
+        // parse the input
+        if((rs=parser.parse( &ev )) ==URL_MATCHED) {
+            // successfully resolved the endpoint
+            Endpoint endpoint;
+            Handler* handler;
+            switch(method) {
+                case HttpGet: handler = ev.ep->GET; break;
+                case HttpPost: handler = ev.ep->POST; break;
+                case HttpPut: handler = ev.ep->PUT; break;
+                case HttpPatch: handler = ev.ep->PATCH; break;
+                case HttpDelete: handler = ev.ep->DELETE; break;
+                case HttpOptions: handler = ev.ep->OPTIONS; break;
+                default: handler = &defaultHandler;
+            }
+
+            if(handler !=nullptr) {
+                endpoint.status = URL_MATCHED;
+                endpoint.handler = *handler;
+                endpoint.name = ev.methodName;
+                endpoint.args = ev.args;
+                endpoint.nargs = ev.nargs;
+            } else {
+                endpoint.handler = defaultHandler;
+                endpoint.status = URL_FAIL_NO_HANDLER;
+            }
+            return endpoint;
+        } else {
+            // cannot resolve
+            return Endpoint(method, defaultHandler, rs);
+        }
+        // todo: we need to release memory from EV struct
+    }
 
 public:
     Handler defaultHandler; // like a 404 handler
