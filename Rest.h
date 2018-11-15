@@ -178,13 +178,20 @@ protected:
 public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
     Endpoints()
-            : maxUriArgs(0), exception(nullptr)
+            : maxUriArgs(0), exception(nullptr), defaultHandler(new Handler())
     {
     }
 
     /// \brief Destroys the RestUriExpression and releases memory
     virtual ~Endpoints() {
         delete exception;
+        if(defaultHandler)
+            delete defaultHandler;
+    }
+
+    Endpoints& onDefault(const Handler& _handler) {
+        *defaultHandler = _handler;
+        return *this;
     }
 
     /// \brief Parse and add single Uri Endpoint expressions to our list of Endpoints
@@ -197,7 +204,7 @@ public:
 
         typename Parser::EvalState ev(&parser, &endpoint_expression);
         if(ev.state<0) {
-            exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL);
+            exception = new Endpoint(methodHandler.method, *defaultHandler, URL_FAIL_INTERNAL);
             return *this;
         }
 
@@ -206,7 +213,7 @@ public:
 
         if((rs = parser.parse(&ev)) !=URL_MATCHED) {
             //printf("parse-eval-error %d   %s\n", rs, ev.uri);
-            exception = new Endpoint(methodHandler.method, defaultHandler, rs);
+            exception = new Endpoint(methodHandler.method, *defaultHandler, rs);
             exception->name = endpoint_expression;
             return *this;
         } else {
@@ -244,7 +251,7 @@ public:
                     case HttpDelete: target = &epc->DELETE; break;
                     case HttpOptions: target = &epc->OPTIONS; break;
                     default:
-                        exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_INTERNAL); // unknown method type
+                        exception = new Endpoint(methodHandler.method, *defaultHandler, URL_FAIL_INTERNAL); // unknown method type
                         exception->name = endpoint_expression;
                         return *this;
                 }
@@ -254,7 +261,7 @@ public:
                     if(*target !=nullptr ) {
                         //fprintf(stderr, "fatal: endpoint %s %s was previously set to a different handler\n",
                         //        uri_method_to_string(methodHandler.method), endpoint_expression);
-                        exception = new Endpoint(methodHandler.method, defaultHandler, URL_FAIL_DUPLICATE);
+                        exception = new Endpoint(methodHandler.method, *defaultHandler, URL_FAIL_DUPLICATE);
                         exception->name = endpoint_expression;
                         return *this;
                     } else {
@@ -301,7 +308,7 @@ public:
         short rs;
         typename Parser::EvalState ev(&parser, &uri);
         if(ev.state<0)
-            return Endpoint(method, defaultHandler, URL_FAIL_INTERNAL);
+            return Endpoint(method, *defaultHandler, URL_FAIL_INTERNAL);
         ev.mode = Parser::resolve;
         ev.args = new Argument[ev.szargs = maxUriArgs];
 
@@ -317,7 +324,7 @@ public:
                 case HttpPatch: handler = ev.ep->PATCH; break;
                 case HttpDelete: handler = ev.ep->DELETE; break;
                 case HttpOptions: handler = ev.ep->OPTIONS; break;
-                default: handler = &defaultHandler;
+                default: handler = defaultHandler;
             }
 
             if(handler !=nullptr) {
@@ -327,19 +334,19 @@ public:
                 endpoint.args = ev.args;
                 endpoint.nargs = ev.nargs;
             } else {
-                endpoint.handler = defaultHandler;
+                endpoint.handler = *defaultHandler;
                 endpoint.status = URL_FAIL_NO_HANDLER;
             }
             return endpoint;
         } else {
             // cannot resolve
-            return Endpoint(method, defaultHandler, rs);
+            return Endpoint(method, *defaultHandler, rs);
         }
         // todo: we need to release memory from EV struct
     }
 
 public:
-    Handler defaultHandler; // like a 404 handler
+    Handler* defaultHandler; // like a 404 handler
 
 protected:
     // some statistics on the endpoints
