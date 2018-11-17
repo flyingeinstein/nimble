@@ -396,9 +396,5 @@ namespace Rest {
             done:
             return URL_MATCHED;
         }
-
-
     };
-
-
 }

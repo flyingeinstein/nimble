@@ -14,6 +14,8 @@
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 
+#include "Rest-Esp8266.h"
+
 #define MAX_SLOTS     256
 
 
@@ -160,6 +162,7 @@ class Devices {
         Devices* owner;
     };
     RequestHandler httpHandler;
+    Esp8266RestRequestHandler restHandler;
     
   public:
     Devices(short maxDevices=32);

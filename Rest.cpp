@@ -6,7 +6,7 @@
 
 
 #include <string.h>
-#include <memory.h>
+//#include <memory.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -238,8 +238,6 @@ yarn* rest_uri_debug_print(UriExpression* expr, yarn* out)
     return rest_uri_debug_print_internal(expr, &ev, out, 0);
 }
 #endif
-
-
 
 
 } // ns: Rest

@@ -21,13 +21,13 @@ namespace Rest {
 // indicates a default Rest handler that matches any http verb request
 // this enum belongs with the web servers HTTP_GET, HTTP_POST, HTTP_xxx constants
 typedef enum {
-    HttpGet=1,
+    HttpMethodAny = 0,
+    HttpGet,
     HttpPost,
     HttpPut,
     HttpPatch,
     HttpDelete,
     HttpOptions,   
-    HttpMethodAny = 128
 } HttpMethod;
 
 /// \brief Convert a http method enum value to a string.
@@ -100,7 +100,7 @@ protected:
     typedef Link<Rest::Literal, Node> Literal;
     typedef Link<Rest::Type, Node> ArgumentType;
     typedef ::Rest::Token Token;
-    typedef Parser<Node, Rest::Literal, Rest::Argument, Token> Parser;
+    typedef ::Rest::Parser<Node, Rest::Literal, Rest::Argument, Token> Parser;
 
 public:
 

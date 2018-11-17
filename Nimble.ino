@@ -18,6 +18,7 @@ const char* hostname = "nimbl";
 #if !defined(CAPTIVE_PORTAL)
 const char* ssid = "MyWifi";
 const char* password = "mypassword";
+#endif
 
 
 boolean enable_influx = false;
