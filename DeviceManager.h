@@ -18,6 +18,12 @@
 
 #define MAX_SLOTS     256
 
+using Rest::GET;
+using Rest::PUT;
+using Rest::POST;
+using Rest::PATCH;
+using Rest::DELETE;
+using Rest::OPTIONS;
 
 typedef struct _InfluxTarget {
   String database;
@@ -114,6 +120,9 @@ typedef struct _DeviceDriverInfo {
 
 class Devices {
   public:
+    typedef Esp8266RestRequestHandler RestRequestHandler;
+    typedef RestRequestHandler::RequestType RestRequest;
+  
     short slots;
     Device** devices;
     
@@ -162,7 +171,7 @@ class Devices {
         Devices* owner;
     };
     RequestHandler httpHandler;
-    Esp8266RestRequestHandler restHandler;
+    RestRequestHandler restHandler;
     
   public:
     Devices(short maxDevices=32);
@@ -218,6 +227,9 @@ class Devices {
     // load aliases file from SPIFFS fs
     int restoreAliasesFile();
 
+    // Rest interface
+    inline const RestRequestHandler& rest() const { return restHandler; }
+    inline RestRequestHandler& rest() { return restHandler; }
 
     // json interface
     void jsonGetDevices(JsonObject& root);

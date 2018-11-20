@@ -118,10 +118,25 @@ void Devices::begin(NTPClient& client)
   ntp = &client;
 }
 
+int myhandler(Devices::RestRequest& request) {
+  return 200;
+}
+
 void Devices::setWebServer(ESP8266WebServer& _http)
 {
   http = &_http;
+  getWebServer().addHandler(&restHandler);
   getWebServer().addHandler(&httpHandler);
+
+  std::function<int(RestRequest&)> func = [](RestRequest& request) {
+    request.response["reply"] = "Hello World!";
+    return 200;
+  };
+  restHandler.on("/api/echo/:msg(string|integer)", GET( func ));
+  restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
+    request.response["reply"] = "Smello World!";
+    return 200;
+  }));
 }
 
 ESP8266WebServer& Devices::getWebServer() 

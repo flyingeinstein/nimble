@@ -69,13 +69,13 @@ template<class H>
 class MethodHandler {
 public:
     HttpMethod method;
-    H& handler;
+    const H& handler;
 
-    MethodHandler(HttpMethod _method, H& _handler) : method(_method), handler(_handler) {}
+    MethodHandler(HttpMethod _method, const H& _handler) : method(_method), handler(_handler) {}
 };
 
-template<class H> MethodHandler<H> GET(H& handler) { return MethodHandler<H>(HttpGet, handler); }
-template<class H> MethodHandler<H> PUT(H& handler) { return MethodHandler<H>(HttpPut, handler); }
+template<class H> MethodHandler<H> GET(const H& handler) { return MethodHandler<H>(HttpGet, handler); }
+template<class H> MethodHandler<H> PUT(const H& handler) { return MethodHandler<H>(HttpPut, handler); }
 template<class H> MethodHandler<H> POST(H& handler) { return MethodHandler<H>(HttpPost, handler); }
 template<class H> MethodHandler<H> PATCH(H& handler) { return MethodHandler<H>(HttpPatch, handler); }
 template<class H> MethodHandler<H> DELETE(H& handler) { return MethodHandler<H>(HttpDelete, handler); }
