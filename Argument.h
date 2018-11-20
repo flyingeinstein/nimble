@@ -8,6 +8,10 @@
 #include <cstring>
 #include <cassert>
 
+#if defined(ARDUINO)
+#include <Arduino.h>
+#endif
+
 // Bitmask values for different types
 #define ARG_MASK_INTEGER       ((unsigned short)1)
 #define ARG_MASK_REAL          ((unsigned short)2)
@@ -102,6 +106,11 @@ namespace Rest {
         inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
         inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
 
+#if defined(ARDUINO)
+        inline explicit operator String() const { assert(type&ARG_MASK_STRING); return String(s); }
+#endif
+
+
 #if 0   // ArgumentValues should never change, so use constructor only (and assignment op if needed)
         void set(long _l) { type = ARG_MASK_INTEGER; l = _l; }
         void set(unsigned long _ul) { type = ARG_MASK_UINTEGER; l = _ul; }
@@ -122,5 +131,57 @@ namespace Rest {
         static const Argument null;
     };
 
-} // ns: Rest
+    class Arguments {
+    public:
+        Arguments(size_t n)
+            : nargs(n), args(nullptr)
+        {
+            if(n>0)
+                args = new Argument[nargs];
+        }
 
+        Arguments(const Arguments& copy)
+            : args(nullptr), nargs(copy.nargs)
+        {
+            if(nargs>0) {
+                args = new Argument[nargs];
+                for (size_t i = 0; i < nargs; i++)
+                    args[i] = copy.args[i];
+            }
+        }
+
+        virtual ~Arguments() { delete [] args; }
+
+        inline Arguments& operator=(const Arguments& copy) {
+            delete [] args; // no need to check null
+            nargs = copy.nargs;
+            if(nargs>0) {
+                args = new Argument[nargs];
+                for (size_t i = 0; i < nargs; i++)
+                    args[i] = copy.args[i];
+            } else
+                args = nullptr;
+            return *this;
+        }
+
+        const Argument& operator[](int idx) const {
+            return (idx>=0 && idx<nargs)
+                   ? args[idx]
+                   : Argument::null;
+        }
+
+        const Argument& operator[](const char* _name) const {
+            for(size_t i=0; i<nargs; i++) {
+                if (strcmp(_name, args[i].name()) == 0)
+                    return args[i];
+            }
+            return Argument::null;
+        }
+
+    protected:
+        Argument* args;
+        size_t nargs;
+    };
+
+
+}; // ns: Rest

@@ -104,60 +104,29 @@ protected:
 
 public:
 
-    class Endpoint {
+    class Endpoint : public Arguments {
     public:
         int status;
         std::string name;
         HttpMethod method;
         Handler handler;
 
-        inline Endpoint() :  status(0), method(HttpMethodAny), args(nullptr), nargs(0) {}
-        inline Endpoint(HttpMethod _method, const Handler& _handler, int _status) :  status(_status), method(_method), handler(_handler), args(nullptr), nargs(0) {}
-        inline Endpoint(const Endpoint& copy) : status(copy.status), name(copy.name), handler(copy.handler), method(copy.method),
-                    args(nullptr), nargs(copy.nargs)
+        inline Endpoint() :  Arguments(0), status(0), method(HttpMethodAny) {}
+        inline Endpoint(HttpMethod _method, const Handler& _handler, int _status) :  Arguments(0), status(_status), method(_method), handler(_handler) {}
+        inline Endpoint(const Endpoint& copy) : Arguments(copy), status(copy.status), name(copy.name), method(copy.method), handler(copy.handler)
         {
-            if(nargs>0) {
-                args = new Argument[nargs];
-                for (int i = 0; i < nargs; i++)
-                    args[i] = copy.args[i];
-            }
         }
 
-        virtual ~Endpoint() { delete [] args; }
-
         inline Endpoint& operator=(const Endpoint& copy) {
+            Arguments::operator=(copy);
             status = copy.status;
             name = copy.name;
             method = copy.method;
             handler = copy.handler;
-            nargs = copy.nargs;
-            if(nargs>0) {
-                args = new Argument[nargs];
-                for (int i = 0; i < nargs; i++)
-                    args[i] = copy.args[i];
-            }
             return *this;
         }
 
         inline explicit operator bool() const { return status==URL_MATCHED; }
-
-        const Argument& operator[](int idx) const {
-            return (idx>=0 && idx<nargs)
-                ? args[idx]
-                : Argument::null;
-        }
-
-        const Argument& operator[](const char* _name) const {
-            for(int i=0; i<nargs; i++) {
-                if (strcmp(_name, args[i].name()) == 0)
-                    return args[i];
-            }
-            return Argument::null;
-        }
-
-    protected:
-        Argument* args;
-        size_t nargs;
 
         friend Endpoints;
     };

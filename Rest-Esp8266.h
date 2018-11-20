@@ -44,6 +44,7 @@ class RestRequest : public TRequest, public TResponse {
 
     Devices& devices;
     TWebServer& server;
+    Rest::Arguments& args;
 
     Rest::HttpMethod method;        // GET, POST, PUT, PATCH, DELETE, etc
 
@@ -54,7 +55,11 @@ class RestRequest : public TRequest, public TResponse {
 
     short httpStatus;               // return status sent in response
 
-    RestRequest(Devices& _devices, TWebServer& _server) : devices(_devices), server(_server) {}
+    inline const Rest::Argument& operator[](int idx) const { return args[idx]; }
+    inline const Rest::Argument& operator[](const char* _name) const { return args[_name]; }
+
+
+    RestRequest(Devices& _devices, TWebServer& _server, Rest::Arguments& _args) : devices(_devices), server(_server), args(_args) {}
 
   protected:
     DynamicJsonDocument requestDoc;
@@ -85,7 +90,7 @@ class RestRequestHandler : public ::RequestHandler
       Rest::HttpMethod method = (Rest::HttpMethod)requestMethod;
       typename Endpoints::Endpoint ep = endpoints.resolve(method, requestUri.c_str());
       if (ep) {
-        RequestType request(*owner, server);
+        RequestType request(*owner, server, ep);
         //request.endpoint = ep;
         request.method = method;
         request.contentType = "application/json";
@@ -98,7 +103,9 @@ class RestRequestHandler : public ::RequestHandler
         String content;
         serializeJson(request.response, content);
         server.send(request.httpStatus, "application/json", content);
+        return true;
       }
+      return false;
     }
 
     RestRequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< int(TRestRequest&) > methodHandler ) {
