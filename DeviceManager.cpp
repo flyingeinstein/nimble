@@ -129,14 +129,16 @@ void Devices::setWebServer(ESP8266WebServer& _http)
   getWebServer().addHandler(&httpHandler);
 
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
-    request.response["reply"] = "Hello World!";
+    String s("Hello ");
+    s += (const char*)request["msg"];
+    request.response["reply"] = s;
     return 200;
   };
   restHandler.on("/api/echo/:msg(string|integer)", GET( func ));
-  restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
+/*  restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
     request.response["reply"] = "Smello World!";
     return 200;
-  }));
+  ));*/
 }
 
 ESP8266WebServer& Devices::getWebServer() 

@@ -39,7 +39,7 @@ namespace Rest {
         errorExpectedIdentifierOrString,
         expectHtmlSuffix,
         expectEof
-    } url_state_e;
+    };
 
 #define GOTO_STATE(st) { ev->state = st; goto rescan; }
 #define NEXT_STATE(st) { ev->state = st; }
@@ -127,7 +127,6 @@ namespace Rest {
         short parse(EvalState* ev)
         {
             short rv;
-            uint64_t ptr;
             long wid;
             Node* epc = ev->ep;
             Literal* lit;
@@ -300,7 +299,7 @@ namespace Rest {
                             while(arg==nullptr && (tm_handlers[0]!=nullptr || tm_handlers[1]!=nullptr || tm_handlers[2]!=nullptr)) {
                                 int i;
                                 uint16_t tm=0;
-                                ArgumentType *x=nullptr, *y=nullptr;
+                                ArgumentType *x=nullptr;
                                 for(i=0; i<sizeof(tm_handlers)/sizeof(tm_handlers[0]); i++) {
                                     if(tm_handlers[i]!=nullptr) {
                                         if(x==nullptr) {

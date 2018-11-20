@@ -77,7 +77,6 @@ namespace Rest {
         TLiteral* newLiteral(TNode* ep, TLiteral* literal)
         {
             TLiteral* _new, *p;
-            int _bb_text;
             int _insert;
             if(ep->literals) {
                 // todo: this kind of realloc every Literal insert will cause memory fragmentation, use Endpoints shared mem

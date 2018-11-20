@@ -1,6 +1,6 @@
 project(basic-tests)
 
-set(SOURCE_FILES pool-objects.cpp binbag.cc RestTests.cpp)
+set(SOURCE_FILES RestTests.cpp RestFunctionalTests.cpp RestRequestTests.cpp)
 
 add_executable(basic-tests ${SOURCE_FILES})
 add_dependencies(basic-tests common-tests nimble)
