@@ -130,7 +130,13 @@ void Devices::setWebServer(ESP8266WebServer& _http)
 
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
     String s("Hello ");
-    s += (const char*)request["msg"];
+    auto msg = request["msg"];
+    if(msg.isString())
+      s += msg.toString();
+    else {
+      s += '#';
+      s += (long)msg;
+    }
     request.response["reply"] = s;
     return 200;
   };

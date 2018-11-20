@@ -147,7 +147,7 @@ protected:
 public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
     Endpoints()
-            : maxUriArgs(0), defaultHandler(new Handler()), exception(nullptr)
+            : defaultHandler(new Handler()), maxUriArgs(0), exception(nullptr)
     {
     }
 

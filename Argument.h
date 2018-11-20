@@ -104,10 +104,25 @@ namespace Rest {
         inline operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
         inline operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
         inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
-        inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
+        inline explicit operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
 
 #if defined(ARDUINO)
-        inline explicit operator String() const { assert(type&ARG_MASK_STRING); return String(s); }
+        inline operator String() const { assert(type&ARG_MASK_STRING); return String(s); }
+
+        String toString() const {
+          if(type & ARG_MASK_STRING)
+            return String(s);
+          else if((type&ARG_MASK_INTEGER)==ARG_MASK_INTEGER)
+            return String(l, 10);
+          else if((type&ARG_MASK_UINTEGER)==ARG_MASK_UINTEGER)
+            return String(ul, 10);
+          else if((type&ARG_MASK_NUMBER)==ARG_MASK_NUMBER)
+            return String(d,5);
+          else if((type&ARG_MASK_BOOLEAN)==ARG_MASK_BOOLEAN)
+            return String( b ? "true":"false" );
+          else
+            return String();
+        }
 #endif
 
 
@@ -134,7 +149,7 @@ namespace Rest {
     class Arguments {
     public:
         Arguments(size_t n)
-            : nargs(n), args(nullptr)
+            : args(nullptr), nargs(n)
         {
             if(n>0)
                 args = new Argument[nargs];
@@ -164,7 +179,7 @@ namespace Rest {
             return *this;
         }
 
-        const Argument& operator[](int idx) const {
+        const Argument& operator[](size_t idx) const {
             return (idx>=0 && idx<nargs)
                    ? args[idx]
                    : Argument::null;
