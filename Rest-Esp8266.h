@@ -13,125 +13,112 @@ class RestError {
     String message;
 };
 
-template<class... TArgs>
-class Handler {
-  public:
-    typedef std::function< int(TArgs... args) > F0;
+namespace Rest {
+    namespace Generics {
 
-    Handler() {}
-    Handler(F0 _f) : f0(std::move(_f)) {
+        /// \brief Main argument to Rest Callbacks
+        /// This structure is created and passed to Rest Method callbacks after the request Uri
+        /// and Endpoint has been resolved. Any arguments in the Uri Endpoint expression will be
+        /// added to the request json object and merged with POST data or other query parameters.
+        template<class TWebServer, class TRequest, class TResponse>
+        class Request : public TRequest, public TResponse {
+          public:
+            typedef TWebServer WebServerType;
+            typedef TRequest RequestType;
+            typedef TResponse ResponseType;
+
+            Devices& devices;
+            TWebServer& server;
+            Rest::Arguments& args;
+
+            Rest::HttpMethod method;        // GET, POST, PUT, PATCH, DELETE, etc
+
+            /// content type of the incoming request (should always be application/json)
+            const char* contentType;
+
+            unsigned long long timestamp;   // timestamp request was received, set by framework
+
+            short httpStatus;               // return status sent in response
+
+            inline const Rest::Argument& operator[](int idx) const { return args[idx]; }
+            inline const Rest::Argument& operator[](const char* _name) const { return args[_name]; }
+
+
+            Request(Devices& _devices, TWebServer& _server, Rest::Arguments& _args) : devices(_devices), server(_server), args(_args) {}
+
+          protected:
+            DynamicJsonDocument requestDoc;
+        };
+
+
+        template<class TRestRequest>
+        class RequestHandler : public ::RequestHandler
+        {
+          public:
+            // types
+            typedef TRestRequest RequestType;
+            typedef typename RequestType::WebServerType WebServerType;
+
+            typedef Handler< TRestRequest& > HandlerType;
+            typedef Rest::Endpoints<RequestHandler> Endpoints;
+
+            // the collection of Rest handlers
+            Endpoints endpoints;
+
+            RequestHandler(Devices* _owner) : owner(_owner) {}
+
+            virtual bool canHandle(HTTPMethod method, String uri) {
+              return true;
+            }
+
+            virtual bool handle(WebServerType& server, HTTPMethod requestMethod, String requestUri) {
+              Rest::HttpMethod method = (Rest::HttpMethod)requestMethod;
+              typename Endpoints::Endpoint ep = endpoints.resolve(method, requestUri.c_str());
+              if (ep) {
+                RequestType request(*owner, server, ep);
+                //request.endpoint = ep;
+                request.method = method;
+                request.contentType = "application/json";
+                request.timestamp = millis();
+                request.httpStatus = 0;
+
+                ep.handler(request);
+
+                // make a << operator to send output to server response
+                String content;
+                serializeJson(request.response, content);
+                server.send(request.httpStatus, "application/json", content);
+                return true;
+              }
+              return false;
+            }
+
+        #if 0
+            RequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< int(TRestRequest&) > methodHandler ) {
+              Rest::MethodHandler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
+              endpoints.on(endpoint_expression, h);
+              return *this;
+            }
+
+            RequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< std::function< int(TRestRequest&) > > methodHandler ) {
+              Rest::MethodHandler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
+              endpoints.on(endpoint_expression, h);
+              return *this;
+            }
+        #else
+            // c++11 using parameter pack expressions to recursively call add()
+            template<class T, class... Targs>
+            RequestHandler& on(const char *endpoint_expression, T h1, Targs... rest ) {
+              endpoints.on(endpoint_expression, h1);   // add first argument
+              return on(endpoint_expression, rest...);   // add the rest (recursively)
+            }
+        #endif
+
+          protected:
+            Devices* owner;
+        };
     }
-    Handler(int _f(TArgs... args)) : f0(_f) {}
-
-    int operator()(TArgs... args) {
-      return f0(args...);
-    }
-
-    F0 f0;
-};
-
-
-/// \brief Main argument to Rest Callbacks
-/// This structure is created and passed to Rest Method callbacks after the request Uri
-/// and Endpoint has been resolved. Any arguments in the Uri Endpoint expression will be
-/// added to the request json object and merged with POST data or other query parameters.
-template<class TWebServer, class TRequest, class TResponse>
-class RestRequest : public TRequest, public TResponse {
-  public:
-    typedef TWebServer WebServerType;
-    typedef TRequest RequestType;
-    typedef TResponse ResponseType;
-
-    Devices& devices;
-    TWebServer& server;
-    Rest::Arguments& args;
-
-    Rest::HttpMethod method;        // GET, POST, PUT, PATCH, DELETE, etc
-
-    /// content type of the incoming request (should always be application/json)
-    const char* contentType;
-
-    unsigned long long timestamp;   // timestamp request was received, set by framework
-
-    short httpStatus;               // return status sent in response
-
-    inline const Rest::Argument& operator[](int idx) const { return args[idx]; }
-    inline const Rest::Argument& operator[](const char* _name) const { return args[_name]; }
-
-
-    RestRequest(Devices& _devices, TWebServer& _server, Rest::Arguments& _args) : devices(_devices), server(_server), args(_args) {}
-
-  protected:
-    DynamicJsonDocument requestDoc;
-};
-
-
-template<class TRestRequest>
-class RestRequestHandler : public ::RequestHandler
-{
-  public:
-    // types
-    typedef TRestRequest RequestType;
-    typedef typename RequestType::WebServerType WebServerType;
-
-    typedef Handler< TRestRequest& > RequestHandler;
-    typedef Rest::Endpoints<RequestHandler> Endpoints;
-
-    // the collection of Rest handlers
-    Endpoints endpoints;
-
-    RestRequestHandler(Devices* _owner) : owner(_owner) {}
-
-    virtual bool canHandle(HTTPMethod method, String uri) {
-      return true;
-    }
-
-    virtual bool handle(WebServerType& server, HTTPMethod requestMethod, String requestUri) {
-      Rest::HttpMethod method = (Rest::HttpMethod)requestMethod;
-      typename Endpoints::Endpoint ep = endpoints.resolve(method, requestUri.c_str());
-      if (ep) {
-        RequestType request(*owner, server, ep);
-        //request.endpoint = ep;
-        request.method = method;
-        request.contentType = "application/json";
-        request.timestamp = millis();
-        request.httpStatus = 0;
-
-        ep.handler(request);
-
-        // make a << operator to send output to server response
-        String content;
-        serializeJson(request.response, content);
-        server.send(request.httpStatus, "application/json", content);
-        return true;
-      }
-      return false;
-    }
-
-    RestRequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< int(TRestRequest&) > methodHandler ) {
-      Rest::MethodHandler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
-      endpoints.on(endpoint_expression, h);
-      return *this;
-    }
-
-    RestRequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< std::function< int(TRestRequest&) > > methodHandler ) {
-      Rest::MethodHandler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
-      endpoints.on(endpoint_expression, h);
-      return *this;
-    }
-
-#if 0
-    // c++11 using parameter pack expressions to recursively call add()
-    template<class T, class... Targs>
-    RestRequestHandler& on(const char *endpoint_expression, T h1, Targs... rest ) {
-      on(endpoint_expression, h1);   // add first argument
-      return on(endpoint_expression, rest...);   // add the rest (recursively)
-    }
-#endif
-
-  protected:
-    Devices* owner;
-};
+}
 
 namespace ArduinoJson {
 class Request {
@@ -169,5 +156,7 @@ class Response {
 };
 }
 
-typedef RestRequest<ESP8266WebServer, ArduinoJson::Request, ArduinoJson::Response> Esp8266RestRequest;
-typedef RestRequestHandler< Esp8266RestRequest > Esp8266RestRequestHandler;
+typedef Rest::Generics::Request<ESP8266WebServer, ArduinoJson::Request, ArduinoJson::Response> Esp8266RestRequest;
+typedef Rest::Generics::RequestHandler< Esp8266RestRequest > Esp8266RestRequestHandler;
+
+DEFINE_HTTP_METHOD_HANDLERS(Esp8266RestRequest)

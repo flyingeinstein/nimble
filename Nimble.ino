@@ -16,8 +16,8 @@ const char* hostname = "nimbl";
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
 #if !defined(CAPTIVE_PORTAL)
-const char* ssid = "MyWifi";
-const char* password = "mypassword";
+const char* ssid = "Yogi";
+const char* password = "cholera0625";
 #endif
 
 

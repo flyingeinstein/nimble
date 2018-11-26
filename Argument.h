@@ -104,7 +104,7 @@ namespace Rest {
         inline operator unsigned long() const { assert(type&ARG_MASK_INTEGER); return ul; }
         inline operator double() const { assert(type&ARG_MASK_NUMBER); return d; }
         inline operator bool() const { return (type == ARG_MASK_BOOLEAN) ? b : (ul>0); }
-        inline explicit operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
+        inline operator const char*() const { assert(type&ARG_MASK_STRING); return s; }
 
 #if defined(ARDUINO)
         inline operator String() const { assert(type&ARG_MASK_STRING); return String(s); }

@@ -33,6 +33,8 @@ const char* OneWireSensor::getDriverName() const
 void OneWireSensor::begin()
 {
   on("devices", std::bind(&OneWireSensor::httpDevices, this));
+  //onn("dewices", GET(std::bind(&OneWireSensor::httpDewices, this)));
+  endpoints.on("dewices", GET(std::bind(&OneWireSensor::httpDewices, this)));
 }
 
 const char* hex = "0123456789ABCDEF";
@@ -47,6 +49,11 @@ void OneWireSensor::httpDevices()
   String content;
   serializeJson(doc, content);
   owner->getWebServer().send(200, "application/json", content);
+}
+
+void OneWireSensor::httpDewices(Devices::RestRequest request)
+{
+  getDeviceInfo(request.response);
 }
 
 void OneWireSensor::getDeviceInfo(JsonObject& node)

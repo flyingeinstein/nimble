@@ -117,12 +117,11 @@ typedef struct _DeviceDriverInfo {
   DriverFactory factory;
 } DeviceDriverInfo;
 
-
 class Devices {
   public:
     typedef Esp8266RestRequestHandler RestRequestHandler;
     typedef RestRequestHandler::RequestType RestRequest;
-  
+
     short slots;
     Device** devices;
     
@@ -230,6 +229,11 @@ class Devices {
     // Rest interface
     inline const RestRequestHandler& rest() const { return restHandler; }
     inline RestRequestHandler& rest() { return restHandler; }
+
+    template<class... Targs>
+    RestRequestHandler& on(const char *endpoint_expression, Targs... rest ) {
+      return restHandler.on(endpoint_expression, rest...);   // add the rest (recursively)
+    }
 
     // json interface
     void jsonGetDevices(JsonObject& root);
@@ -366,6 +370,8 @@ class Device {
     unsigned short slots;
     Slot* readings;
     unsigned long flags;
+    Devices::RestRequestHandler::Endpoints endpoints;
+
 
     unsigned long updateInterval;
     unsigned long nextUpdate;
@@ -382,6 +388,18 @@ class Device {
     void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
     void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
 
+/*    template<class... Targs>
+    Device& onn(const char *endpoint_expression, Targs... rest ) {
+      onn(endpoint_expression, rest...);   // add the rest (recursively)
+      return *this;
+    }
+*/
+    template<class... Targs>
+    Device& on(const char *endpoint_expression, Targs... rest ) {
+        endpoints.on(endpoint_expression, rest...);   // add the rest (recursively)
+        return *this;
+    }
+   
     // enable direct access to slots via http or mqqt
     // deprecated: void enableDirect(short slot, bool _get=true, bool _post=true);
 

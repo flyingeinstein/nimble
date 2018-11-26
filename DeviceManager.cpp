@@ -140,11 +140,11 @@ void Devices::setWebServer(ESP8266WebServer& _http)
     request.response["reply"] = s;
     return 200;
   };
-  restHandler.on("/api/echo/:msg(string|integer)", GET( func ));
-/*  restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
+  this->on("/api/echo/:msg(string|integer)", GET( func ));
+  restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
     request.response["reply"] = "Smello World!";
     return 200;
-  ));*/
+  ));
 }
 
 ESP8266WebServer& Devices::getWebServer() 

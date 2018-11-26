@@ -43,28 +43,33 @@ typedef enum {
   RestHandler
 } HandlerPrototype;
 
-
-/// \brief Contains details of a resolved Uri request and the UriExpression that matched it.
-/// Like the UriEndpoint above, but used when an actual http request is matched against an
-/// Endpoint Uri expression. This structure contains information on both the http request
-/// and the matched expression.
-/*typedef struct _ResolvedUriEndpoint {
-    uint32_t method;        // GET, POST, PUT, PATCH, DELETE, etc
-    const char* name;
-    const char* requestUri;
-    UriEndpointMethodHandler handler;
-    std::map<String, argdddp> arguments;
-    uint32_t flags;         // UEF flags
-} ResolvedUriEndpoint;*/
-
-
 typedef uint16_t url_opcode_t;
+
+
+template<class... TArgs>
+class Handler {
+public:
+    typedef std::function< int(TArgs... args) > F0;
+
+    Handler() {}
+    Handler(F0 _f) : method(HttpGet), handler(std::move(_f)) {}
+    Handler(HttpMethod m, F0 _f) : method(m), handler(std::move(_f)) {}
+    //Handler(int _f(TArgs... args)) : f0(_f) {}
+
+    int operator()(TArgs... args) {
+        return handler(args...);
+    }
+
+    HttpMethod method;
+    F0 handler;
+};
 
 /// \defgroup MethodHandlers Associates an http method verb to a handler function
 /// \@{
 /// \brief Class used to associate a http method verb with a handler function
 /// This is used when adding a handler to an endpoint for specific http verbs such as GET, PUT, POST, PATCH, DELETE, etc.
 /// Do not use this class, but instead use the template functions  GET(handler), PUT(handler), POST(handler), etc.
+#if 0
 template<class H>
 class MethodHandler {
 public:
@@ -73,7 +78,9 @@ public:
 
     MethodHandler(HttpMethod _method, const H& _handler) : method(_method), handler(_handler) {}
 };
+#endif
 
+#if 0
 template<class H> MethodHandler<H> GET(const H& handler) { return MethodHandler<H>(HttpGet, handler); }
 template<class H> MethodHandler<H> PUT(const H& handler) { return MethodHandler<H>(HttpPut, handler); }
 template<class H> MethodHandler<H> POST(H& handler) { return MethodHandler<H>(HttpPost, handler); }
@@ -81,6 +88,36 @@ template<class H> MethodHandler<H> PATCH(H& handler) { return MethodHandler<H>(H
 template<class H> MethodHandler<H> DELETE(H& handler) { return MethodHandler<H>(HttpDelete, handler); }
 template<class H> MethodHandler<H> OPTIONS(H& handler) { return MethodHandler<H>(HttpOptions, handler); }
 template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(HttpMethodAny, handler); }
+#elif 0
+    template<class H> Handler<H&> GET(std::function<int(H&)> handler) { return Handler<H&>(HttpGet, std::move(handler)); }
+    template<class H> Handler<H&> GET(int (handler)(H&)) { return Handler<H&>(HttpGet, std::function<int(H&)>(handler)); }
+
+    template<class H> Handler<H&> PUT(std::function<int(H&)> handler) { return Handler<H&>(HttpPut, handler); }
+    template<class H> Handler<H&> POST(std::function<int(H&)> handler) { return Handler<H&>(HttpPost, handler); }
+    template<class H> Handler<H&> PATCH(std::function<int(H&)> handler) { return Handler<H&>(HttpPatch, handler); }
+    template<class H> Handler<H&> DELETE(std::function<int(H&)> handler) { return Handler<H&>(HttpDelete, handler); }
+    template<class H> Handler<H&> OPTIONS(std::function<int(H&)> handler) { return Handler<H&>(HttpOptions, handler); }
+    template<class H> Handler<H&> ANY(std::function<int(H&)> handler) { return Handler<H&>(HttpMethodAny, handler); }
+#else
+    template<class H> Handler<H&> GET(std::function<int(H&)> handler) { return Handler<H&>(HttpGet, std::move(handler)); }
+    template<class H> Handler<H&> PUT(std::function<int(H&)> handler) { return Handler<H&>(HttpPut, handler); }
+    template<class H> Handler<H&> POST(std::function<int(H&)> handler) { return Handler<H&>(HttpPost, handler); }
+    template<class H> Handler<H&> PATCH(std::function<int(H&)> handler) { return Handler<H&>(HttpPatch, handler); }
+    template<class H> Handler<H&> DELETE(std::function<int(H&)> handler) { return Handler<H&>(HttpDelete, handler); }
+    template<class H> Handler<H&> OPTIONS(std::function<int(H&)> handler) { return Handler<H&>(HttpOptions, handler); }
+    template<class H> Handler<H&> ANY(std::function<int(H&)> handler) { return Handler<H&>(HttpMethodAny, handler); }
+
+#define DEFINE_HTTP_METHOD_HANDLER(RequestType, M, e)  \
+    Rest::Handler<RequestType&> M(std::function<int(RequestType&)> handler) { return Rest::Handler<RequestType&>(Rest::e, std::move(handler)); }
+#define DEFINE_HTTP_METHOD_HANDLERS(RequestType)  \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, GET, HttpGet)   \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, PUT, HttpPut)   \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, POST, HttpPost)   \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, PATCH, HttpPatch)   \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, DELETE, HttpDelete)   \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, OPTIONS, HttpOptions)   \
+    DEFINE_HTTP_METHOD_HANDLER(RequestType, ANY, HttpMethodAny)
+#endif
 /// \@}
 
 
@@ -164,7 +201,7 @@ public:
     }
 
     /// \brief Parse and add single Uri Endpoint expressions to our list of Endpoints
-    Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> methodHandler ) {
+    Endpoints& on(const char *endpoint_expression, THandler methodHandler ) {
         short rs;
 
         // if exception was set, abort
@@ -245,13 +282,29 @@ public:
 
 #if __cplusplus < 201103L || (defined(_MSC_VER) && _MSC_VER < 1900)
     // for pre-c++11 support we have to specify a number of add handler methods
-    inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2 ) {
-        add(endpoint_expression, h1);
-        return add(endpoint_expression, h2);
+    inline Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2 ) {
+        on(endpoint_expression, h1);
+        return on(endpoint_expression, h2);
     }
-    inline Endpoints& add(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3 ) {
-        add(endpoint_expression, h1, h2);
-        return add(endpoint_expression, h3);
+    inline Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3 ) {
+        on(endpoint_expression, h1, h2);
+        return on(endpoint_expression, h3);
+    }
+    inline Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3, MethodHandler<Handler> h4 ) {
+        on(endpoint_expression, h1, h2, h3);
+        return on(endpoint_expression, h4);
+    }
+    inline Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3, MethodHandler<Handler> h4, MethodHandler<Handler> h5 ) {
+        on(endpoint_expression, h1, h2, h3, h4);
+        return on(endpoint_expression, h5);
+    }
+    inline Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3, MethodHandler<Handler> h4, MethodHandler<Handler> h5, MethodHandler<Handler> h6 ) {
+        on(endpoint_expression, h1, h2, h3, h4, h5);
+        return on(endpoint_expression, h6);
+    }
+    inline Endpoints& on(const char *endpoint_expression, MethodHandler<Handler> h1, MethodHandler<Handler> h2, MethodHandler<Handler> h3, MethodHandler<Handler> h4, MethodHandler<Handler> h5, MethodHandler<Handler> h6, MethodHandler<Handler> h7 ) {
+        on(endpoint_expression, h1, h2, h3, h4, h5, h6);
+        return on(endpoint_expression, h7);
     }
 #else
     // c++11 using parameter pack expressions to recursively call add()

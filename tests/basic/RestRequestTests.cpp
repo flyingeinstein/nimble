@@ -9,23 +9,6 @@
 #include "../../Rest.h"
 
 
-template<class... TArgs>
-class Handler {
-public:
-    typedef std::function< int(TArgs... args) > F0;
-
-    Handler() {}
-    Handler(F0 _f) : f0(std::move(_f)) {
-    }
-    Handler(int _f(TArgs... args)) : f0(_f) {}
-
-    int operator()(TArgs... args) {
-        return f0(args...);
-    }
-
-    F0 f0;
-};
-
 class RestRequest
 {
 public:
@@ -38,12 +21,6 @@ public:
     RestRequest(Rest::Arguments& _args) : args(_args) {}
 };
 
-using Rest::GET;
-using Rest::PUT;
-using Rest::POST;
-using Rest::PATCH;
-using Rest::DELETE;
-using Rest::OPTIONS;
 
 using Rest::HttpMethod;
 using Rest::HttpGet;
@@ -60,7 +37,7 @@ public:
     // types
     typedef TRestRequest RequestType;
 
-    typedef Handler< TRestRequest& > RequestHandler;
+    typedef Rest::Handler< TRestRequest& > RequestHandler;
     typedef Rest::Endpoints<RequestHandler> Endpoints;
 
     // the collection of Rest handlers
@@ -79,17 +56,25 @@ public:
             return false;
     }
 
-    RestRequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< int(TRestRequest&) > methodHandler ) {
-        Rest::MethodHandler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
-        endpoints.on(endpoint_expression, h);
+#if 0
+    RestRequestHandler& on(const char *endpoint_expression, Rest::Handler< TRestRequest& > methodHandler ) {
+        //Rest::Handler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
+        endpoints.on(endpoint_expression, methodHandler);
         return *this;
     }
 
-    RestRequestHandler& on(const char *endpoint_expression, Rest::MethodHandler< std::function< int(TRestRequest&) > > methodHandler ) {
-        Rest::MethodHandler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
-        endpoints.on(endpoint_expression, h);
+    RestRequestHandler& on(const char *endpoint_expression, std::function< int(TRestRequest&) > methodHandler ) {
+        //Rest::Handler< RequestHandler > h( methodHandler.method, RequestHandler( methodHandler.handler ) );
+        endpoints.on(endpoint_expression, methodHandler);
         return *this;
     }
+#else
+    template<class... Targs>
+    RestRequestHandler& on(const char *endpoint_expression, Targs... rest ) {
+        endpoints.on(endpoint_expression, rest...);   // add the rest (recursively)
+        return *this;
+    }
+#endif
 
 #if 0
     // c++11 using parameter pack expressions to recursively call add()
@@ -101,6 +86,7 @@ public:
 #endif
 };
 
+DEFINE_HTTP_METHOD_HANDLERS(RestRequest)
 
 using Rest::uri_result_to_string;
 
@@ -119,5 +105,27 @@ TEST(endpoints_std_function)
         return 200;
     };
     rest.on("/api/echo/:msg(string|integer)", GET(func));
+    return OK;
+}
+
+int handler_func(RestRequest& r) { r.response = "hello world"; return 2; }
+
+TEST(endpoints_function)
+{
+    RestRequestHandler<RestRequest> rest;
+    rest.on("/api/echo/:msg(string|integer)", GET(handler_func));
+    return OK;
+}
+
+//template<class H> Rest::Handler<H&> GETT(std::function< int(H&) > handler) { return Rest::Handler<H&>(HttpGet, handler); }
+//Rest::Handler<RestRequest&> GETT(std::function< int(RestRequest&) > handler) { return Rest::Handler<RestRequest&>(HttpGet, handler); }
+
+TEST(endpoints_lambda)
+{
+    RestRequestHandler<RestRequest> rest;
+    rest.on("/api/echo/:msg(string|integer)", GET([](RestRequest &request) {
+        request.response = "Hello World!";
+        return 200;
+    }));
     return OK;
 }
