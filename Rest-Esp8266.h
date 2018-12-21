@@ -106,6 +106,12 @@ namespace Rest {
               return *this;
             }
         #else
+            // single argument case
+            RequestHandler& on(const char *endpoint_expression,  HandlerType& h1 ) {
+              endpoints.on(endpoint_expression, h1);   // add first argument
+              return *this;
+            }
+        
             // c++11 using parameter pack expressions to recursively call add()
             template<class T, class... Targs>
             RequestHandler& on(const char *endpoint_expression, T h1, Targs... rest ) {

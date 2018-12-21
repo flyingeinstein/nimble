@@ -179,6 +179,16 @@ namespace Rest {
             return *this;
         }
 
+        Arguments operator+(const Arguments& rhs) {
+            int i, j;
+            Arguments a(nargs + rhs.nargs);
+            for(i=0; i<nargs; i++)
+                a.args[i] = args[i];
+            for(j=0; j<rhs.nargs; j++)
+                a.args[i+j] = args[j];
+            return a;
+        }
+
         const Argument& operator[](size_t idx) const {
             return (idx<nargs)
                    ? args[idx]
