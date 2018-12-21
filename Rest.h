@@ -99,6 +99,7 @@ template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(Htt
     template<class H> Handler<H&> OPTIONS(std::function<int(H&)> handler) { return Handler<H&>(HttpOptions, handler); }
     template<class H> Handler<H&> ANY(std::function<int(H&)> handler) { return Handler<H&>(HttpMethodAny, handler); }
 #else
+namespace Generics {
     template<class H> Handler<H&> GET(std::function<int(H&)> handler) { return Handler<H&>(HttpGet, std::move(handler)); }
     template<class H> Handler<H&> PUT(std::function<int(H&)> handler) { return Handler<H&>(HttpPut, handler); }
     template<class H> Handler<H&> POST(std::function<int(H&)> handler) { return Handler<H&>(HttpPost, handler); }
@@ -106,9 +107,10 @@ template<class H> MethodHandler<H> ANY(H& handler) { return MethodHandler<H>(Htt
     template<class H> Handler<H&> DELETE(std::function<int(H&)> handler) { return Handler<H&>(HttpDelete, handler); }
     template<class H> Handler<H&> OPTIONS(std::function<int(H&)> handler) { return Handler<H&>(HttpOptions, handler); }
     template<class H> Handler<H&> ANY(std::function<int(H&)> handler) { return Handler<H&>(HttpMethodAny, handler); }
+}
 
 #define DEFINE_HTTP_METHOD_HANDLER(RequestType, M, e)  \
-    Rest::Handler<RequestType&> M(std::function<int(RequestType&)> handler) { return Rest::Handler<RequestType&>(Rest::e, std::move(handler)); }
+    inline Rest::Handler<RequestType&> M(std::function<int(RequestType&)> handler) { return Rest::Handler<RequestType&>(Rest::e, std::move(handler)); }
 #define DEFINE_HTTP_METHOD_HANDLERS(RequestType)  \
     DEFINE_HTTP_METHOD_HANDLER(RequestType, GET, HttpGet)   \
     DEFINE_HTTP_METHOD_HANDLER(RequestType, PUT, HttpPut)   \
@@ -192,6 +194,12 @@ public:
     /// \brief Initialize an empty UriExpression with a maximum number of code size.
     Endpoints()
             : defaultHandler(new Handler()), maxUriArgs(0), exception(nullptr)
+    {
+    }
+
+    template<class... Targs>
+    Endpoints(Targs... args)
+            : defaultHandler(new Handler(args...)), maxUriArgs(0), exception(nullptr)
     {
     }
 
