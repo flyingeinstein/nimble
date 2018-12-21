@@ -201,7 +201,7 @@ namespace Rest {
                         } else if(ev->mode == resolve) {
                             GOTO_STATE(expectParameterValue);
                         } else
-                        NEXT_STATE( errorExpectedIdentifierOrString );
+                            NEXT_STATE( errorExpectedIdentifierOrString );
                     } break;
                     case expectParameterValue: {
                         const char* _typename=nullptr;

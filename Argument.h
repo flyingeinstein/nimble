@@ -180,7 +180,7 @@ namespace Rest {
         }
 
         const Argument& operator[](size_t idx) const {
-            return (idx>=0 && idx<nargs)
+            return (idx<nargs)
                    ? args[idx]
                    : Argument::null;
         }

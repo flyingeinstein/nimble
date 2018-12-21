@@ -2,6 +2,7 @@
 include(CheckIncludeFile)
 check_include_file(string.h HAS_STRING_H)
 check_include_file(strings.h HAS_STRINGS_H)
+check_include_file(malloc.h HAS_MALLOC_H)
 
 # check symbols for existance on platform
 include(CheckSymbolExists)

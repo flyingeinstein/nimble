@@ -5,8 +5,12 @@
 #pragma once
 
 #include <string.h>
-#include <malloc.h>
 #include <cstdlib>
+
+#if defined(HAS_MALLOC_H)
+#include <malloc.h>
+#endif
+
  
 // simple token IDs
 #define TID_EOF               300
