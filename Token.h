@@ -17,6 +17,7 @@
 #define TID_INTEGER           303
 #define TID_FLOAT             305
 #define TID_BOOL              307
+#define TID_WILDCARD          '*'
 
 // String token IDs
 // the following token types allocate memory for string tokens and so must be freed
@@ -47,7 +48,10 @@ class Token {
     int64_t i;
     double d;
 
-    inline Token() : id(0), s(nullptr), i(0), d(0) {}
+    // reference back to the original string
+    const char* original;
+
+    inline Token() : id(0), s(nullptr), i(0), d(0), original(nullptr) {}
 
     ~Token() {
       clear();
@@ -62,6 +66,7 @@ class Token {
       s = nullptr;
       i = 0;
       d = 0.0;
+      original= nullptr;
     }
 
     /// \brief swap the values of two tokens
@@ -72,14 +77,17 @@ class Token {
       char *_s = rhs.s;
       int64_t _i = rhs.i;
       double _d = rhs.d;
+      const char* _original = rhs.original;
       rhs.id = id;
       rhs.s = s;
       rhs.i = i;
       rhs.d = d;
+      rhs.original = original;
       id = _id;
       s = _s;
       i = _i;
       d = _d;
+      original = _original;
     }
 
     void set(short _id, const char* _begin, const char* _end)
@@ -150,6 +158,8 @@ class Token {
         return 0;
       }
 
+      original = input;
+
       // check for single character token
       // note: if we find a single char token we break and then return, otherwise (default) we jump over
       // to check for longer token types like keywords and attributes
@@ -157,7 +167,7 @@ class Token {
         s = nullptr;
         id = *input++;
         goto done;
-      } else if (allow_parameters && strchr("=:?(|)", *input) != nullptr) {
+      } else if (allow_parameters && strchr("=:?(|)*", *input) != nullptr) {
         // these symbols are allowed when we are scanning a Rest URL match expression
         // but are not valid in normal URLs, or at least considered part of normal URL matching below
         s = nullptr;

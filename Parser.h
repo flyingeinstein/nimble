@@ -7,6 +7,7 @@
 #include "Token.h"
 
 #define URL_MATCHED                         0
+#define URL_MATCHED_WILDCARD                1
 #define URL_FAIL_NO_ENDPOINT                (-1)
 #define URL_FAIL_NO_HANDLER                 (-2)
 #define URL_FAIL_DUPLICATE                  (-3)
@@ -167,7 +168,20 @@ namespace Rest {
                         }
                     } break;
                     case expectPathPart: {
-                        if(ev->t.is(TID_STRING, TID_IDENTIFIER)) {
+                        if(ev->mode == expand && ev->t.is(TID_WILDCARD)) {
+                            // encountered wildcard, must be last token
+                            if(epc->wild==nullptr) {
+                                ev->ep = epc->wild = pool.newNode();
+                            } else {
+                                ev->ep = epc->wild;
+                            }
+                            *ev->pmethodName++ = '*';
+                            *ev->pmethodName = 0;
+                            return ev->peek.is(TID_EOF)
+                                ? URL_MATCHED_WILDCARD
+                                : URL_FAIL_SYNTAX;
+                        }
+                        else if(ev->t.is(TID_STRING, TID_IDENTIFIER)) {
                             // we must see if we already have a literal with this name
                             lit = nullptr;
                             wid = binbag_find_nocase(pool.text, ev->t.s);
@@ -188,8 +202,22 @@ namespace Rest {
                                     ev->ep = lit->next = pool.newNode();
                                 } else if(ev->mode == resolve && epc->string!=nullptr) {
                                     GOTO_STATE(expectParameterValue);
-                                } else
-                                    return URL_FAIL_NO_ENDPOINT;
+                                } else {
+                                    if(epc->wild != nullptr) {
+                                        // match wildcard
+                                        ev->ep = epc->wild;
+
+                                        // complete method name
+                                        *ev->pmethodName++ = '*';
+                                        *ev->pmethodName = 0;
+
+                                        // add remaining URL as argument
+                                        ev->args[ev->nargs++] = Argument(Type("_url", ARG_MASK_STRING), ev->t.original);
+
+                                        return URL_MATCHED_WILDCARD;
+                                    } else
+                                        return URL_FAIL_NO_ENDPOINT;
+                                }
                             } else
                                 ev->ep = lit->next;
 

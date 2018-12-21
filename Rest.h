@@ -177,8 +177,15 @@ protected:
         // if no literal matches, then try to match based on token type
         ArgumentType *string, *numeric, *boolean;
 
+        // if no match is made, we can optionally call a wildcard handler
+        Node *wild;  // todo: make this a node instead so it contains all the GET, PUT, etc
+
         // if we are at the end of the URI then we can pass to one of the http verb handlers
         Handler *GET, *POST, *PUT, *PATCH, *DELETE, *OPTIONS;
+
+        inline Node() : literals(nullptr), string(nullptr), numeric(nullptr), boolean(nullptr), wild(nullptr),
+                        GET(nullptr), POST(nullptr), PUT(nullptr), PATCH(nullptr), DELETE(nullptr), OPTIONS(nullptr)
+        {}
     };
 
 public:
@@ -217,7 +224,7 @@ public:
         ev.szargs = 20;
         ev.mode = Parser::expand;         // tell the parser we are adding this endpoint
 
-        if((rs = parser.parse(&ev)) !=URL_MATCHED) {
+        if((rs = parser.parse(&ev)) <URL_MATCHED) {
             //printf("parse-eval-error %d   %s\n", rs, ev.uri);
             exception = new Endpoint(methodHandler.method, *defaultHandler, rs);
             exception->name = endpoint_expression;
@@ -332,13 +339,14 @@ public:
         if(ev.state<0)
             return Endpoint(method, *defaultHandler, URL_FAIL_INTERNAL);
         ev.mode = Parser::resolve;
-        ev.args = new Argument[ev.szargs = maxUriArgs];
+        ev.args = new Argument[ev.szargs = maxUriArgs+1];
 
         // parse the input
-        if((rs=parser.parse( &ev )) ==URL_MATCHED) {
+        if((rs=parser.parse( &ev )) >=URL_MATCHED) {
             // successfully resolved the endpoint
             Endpoint endpoint;
             Handler* handler;
+
             switch(method) {
                 case HttpGet: handler = ev.ep->GET; break;
                 case HttpPost: handler = ev.ep->POST; break;
