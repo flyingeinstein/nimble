@@ -48,3 +48,55 @@ TEST(endpoints_lambda)
     }));
     return OK;
 }
+
+TEST(endpoints_split_collection)
+{
+    char msg[256];
+    RestRequestHandler<RestRequest> rest;
+    RestRequestHandler<RestRequest> dev1;
+    RestRequestHandler<RestRequest> dev2;
+    rest.on("/api/device/:dev(integer)/*", GET([&msg,&dev1,&dev2](RestRequest &request) {
+        const char* url = (const char*)request.args["_url"];
+        int devid = (long)request.args["dev"];
+        switch(devid) {
+            case 1: dev1.handle(HttpGet, url, &request.response); break;
+            case 2: dev2.handle(HttpGet, url, &request.response); break;
+            default:
+                sprintf(msg, "no device %d", devid);
+                request.response = msg;
+                break;
+        }
+        return 200;
+    }));
+    dev1.on("echo/:msg(string|integer)", GET([&msg](RestRequest &request) {
+        sprintf(msg, "Hello %s from Device1", (const char*)request.args["msg"]);
+        request.response = msg;
+        return 200;
+    }));
+    dev2.on("echo/:msg(string|integer)", GET([&msg](RestRequest &request) {
+        sprintf(msg, "Hello %s from Device2", (const char*)request.args["msg"]);
+        request.response = msg;
+        return 200;
+    }));
+
+    std::string response;
+    if(rest.handle(HttpGet, "/api/device/2/echo/Colin", &response)) {
+        //printf("response: %s\n", response.c_str());
+        if(response !="Hello Colin from Device2")
+            return FAIL;
+    }
+
+    if(rest.handle(HttpGet, "/api/device/1/echo/Maya", &response)) {
+        //printf("response: %s\n", response.c_str());
+        if(response !="Hello Maya from Device1")
+            return FAIL;
+    }
+
+    if(rest.handle(HttpGet, "/api/device/3/echo/Maya", &response)) {
+        //printf("response: %s\n", response.c_str());
+        if(response !="no device 3")
+            return FAIL;
+    }
+
+    return OK;
+}

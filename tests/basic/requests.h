@@ -41,7 +41,7 @@ public:
     // the collection of Rest handlers
     Endpoints endpoints;
 
-    virtual bool handle(HttpMethod requestMethod, std::string requestUri) {
+    virtual bool handle(HttpMethod requestMethod, std::string requestUri, std::string* response_out=NULL) {
         Rest::HttpMethod method = (Rest::HttpMethod)requestMethod;
         typename Endpoints::Endpoint ep = endpoints.resolve(method, requestUri.c_str());
         if (ep) {
@@ -49,6 +49,8 @@ public:
             request.method = method;
             request.uri = requestUri;
             ep.handler(request);
+            if(response_out)
+                *response_out = request.response;
             return true;
         } else
             return false;
