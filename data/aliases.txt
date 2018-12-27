@@ -1,0 +1,11 @@
+5:0=Windows
+
+5:1=Linux
+
+# office humidity sensor
+4=Office
+4:0=Office
+4:1=Office
+
+# Pool
+8:1=Pool
