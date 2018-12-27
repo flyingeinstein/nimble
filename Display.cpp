@@ -45,10 +45,10 @@ void Display::begin()
   display.clearDisplay();
 #endif
 
-  on("fonts", HTTP_GET, std::bind(&Display::httpPageGetFonts, this));
-  on("page/active", HTTP_POST, std::bind(&Display::httpPageSetActivePage, this));
-  on("page/code", HTTP_GET, std::bind(&Display::httpPageGetCode, this));
-  on("page/code", HTTP_POST, std::bind(&Display::httpPageSetCode, this));
+  onHttp("fonts", HTTP_GET, std::bind(&Display::httpPageGetFonts, this));
+  onHttp("page/active", HTTP_POST, std::bind(&Display::httpPageSetActivePage, this));
+  onHttp("page/code", HTTP_GET, std::bind(&Display::httpPageGetCode, this));
+  onHttp("page/code", HTTP_POST, std::bind(&Display::httpPageSetCode, this));
 
   loadAllPagesFromFS();
 }

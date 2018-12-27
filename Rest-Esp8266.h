@@ -60,7 +60,7 @@ namespace Rest {
             typedef typename RequestType::WebServerType WebServerType;
 
             typedef Handler< TRestRequest& > HandlerType;
-            typedef Rest::Endpoints<RequestHandler> Endpoints;
+            typedef Rest::Endpoints<HandlerType> Endpoints;  // is really correct (it was RequestHandler)? endpoints reference self type???
 
             // the collection of Rest handlers
             Endpoints endpoints;
@@ -120,6 +120,8 @@ namespace Rest {
             }
         #endif
 
+          inline void setOwner(Devices* _owner) { owner = _owner; }
+          
           protected:
             Devices* owner;
         };

@@ -18,12 +18,6 @@
 
 #define MAX_SLOTS     256
 
-using Rest::GET;
-using Rest::PUT;
-using Rest::POST;
-using Rest::PATCH;
-using Rest::DELETE;
-using Rest::OPTIONS;
 
 typedef struct _InfluxTarget {
   String database;
@@ -120,8 +114,10 @@ typedef struct _DeviceDriverInfo {
 class Devices {
   public:
     typedef Esp8266RestRequestHandler RestRequestHandler;
-    typedef RestRequestHandler::RequestType RestRequest;
-
+    typedef Esp8266RestRequest RestRequest;  // RestRequestHandler::RequestType RestRequest;
+    typedef typename RestRequestHandler::HandlerType HandlerType;
+    typedef typename RestRequestHandler::Endpoints Endpoints;
+    
     short slots;
     Device** devices;
     
@@ -169,10 +165,13 @@ class Devices {
       private:
         Devices* owner;
     };
+    
     RequestHandler httpHandler;
     RestRequestHandler restHandler;
-    
-  public:
+
+    int deviceRestHandler(RestRequest& request);
+
+public:
     Devices(short maxDevices=32);
     ~Devices();
 
@@ -231,7 +230,7 @@ class Devices {
     inline RestRequestHandler& rest() { return restHandler; }
 
     template<class... Targs>
-    RestRequestHandler& on(const char *endpoint_expression, Targs... rest ) {
+    RestRequestHandler& onRest(const char *endpoint_expression, Targs... rest ) {
       return restHandler.on(endpoint_expression, rest...);   // add the rest (recursively)
     }
 
@@ -370,7 +369,7 @@ class Device {
     unsigned short slots;
     Slot* readings;
     unsigned long flags;
-    Devices::RestRequestHandler::Endpoints endpoints;
+    Devices::Endpoints endpoints;
 
 
     unsigned long updateInterval;
@@ -384,9 +383,9 @@ class Device {
     ESP8266WebServer* getWebServer();
 
     // same as http's on() methods except uri is prefixed with device specific path
-    void on(const String &uri, ESP8266WebServer::THandlerFunction handler);
-    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
-    void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
+    void onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler);
+    void onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
+    void onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
 
 /*    template<class... Targs>
     Device& onn(const char *endpoint_expression, Targs... rest ) {
@@ -395,7 +394,7 @@ class Device {
     }
 */
     template<class... Targs>
-    Device& on(const char *endpoint_expression, Targs... rest ) {
+    Device& onRest(const char *endpoint_expression, Targs... rest ) {
         endpoints.on(endpoint_expression, rest...);   // add the rest (recursively)
         return *this;
     }
@@ -407,6 +406,8 @@ class Device {
     // deprecated: void httpGetReading(short slot);
     // deprecated: void httpPostValue(short slot);
 
+    void setOwner(Devices* owner);
+    
     friend class Devices;
 };
 

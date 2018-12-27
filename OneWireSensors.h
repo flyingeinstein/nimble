@@ -32,7 +32,7 @@ class OneWireSensor : public Device
 
   protected:
     void httpDevices();
-    void httpDewices(Devices::RestRequest request);
+    int httpDewices(Devices::RestRequest& request);
     
     void getDeviceInfo(JsonObject& node);
 };

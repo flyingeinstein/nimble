@@ -122,6 +122,26 @@ int myhandler(Devices::RestRequest& request) {
   return 200;
 }
 
+int Devices::deviceRestHandler(RestRequest& request)
+{
+  const char* _url = request["_url"];
+  Rest::Argument req_dev = request["device"];
+
+  Device* dev = (req_dev.isNumber())
+                ? &find( (long)req_dev )
+                : (req_dev.isString())
+                  ? &find( (const char*)req_dev )
+                  : nullptr;
+
+  if(dev != nullptr) {
+    Endpoints::Endpoint ep = dev->endpoints.resolve(request.method, _url);
+    if(ep.status == URL_MATCHED) {
+      request.args = request.args + ep;
+      ep.handler(request);
+    }
+  }
+}
+
 void Devices::setWebServer(ESP8266WebServer& _http)
 {
   http = &_http;
@@ -140,11 +160,12 @@ void Devices::setWebServer(ESP8266WebServer& _http)
     request.response["reply"] = s;
     return 200;
   };
-  this->on("/api/echo/:msg(string|integer)", GET( func ));
-  restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
+  this->onRest("/api/dev/:device(string|integer)/*", ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
+  this->onRest("/api/echo/:msg(string|integer)", GET( func ));
+  /*restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
     request.response["reply"] = "Smello World!";
     return 200;
-  ));
+  ));*/
 }
 
 ESP8266WebServer& Devices::getWebServer() 
@@ -784,6 +805,12 @@ Device& Device::operator=(const Device& copy)
   return *this;
 }
 
+void Device::setOwner(Devices* _owner)
+{
+  owner = _owner;
+  //endpoints.defaultHandler->setOwner( _owner );
+}
+
 void Device::alloc(unsigned short _slots)
 {
   if(_slots >=MAX_SLOTS) {
@@ -855,21 +882,21 @@ ESP8266WebServer* Device::getWebServer()
 }
 
 
-void Device::on(const String &uri, ESP8266WebServer::THandlerFunction handler)
+void Device::onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler)
 {
   ESP8266WebServer* http = getWebServer();
   if(http)
     http->on( prefixUri(uri), handler);
 }
 
-void Device::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
+void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
 {
   ESP8266WebServer* http = getWebServer();
   if(http)
     http->on( prefixUri(uri), method, fn);
 }
 
-void Device::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
+void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
 {
   ESP8266WebServer* http = getWebServer();
   if(http)
