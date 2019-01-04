@@ -808,7 +808,13 @@ Device& Device::operator=(const Device& copy)
 void Device::setOwner(Devices* _owner)
 {
   owner = _owner;
-  //endpoints.defaultHandler->setOwner( _owner );
+
+  std::function<int(Devices::RestRequest&)> func = [](Devices::RestRequest& request) {
+    request.response["error"] = "no device specific endpoint";
+    return 404;
+  };  
+  endpoints.onDefault( func );
+  // endpoints.defaultHandler->setOwner( _owner );
 }
 
 void Device::alloc(unsigned short _slots)
