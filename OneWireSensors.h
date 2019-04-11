@@ -31,8 +31,7 @@ class OneWireSensor : public Device
     DallasTemperature DS18B20;
 
   protected:
-    void httpDevices();
-    int httpDewices(Devices::RestRequest& request);
+    int httpDevices(RestRequest& request);
     
     void getDeviceInfo(JsonObject& node);
 };

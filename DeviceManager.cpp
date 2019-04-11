@@ -93,7 +93,7 @@ const DeviceDriverInfo* Devices::findDriver(const char* name)
 }
 
 Devices::Devices(short _maxDevices)
-  : slots(_maxDevices), devices(NULL), httpHandler(this), restHandler(this), update_iterator(0), ntp(NULL), http(NULL) {
+  : slots(_maxDevices), devices(NULL), restHandler(NULL), update_iterator(0), ntp(NULL) {
     devices = (Device**)calloc(slots, sizeof(Device*));
 }
 
@@ -113,16 +113,19 @@ Devices& Devices::operator=(const Devices& copy) {
 }
 #endif
 
-void Devices::begin(NTPClient& client)
+void Devices::begin(WebServer& _http, NTPClient& _ntp)
 {
-  ntp = &client;
+  httpServer = &_http;
+  ntp = &_ntp;
+
+  if(restHandler == NULL) {
+    restHandler = new RestRequestHandler();
+    setupRestHandler();
+    httpServer->addHandler(restHandler);
+  }
 }
 
-int myhandler(Devices::RestRequest& request) {
-  return 200;
-}
-
-int Devices::deviceRestHandler(RestRequest& request)
+/*int Devices::deviceRestHandler(RestRequest& request)
 {
   const char* _url = request["_url"];
   Rest::Argument req_dev = request["device"];
@@ -140,14 +143,10 @@ int Devices::deviceRestHandler(RestRequest& request)
       ep.handler(request);
     }
   }
-}
+}*/
 
-void Devices::setWebServer(ESP8266WebServer& _http)
-{
-  http = &_http;
-  getWebServer().addHandler(&restHandler);
-  getWebServer().addHandler(&httpHandler);
-
+void Devices::setupRestHandler()
+{  
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
     String s("Hello ");
     auto msg = request["msg"];
@@ -160,19 +159,12 @@ void Devices::setWebServer(ESP8266WebServer& _http)
     request.response["reply"] = s;
     return 200;
   };
-  this->onRest("/api/dev/:device(string|integer)/*", ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
-  this->onRest("/api/echo/:msg(string|integer)", GET( func ));
+  //on("/api/dev/:device(string|integer)/*", ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
+  on("/api/echo/:msg(string|integer)").GET( func );
   /*restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
     request.response["reply"] = "Smello World!";
     return 200;
   ));*/
-}
-
-ESP8266WebServer& Devices::getWebServer() 
-{ 
-  if(http ==NULL)
-    http = new ESP8266WebServer(80);
-  return *http; 
 }
 
 short Devices::add(Device& dev)
@@ -583,6 +575,7 @@ void Devices::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bo
   }
 }
 
+#if 0
 void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json)
 {
   String content;
@@ -762,7 +755,7 @@ output_doc:
   httpSend(server, 200, root);
   return true;  
 }
-
+#endif  // disabled old handler code
 
 
 Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
@@ -809,11 +802,11 @@ void Device::setOwner(Devices* _owner)
 {
   owner = _owner;
 
-  std::function<int(Devices::RestRequest&)> func = [](Devices::RestRequest& request) {
+  std::function<int(RestRequest&)> func = [](RestRequest& request) {
     request.response["error"] = "no device specific endpoint";
     return 404;
   };  
-  endpoints.onDefault( func );
+  //endpoints.onDefault( func );
   // endpoints.defaultHandler->setOwner( _owner );
 }
 
@@ -880,33 +873,19 @@ String Device::prefixUri(const String& uri, short slot) const
   return u;
 }
 
-ESP8266WebServer* Device::getWebServer()
-{
-  return (owner!=NULL)
-    ? &owner->getWebServer()
-    : NULL;
-}
-
-
 void Device::onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler)
 {
-  ESP8266WebServer* http = getWebServer();
-  if(http)
-    http->on( prefixUri(uri), handler);
+    http().on( prefixUri(uri), handler);
 }
 
 void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
 {
-  ESP8266WebServer* http = getWebServer();
-  if(http)
-    http->on( prefixUri(uri), method, fn);
+    http().on( prefixUri(uri), method, fn);
 }
 
 void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
 {
-  ESP8266WebServer* http = getWebServer();
-  if(http)
-    http->on( prefixUri(uri), method, fn, ufn);
+    http().on( prefixUri(uri), method, fn, ufn);
 }
 
 void Device::jsonGetReading(JsonObject& node, short slot)
@@ -998,7 +977,7 @@ void Device::enableDirect(short slot, bool _get, bool _post)
       );  
   }
 }
-#endif
+#endif  // old Rest functions
 
 String Device::getSlotAlias(short slotIndex) const
 {

@@ -370,11 +370,11 @@ void Display::httpPageGetFonts() {
       s += '"';
   }
   s += ']';
-  owner->getWebServer().send(200, "application/json", s);
+  http().send(200, "application/json", s);
 }
 
 void Display::httpPageSetActivePage() {
-  ESP8266WebServer& server = owner->getWebServer();
+  Devices::WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   if(n>=0 && n < npages) {
@@ -387,7 +387,7 @@ void Display::httpPageSetActivePage() {
 
 
 void Display::httpPageGetCode() {
-  ESP8266WebServer& server = owner->getWebServer();
+  Devices::WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   if(n>=0 && n < npages) {
@@ -398,7 +398,7 @@ void Display::httpPageGetCode() {
 }
 
 void Display::httpPageSetCode() {
-  ESP8266WebServer& server = owner->getWebServer();
+  Devices::WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   String fs = server.arg("fs");

@@ -26,13 +26,16 @@ const char* influx_server = "http://192.168.2.115";
 const char* influx_database = "gem";
 const char* influx_measurement = "walls";
 
+#if 0
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
-#include <FS.h>   // Include the SPIFFS library
 #include <WiFiUdp.h>
 #include <NTPClient.h>
+#endif
+
+#include <FS.h>   // Include the SPIFFS library
 
 #if defined(ALLOW_OTA_UPDATE)
 #include <ArduinoOTA.h>
@@ -59,6 +62,8 @@ const char* influx_measurement = "walls";
 #include "OneWireSensors.h"
 #include "Display.h"
 #include "AtlasScientific.h"
+
+#include <Restfully.h>
 
 // our fonts
 #include <Fonts/FreeSans9pt7b.h>
@@ -104,6 +109,7 @@ InfluxTarget targets[] = {
 
 ESP8266WebServer server(80);
 
+
 #if defined(CAPTIVE_PORTAL)
 AutoConnect Portal(server);
 #endif
@@ -121,7 +127,7 @@ void SendHeaders()
 {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.sendHeader("Access-Control-Allow-Methods", "GET");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
 }
 
 String getContentType(String filename) { // convert the file extension to the MIME type
@@ -417,11 +423,11 @@ void setup() {
    *   todo: Eventually this will be configurable or via probing where possible
    * 
    */
-  DeviceManager.begin( ntp );
-  DeviceManager.setWebServer( server );
+  DeviceManager.begin( server, ntp );
+  DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
+  #if 0
   DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
   DeviceManager.add( *new DHTSensor(4, 12) );      // D6
-  DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
 
   // we can optionally add the I2C bus as a device which enables external control
@@ -432,7 +438,7 @@ void setup() {
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
-
+#endif
   DeviceManager.restoreAliasesFile();
 
   Serial.print("Host: ");

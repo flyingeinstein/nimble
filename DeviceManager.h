@@ -9,12 +9,27 @@
  #include <pins_arduino.h>
 #endif
 #include <WString.h>
+#include <assert.h>
 
 #include <NTPClient.h>
-#include <ESP8266WebServer.h>
-#include <ArduinoJson.h>
 
-#include "Rest-Esp8266.h"
+#ifdef ARDUINO_ARCH_ESP8266
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+
+#else
+#include <WiFi.h>
+#include <mDNS.h>
+#include <WebServer.h>
+#include <HTTPClient.h>
+#endif
+
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+
+#include <Restfully.h>
 
 #define MAX_SLOTS     256
 
@@ -113,10 +128,12 @@ typedef struct _DeviceDriverInfo {
 
 class Devices {
   public:
-    typedef Esp8266RestRequestHandler RestRequestHandler;
-    typedef Esp8266RestRequest RestRequest;  // RestRequestHandler::RequestType RestRequest;
-    typedef typename RestRequestHandler::HandlerType HandlerType;
-    typedef typename RestRequestHandler::Endpoints Endpoints;
+    using WebServer = ESP8266WebServer;
+    
+    //typedef Esp8266RestRequestHandler RestRequestHandler;
+    //typedef Esp8266RestRequest RestRequest;  // RestRequestHandler::RequestType RestRequest;
+    //typedef typename RestRequestHandler::HandlerType HandlerType;
+    using Endpoints = typename RestRequestHandler::Endpoints;
     
     short slots;
     Device** devices;
@@ -155,7 +172,7 @@ class Devices {
     };
 
   protected:  
-    class RequestHandler : public ::RequestHandler {
+    /*class RequestHandler : public ::RequestHandler {
       public:
         RequestHandler(Devices* _owner) : owner(_owner) {}
         virtual bool canHandle(HTTPMethod method, String uri);
@@ -164,21 +181,13 @@ class Devices {
         bool expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev);
       private:
         Devices* owner;
-    };
+    };*/
     
-    RequestHandler httpHandler;
-    RestRequestHandler restHandler;
-
-    int deviceRestHandler(RestRequest& request);
-
 public:
     Devices(short maxDevices=32);
     ~Devices();
 
-    void begin(NTPClient& client);
-
-    void setWebServer(ESP8266WebServer& _http);
-    ESP8266WebServer& getWebServer();
+    void begin(WebServer& _http, NTPClient& client);
 
     // clear all devices
     void clearAll();
@@ -225,13 +234,16 @@ public:
     // load aliases file from SPIFFS fs
     int restoreAliasesFile();
 
+    // Web interface
+    inline const WebServer& http() const { return *httpServer; }
+    inline WebServer& http() { return *httpServer; }
+    
     // Rest interface
-    inline const RestRequestHandler& rest() const { return restHandler; }
-    inline RestRequestHandler& rest() { return restHandler; }
+    inline const RestRequestHandler& rest() const { return *restHandler; }
+    inline RestRequestHandler& rest() { return *restHandler; }
 
-    template<class... Targs>
-    RestRequestHandler& onRest(const char *endpoint_expression, Targs... rest ) {
-      return restHandler.on(endpoint_expression, rest...);   // add the rest (recursively)
+    Endpoints::Node on(const char *endpoint_expression ) {
+      return restHandler->on(endpoint_expression);   // add the rest (recursively)
     }
 
     // json interface
@@ -243,7 +255,8 @@ public:
   protected:
     short update_iterator;  // ordinal of next device update
     NTPClient* ntp;
-    ESP8266WebServer* http;
+    WebServer* httpServer;
+    RestRequestHandler* restHandler;
     
     void alloc(short n);
 
@@ -255,7 +268,8 @@ public:
     static const DeviceDriverInfo** drivers;
     static short driversSize;
     static short driversCount;
-    
+
+    void setupRestHandler();
     static const DeviceDriverInfo* findDriver(const char* name);
 };
 
@@ -380,12 +394,19 @@ class Device {
     void alloc(unsigned short _slots);
 
     String prefixUri(const String& uri, short slot=-1) const;
-    ESP8266WebServer* getWebServer();
+    
+// Web interface
+    inline const Devices::WebServer& http() const { assert(owner); return owner->http(); }
+    inline Devices::WebServer& http() { assert(owner); return owner->http(); }
+    
+    // Rest interface
+    inline const RestRequestHandler& rest() const { assert(owner); return owner->rest(); }
+    inline RestRequestHandler& rest() { assert(owner); return owner->rest(); }
 
     // same as http's on() methods except uri is prefixed with device specific path
-    void onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler);
-    void onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn);
-    void onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn);
+    void onHttp(const String &uri, Devices::WebServer::THandlerFunction handler);
+    void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn);
+    void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn, Devices::WebServer::THandlerFunction ufn);
 
 /*    template<class... Targs>
     Device& onn(const char *endpoint_expression, Targs... rest ) {
@@ -393,10 +414,9 @@ class Device {
       return *this;
     }
 */
-    template<class... Targs>
-    Device& onRest(const char *endpoint_expression, Targs... rest ) {
-        endpoints.on(endpoint_expression, rest...);   // add the rest (recursively)
-        return *this;
+    Devices::Endpoints::Node on(const char *endpoint_expression) {
+        assert(owner);
+        return owner->on(endpoint_expression);   // add the rest (recursively)
     }
    
     // enable direct access to slots via http or mqqt

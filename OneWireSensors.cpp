@@ -30,13 +30,19 @@ const char* OneWireSensor::getDriverName() const
   return "DallasOneWire";
 }
 
+int OneWireSensor::httpDevices(RestRequest& request)
+{
+  getDeviceInfo(request.response);
+  return 200;
+}
+
 void OneWireSensor::begin()
 {
   #if 1
   //onHttp("devices", std::bind(&OneWireSensor::httpDevices, this));
   //onn("dewices", GET(std::bind(&OneWireSensor::httpDewices, this)));
 
-  std::function<int(Devices::RestRequest&)> func = [](Devices::RestRequest& request) {
+  std::function<int(RestRequest&)> func = [](RestRequest& request) {
     String s("Hello ");
     auto msg = request["msg"];
     if(msg.isString())
@@ -48,7 +54,11 @@ void OneWireSensor::begin()
     request.response["reply"] = s;
     return 200;
   };
-  endpoints.on("/hello/:msg(string|integer)", GET( func ));
+  on("/hello/:msg(string|integer)").GET( func );
+  on("/onewire")
+    .with(*this)
+    .on("devices")
+      .GET(&OneWireSensor::httpDevices);
   
   //FakeHandler h = GET(std::bind(&handler_class::m, &c, std::placeholders::_1));
   //Devices::HandlerType h = GET(std::bind(&OneWireSensor::httpDewices, this, std::placeholders::_1));
@@ -58,23 +68,6 @@ void OneWireSensor::begin()
 }
 
 const char* hex = "0123456789ABCDEF";
-
-void OneWireSensor::httpDevices()
-{
-  DynamicJsonDocument doc;
-  JsonObject root = doc.to<JsonObject>();
-  
-  getDeviceInfo(root);
-  
-  String content;
-  serializeJson(doc, content);
-  owner->getWebServer().send(200, "application/json", content);
-}
-
-int OneWireSensor::httpDewices(Devices::RestRequest& request)
-{
-  getDeviceInfo(request.response);
-}
 
 void OneWireSensor::getDeviceInfo(JsonObject& node)
 {
