@@ -378,6 +378,9 @@ class Device {
     void jsonGetReading(JsonObject& node, short slot);
     void jsonGetReadings(JsonObject& node);
 
+    // standard rest methods
+    int restInfo(RestRequest& request);
+    
   protected:
     Devices* owner;
     unsigned short slots;
@@ -408,12 +411,6 @@ class Device {
     void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn);
     void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn, Devices::WebServer::THandlerFunction ufn);
 
-/*    template<class... Targs>
-    Device& onn(const char *endpoint_expression, Targs... rest ) {
-      onn(endpoint_expression, rest...);   // add the rest (recursively)
-      return *this;
-    }
-*/
     Devices::Endpoints::Node on(const char *endpoint_expression) {
         assert(owner);
         return owner->on(endpoint_expression);   // add the rest (recursively)

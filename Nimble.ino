@@ -313,7 +313,7 @@ void sendToInflux()
 
 
 void setup() {
-  Serial.begin(230400);
+  Serial.begin(115200);
   Serial.println("Nimble Multi-Sensor");
   Serial.println("(c)2018 FlyingEinstein.com");
 

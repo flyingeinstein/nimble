@@ -159,8 +159,36 @@ void Devices::setupRestHandler()
     request.response["reply"] = s;
     return 200;
   };
-  //on("/api/dev/:device(string|integer)/*", ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
+
+  // resolves a device number to a Device object
+  std::function<Device&(Rest::UriRequest&)> device_resolver = [this](Rest::UriRequest& request) -> Device& {
+#if 1
+    Rest::Argument req_dev = request["xxx"];
+    Serial.print("device ");
+    Serial.println((long)req_dev);
+    Device* dev = (req_dev.isNumber())
+          ? &find( (long)req_dev )
+          : (req_dev.isString())
+            ? &find( (const char*)req_dev )
+            : nullptr;
+#else
+  Device* dev = &find(5);
+#endif
+            
+    // check for NOT FOUND
+    if (dev == &NullDevice)
+      request.abort(404);
+
+    return *dev;
+  };
+  
+  //on("/api/dev/:device(string|integer)"), ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
   on("/api/echo/:msg(string|integer)").GET( func );
+  on("/api/devices")
+    .GET([this](RestRequest& request) { jsonGetDevices(request.response); return 200; });
+  on("/api/dev/:xxx(string|integer)/info")
+    .with(device_resolver)
+    .GET(&Device::restInfo);
   /*restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
     request.response["reply"] = "Smello World!";
     return 200;
@@ -1024,6 +1052,21 @@ SensorReading& Device::operator[](unsigned short slotIndex)
   if(slotIndex >= slots)
     alloc( slotIndex+1 );
   return readings[slotIndex].reading;
+}
+
+int Device::restInfo(RestRequest& request)
+{
+  JsonObject root = request.response;
+  const char* driver = getDriverName();
+  root["alias"] = getAlias();
+  if(driver)
+    root["driver"] = getDriverName();
+  root["flags"] = getFlags();
+  root["state"] = DeviceStateName(getState());
+
+  jsonGetReadings(root);
+
+  return 200;
 }
 
 
