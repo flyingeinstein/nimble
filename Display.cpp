@@ -3,6 +3,7 @@
 
 #include <ctype.h>
 #include <FS.h>   // Include the SPIFFS library
+#include <SPIFFS.h>
 
 #define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
 
@@ -125,6 +126,7 @@ short Display::savePageToFS(short page_number)
 
 short Display::loadAllPagesFromFS()
 {
+#if !defined(ARDUINO_ARCH_ESP32)
   short loaded=0;
   Dir dir = SPIFFS.openDir("/display/page");
   while (dir.next()) {
@@ -138,6 +140,9 @@ short Display::loadAllPagesFromFS()
   if(loaded==0)
     Serial.println("no display pages found in SPIFFS://display/page");
   return loaded;
+  #else
+    Serial.println("Cannot load display plages, ESP32 doesnt support Dir listing");
+  #endif
 }
 
 void Display::handleUpdate()

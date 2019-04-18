@@ -36,6 +36,7 @@ const char* influx_measurement = "walls";
 #endif
 
 #include <FS.h>   // Include the SPIFFS library
+#include <SPIFFS.h>
 
 #if defined(ALLOW_OTA_UPDATE)
 #include <ArduinoOTA.h>
@@ -107,7 +108,7 @@ InfluxTarget targets[] = {
 };
 
 
-ESP8266WebServer server(80);
+Devices::WebServer server(80);
 
 
 #if defined(CAPTIVE_PORTAL)
@@ -238,7 +239,7 @@ class OptionsRequestHandler : public RequestHandler
     virtual bool canHandle(HTTPMethod method, String uri) {
       return method == HTTP_OPTIONS;
     }
-    virtual bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
+    virtual bool handle(Devices::WebServer& server, HTTPMethod requestMethod, String requestUri) {
       SendHeaders();
       server.send(200, "application/json; charset=utf-8", "");
       return true;
@@ -350,7 +351,13 @@ void setup() {
   Portal.begin();
 #else
   WiFi.mode(WIFI_STA);
+
+#if defined(ARDUINO_ARCH_ESP32)
+  WiFi.setHostname(hostname);
+#else
   WiFi.hostname(hostname);
+#endif
+  
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
 #ifdef SERIAL_DEBUG
@@ -411,10 +418,14 @@ void setup() {
 #endif
 
   // add the web server to mDNS
-  MDNS.begin(hostname);
+  // todo: add MDNS as a Device driver and have it startup later with proper error checking
+  if(!MDNS.begin(hostname)) {
+    Serial.println("mDNS failed to initialize");
+  }
   MDNS.addService("http", "tcp", 80);
 
   // begin the ntp client
+  // todo: add NTP as a Device driver and have it startup later with proper error checking
   ntp.begin();
 
   /**

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <HardwareSerial.h>
 #include <FS.h>
+#include <SPIFFS.h>
 
 
 #include "DeviceManager.h"
@@ -604,7 +605,7 @@ void Devices::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bo
 }
 
 #if 0
-void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json)
+void httpSend(Devices::WebServer& server, short responseCode, const JsonObject& json)
 {
   String content;
   serializeJson(json, content);
@@ -613,13 +614,13 @@ void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& js
 
 
 template<class T>
-bool expectNumeric(ESP8266WebServer& server, const char*& p, T& n) {
+bool expectNumeric(Devices::WebServer& server, const char*& p, T& n) {
   auto limits = std::numeric_limits<T>();
   return expectNumeric<T>(server, p, limits.min, limits.max, n);
 }
 
 template<class T>
-bool expectNumeric(ESP8266WebServer& server, const char*& p, T _min, T _max, T& n) {
+bool expectNumeric(Devices::WebServer& server, const char*& p, T _min, T _max, T& n) {
   if(!isdigit(*p)) {
     String e;
     e += "expected numeric value near ";
@@ -653,7 +654,7 @@ bool expectNumeric(ESP8266WebServer& server, const char*& p, T _min, T _max, T& 
   return false;
 }
 
-bool Devices::RequestHandler::expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev) {
+bool Devices::RequestHandler::expectDevice(Devices::WebServer& server, const char*& p, Device*& dev) {
   short id;
   Device* d = &NullDevice;
   if(isdigit(*p) && expectNumeric(server, p, (short)0, owner->slots, id)) {
@@ -685,7 +686,7 @@ bool Devices::RequestHandler::canHandle(HTTPMethod method, String uri) {
 }
 
 
-bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
+bool Devices::RequestHandler::handle(Devices::WebServer& server, HTTPMethod requestMethod, String requestUri) {
   Device* dev;
   const char* p = requestUri.c_str();
   DynamicJsonDocument doc;
@@ -901,17 +902,17 @@ String Device::prefixUri(const String& uri, short slot) const
   return u;
 }
 
-void Device::onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler)
+void Device::onHttp(const String &uri, Devices::WebServer::THandlerFunction handler)
 {
     http().on( prefixUri(uri), handler);
 }
 
-void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
+void Device::onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn)
 {
     http().on( prefixUri(uri), method, fn);
 }
 
-void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
+void Device::onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn, Devices::WebServer::THandlerFunction ufn)
 {
     http().on( prefixUri(uri), method, fn, ufn);
 }
@@ -936,7 +937,7 @@ void Device::jsonGetReadings(JsonObject& node)
 
 #if 0
 void Device::httpGetReading(short slot) {
-  ESP8266WebServer* http = getWebServer();
+  Devices::WebServer* http = getWebServer();
   if(http!=NULL && slot >=0 && slot < slots) {
     String value;
     SensorReading r = (*this)[slot];
@@ -961,7 +962,7 @@ void Device::httpGetReading(short slot) {
 }
 
 void Device::httpPostValue(short slot) {
-  ESP8266WebServer* http = getWebServer();
+  Devices::WebServer* http = getWebServer();
   if(http!=NULL && slot >=0 && slot < slots) {
     String value = http->arg("plain");
     SensorReading r = readings[slot];
@@ -981,7 +982,7 @@ void Device::httpPostValue(short slot) {
 
 void Device::enableDirect(short slot, bool _get, bool _post)
 {
-  ESP8266WebServer* http = getWebServer();
+  Devices::WebServer* http = getWebServer();
   if(http) {
     String prefix = prefixUri(String(), slot);
 

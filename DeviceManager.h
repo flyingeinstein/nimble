@@ -13,15 +13,17 @@
 
 #include <NTPClient.h>
 
-#ifdef ARDUINO_ARCH_ESP8266
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 
-#else
+using WebServer = ESP8266WebServer;
+
+#elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
-#include <mDNS.h>
+#include <ESPmDNS.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
 #endif
@@ -128,7 +130,7 @@ typedef struct _DeviceDriverInfo {
 
 class Devices {
   public:
-    using WebServer = ESP8266WebServer;
+    using WebServer = ::WebServer;
     
     //typedef Esp8266RestRequestHandler RestRequestHandler;
     //typedef Esp8266RestRequest RestRequest;  // RestRequestHandler::RequestType RestRequest;
@@ -430,4 +432,4 @@ class Device {
 
 extern Device NullDevice;
 
-void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json);
+void httpSend(Devices::WebServer& server, short responseCode, const JsonObject& json);
