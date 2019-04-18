@@ -163,7 +163,6 @@ void Devices::setupRestHandler()
 
   // resolves a device number to a Device object
   std::function<Device&(Rest::UriRequest&)> device_resolver = [this](Rest::UriRequest& request) -> Device& {
-#if 1
     Rest::Argument req_dev = request["xxx"];
     Serial.print("device ");
     Serial.println((long)req_dev);
@@ -172,9 +171,6 @@ void Devices::setupRestHandler()
           : (req_dev.isString())
             ? &find( (const char*)req_dev )
             : nullptr;
-#else
-  Device* dev = &find(5);
-#endif
             
     // check for NOT FOUND
     if (dev == &NullDevice)
@@ -186,7 +182,10 @@ void Devices::setupRestHandler()
   //on("/api/dev/:device(string|integer)"), ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
   on("/api/echo/:msg(string|integer)").GET( func );
   on("/api/devices")
-    .GET([this](RestRequest& request) { jsonGetDevices(request.response); return 200; });
+    .GET([this](RestRequest& request) { 
+      jsonGetDevices(request.response); 
+      return 200; 
+    });
   on("/api/dev/:xxx(string|integer)/info")
     .with(device_resolver)
     .GET(&Device::restInfo);
