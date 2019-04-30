@@ -3,7 +3,7 @@
 
 #include <Wire.h>
 
-#include "DeviceManager.h"
+#include "NimbleAPI.h"
 
 
 class I2CBus : public Device

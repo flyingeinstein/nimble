@@ -425,8 +425,8 @@ void setup() {
    */
   DeviceManager.begin( server, ntp );
   DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
-  #if 0
   DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
+  #if 1
   DeviceManager.add( *new DHTSensor(4, 12) );      // D6
   DeviceManager.add( *new MotionIR(6, 14) );       // D5
 

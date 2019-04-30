@@ -13,7 +13,7 @@
 #include <Adafruit_SSD1306.h>
 #endif
 
-#include "DeviceManager.h"
+#include "NimbleAPI.h"
 
 #define FONT(name)  { &name, #name }
 

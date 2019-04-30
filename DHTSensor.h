@@ -2,7 +2,7 @@
 #pragma once
 
 
-#include "DeviceManager.h"
+#include "NimbleAPI.h"
 
 #include <DHT.h>
 
