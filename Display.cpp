@@ -5,8 +5,11 @@
 #include <FS.h>   // Include the SPIFFS library
 #include <SPIFFS.h>
 
-#define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
-
+//#if defined(ARDUINO_ARCH_ESP32)
+#define OLED_RESET 16
+//#else
+//#define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
+//#endif
 
 const char* ParseExceptionCodeToString(ParseExceptionCode code) {
   switch(code) {
@@ -38,6 +41,14 @@ const char* Display::getDriverName() const
 void Display::begin()
 {
   #if (LCD == SSD1306)
+  
+  #if defined(OLED_RESET)
+    pinMode(OLED_RESET,OUTPUT); 
+    digitalWrite(OLED_RESET, LOW); // set GPIO16 low to reset OLED 
+    delay(50); 
+    digitalWrite(OLED_RESET, HIGH); // while OLED is running, must set GPIO16 to high 
+  #endif
+
   // Initiate the LCD and disply the Splash Screen
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false);  // initialize with the I2C addr 0x3C (for the 128x32)
   display.ssd1306_command(SSD1306_SETCONTRAST);
