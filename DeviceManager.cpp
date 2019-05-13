@@ -79,7 +79,7 @@ const DeviceDriverInfo* Devices::findDriver(const char* name)
 }
 
 Devices::Devices(short _maxDevices)
-  : slots(_maxDevices), devices(NULL), restHandler(NULL), update_iterator(0), ntp(NULL) {
+  : slots(_maxDevices), devices(NULL), update_iterator(0), ntp(NULL), httpServer(NULL), restHandler(NULL) {
     devices = (Device**)calloc(slots, sizeof(Device*));
 }
 
