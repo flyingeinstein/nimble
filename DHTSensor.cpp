@@ -1,10 +1,9 @@
 #include "DHTSensor.h"
 
 
-DHTSensor::DHTSensor(short id, int _pin)
-  : Device(id, 3, 1000), dht(_pin, DHTTYPE), backoffDelay(10000)
+DHTSensor::DHTSensor(short id, uint8_t _pin, uint8_t _type)
+  : Device(id, 3, 2500), dht(_pin, _type), attempts(0), backoffDelay(10000)
 {
-  pinMode(_pin, INPUT);
   dht.begin();
 }
 
@@ -43,12 +42,12 @@ void DHTSensor::handleUpdate()
       state = Degraded;  // skip humidity
       nextUpdate = millis() + backoffDelay;  // now we defer the next read attempt for a back-off
     }
-    return;
+  } else {
+    state = Nominal;
+    attempts =0;
   }
 
   (*this)[0] = SensorReading(Humidity, h);
   (*this)[1] = SensorReading(Temperature, f);
   (*this)[2] = SensorReading(HeatIndex, dht.computeHeatIndex(f, h));
-  
-  state = Nominal;
 }
