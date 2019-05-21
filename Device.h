@@ -21,10 +21,31 @@ class Device {
     String alias;
 
   public:
+    // flags controlling toJson output detail
+    typedef enum : int {
+      JsonSlots        = 1,
+      JsonStatistics   = 2,
+      JsonDefault      = JsonSlots
+    } JsonFlags;
+  
     class Slot {
       public:
-      String alias;
-      SensorReading reading;
+        String alias;
+        SensorReading reading;
+    };
+
+    class Statistics {
+      public:
+        int updates;
+        
+        struct {
+          int bus;      // errors communicating with the sensor
+          int sensing;    // errors reported by sensor (failure to sense)
+        } errors;
+
+        inline Statistics() : updates(0) { memset(&errors, 0, sizeof(errors)); }
+        
+        void toJson(JsonObject& target) const;
     };
 
   public:
@@ -64,18 +85,27 @@ class Device {
 
     void delay(unsigned long _delay);
 
-    virtual bool isStale(unsigned long long _now=0) const;
+    virtual bool isStale(unsigned long _now=0) const;
 
     // read readings
     SensorReading& operator[](unsigned short slotIndex);
+    const SensorReading& operator[](unsigned short slotIndex) const;
 
     // json interface
-    void jsonGetReading(JsonObject& node, short slot);
-    void jsonGetReadings(JsonObject& node);
+    void jsonGetReading(JsonObject& node, short slot) const;
+    void jsonGetReadings(JsonObject& node) const;
 
     // standard rest methods
-    int restInfo(RestRequest& request);
+    int toJson(JsonObject& target, JsonFlags displayFlags=JsonDefault) const;
+
+    // rest methods
+    // unfortunately we cannot bind constants in the rest handlers so we have to create these inline ones
+    inline int restStatus(RestRequest& request) const { return toJson(request.response, JsonDefault); }
+    inline int restSlots(RestRequest& request) const { return toJson(request.response, JsonSlots); }
+    inline int restStatistics(RestRequest& request) const { return toJson(request.response, JsonStatistics); }
+    inline int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
     
+
   protected:
     Devices* owner;
     unsigned short slots;
@@ -85,9 +115,10 @@ class Device {
 
 
     unsigned long updateInterval;
-    unsigned long nextUpdate;
+    unsigned long nextUpdate;       // timestamp next update is scheduled for this device
 
     DeviceState state;
+    Statistics statistics;
     
     void alloc(unsigned short _slots);
 

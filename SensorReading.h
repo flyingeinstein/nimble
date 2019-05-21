@@ -52,7 +52,7 @@ class SensorReading
     
     String toString() const;
 
-    void toJson(JsonObject& node, bool showType=true) const;
+    void toJson(JsonObject& node, bool showType=true, bool showTimestamp=true) const;
     void addTo(JsonArray& array) const;
 
   public:

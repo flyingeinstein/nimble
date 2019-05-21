@@ -111,26 +111,6 @@ void Devices::begin(WebServer& _http, NTPClient& _ntp)
   }
 }
 
-/*int Devices::deviceRestHandler(RestRequest& request)
-{
-  const char* _url = request["_url"];
-  Rest::Argument req_dev = request["device"];
-
-  Device* dev = (req_dev.isNumber())
-                ? &find( (long)req_dev )
-                : (req_dev.isString())
-                  ? &find( (const char*)req_dev )
-                  : nullptr;
-
-  if(dev != nullptr) {
-    Endpoints::Endpoint ep = dev->endpoints.resolve(request.method, _url);
-    if(ep.status == URL_MATCHED) {
-      request.args = request.args + ep;
-      ep.handler(request);
-    }
-  }
-}*/
-
 void Devices::setupRestHandler()
 {  
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
@@ -149,9 +129,7 @@ void Devices::setupRestHandler()
   // resolves a device number to a Device object
   std::function<Device*(Rest::UriRequest&)> device_resolver = [this](Rest::UriRequest& request) -> Device* {
     Rest::Argument req_dev = request["xxx"];
-    Serial.print("device ");
-    Serial.println((long)req_dev);
-    Device& dev = (req_dev.isNumber())
+    Device& dev = (req_dev.isInteger())
           ? find( (long)req_dev )
           : (req_dev.isString())
             ? find( (const char*)req_dev )
@@ -165,19 +143,59 @@ void Devices::setupRestHandler()
 
     return &dev;
   };
-  
-  //on("/api/dev/:device(string|integer)"), ANY(std::bind(&Devices::deviceRestHandler, this, std::placeholders::_1)));
+
+  std::function<const Device*(Rest::UriRequest&)> const_device_resolver = [this](Rest::UriRequest& request) -> const Device* {
+    Rest::Argument req_dev = request["xxx"];
+    Device& dev = (req_dev.isInteger())
+          ? find( (long)req_dev )
+          : (req_dev.isString())
+            ? find( (const char*)req_dev )
+            : NullDevice;
+
+    // check for NOT FOUND
+    if (&dev == &NullDevice) {
+      request.abort(404);
+      return nullptr;
+    }
+
+    return &dev;
+  };
+
+  // Playground
   on("/api/echo/:msg(string|integer)").GET( func );
+  
+  // Devices API
   on("/api/devices")
     .GET([this](RestRequest& request) { jsonGetDevices(request.response); return 200; });
-  on("/api/dev/:xxx(string|integer)/info")
-    .with(device_resolver)
-    .GET(&Device::restInfo);
-  /*restHandler.on("/api/echo/:msg(string|integer)", PUT([](RestRequest& request) {
-    request.response["reply"] = "Smello World!";
-    return 200;
-  ));*/
+  on("/api/dev/:xxx(string|integer)")
+    .with(const_device_resolver)
+    .GET(&Device::restDetail)
+    .GET("status", &Device::restStatus)
+    .GET("slots", &Device::restSlots)
+    .GET("statistics", &Device::restStatistics);
+
+  // Config API
+  on("/api/config/aliases")
+    .GET([this](RestRequest& request) {
+      // retrieve the alias file
+      String aliases = getAliasesFile();
+      request.server.send(200, "text/plain", aliases);
+      return HTTP_RESPONSE_SENT;
+    })
+    .POST([this](RestRequest& request) {
+      // write an aliases file
+      String aliases = request.server.arg("plain");
+      if(parseAliasesFile(aliases.c_str()) >0)
+        saveAliasesFile(aliases.c_str());
+
+      // re-read the aliase file back
+      aliases = getAliasesFile();
+      request.server.send(200, "text/plain", aliases);
+      return HTTP_RESPONSE_SENT;
+    });
 }
+
+
 
 short Devices::add(Device& dev)
 {

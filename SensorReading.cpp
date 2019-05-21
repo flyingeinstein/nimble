@@ -48,13 +48,15 @@ void SensorReading::addTo(JsonArray& arr) const
   }    
 }
 
-void SensorReading::toJson(JsonObject& root, bool showType) const {
+void SensorReading::toJson(JsonObject& root, bool showType, bool showTimestamp) const {
   if(showType)
     root["type"] = SensorTypeName(sensorType);
+  if(showTimestamp)
+    root["ts"] = timestamp;
   switch(valueType) {
     case 'i':
     case 'l': root["value"] = l; break;
-    case 'f': root["value"] = f; break;
+    case 'f': if(!isnan(f)) root["value"] = f; break;
     case 'b': root["value"] = b; break;
     case 'n':
     default:

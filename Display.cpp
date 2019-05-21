@@ -142,9 +142,12 @@ short Display::loadAllPagesFromFS()
 
 void Display::handleUpdate()
 {
-  ParseException pex;
-  if(activePage>=0 && activePage<npages && pages[activePage].isValid())
+  if(activePage>=0 && activePage<npages && pages[activePage].isValid()) {
+    ParseException pex;
     execute(pages[activePage].code(), &pex);
+    state = Nominal;
+  } else
+    state = Offline;
 }
 
 short& Display::getRegister(char reg)

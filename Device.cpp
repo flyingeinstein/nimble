@@ -38,7 +38,7 @@ Device& Device::operator=(const Device& copy)
   readings=NULL;
   flags=copy.flags;
   updateInterval=copy.updateInterval;
-  nextUpdate=0;
+  nextUpdate=copy.nextUpdate;
   state=copy.state;
   readings = (Slot*)calloc(slots, sizeof(Slot));
   memcpy(readings, copy.readings, slots*sizeof(Slot));
@@ -135,7 +135,7 @@ void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THan
     http().on( prefixUri(uri), method, fn, ufn);
 }
 
-void Device::jsonGetReading(JsonObject& node, short slot)
+void Device::jsonGetReading(JsonObject& node, short slot) const
 {
   if(slot >=0 && slot < slots) {
     SensorReading r = (*this)[slot];
@@ -143,7 +143,7 @@ void Device::jsonGetReading(JsonObject& node, short slot)
   }
 }
 
-void Device::jsonGetReadings(JsonObject& node)
+void Device::jsonGetReadings(JsonObject& node) const
 {
   JsonArray jslots = node.createNestedArray("slots");
   for(short i=0, _i=slotCount(); i<_i; i++) {
@@ -254,7 +254,7 @@ void Device::handleUpdate()
 {
 }
 
-bool Device::isStale(unsigned long long _now) const
+bool Device::isStale(unsigned long _now) const
 {
   if(_now==0)
     _now = millis();
@@ -273,18 +273,41 @@ SensorReading& Device::operator[](unsigned short slotIndex)
   return readings[slotIndex].reading;
 }
 
-int Device::restInfo(RestRequest& request)
+const SensorReading& Device::operator[](unsigned short slotIndex) const
 {
-  JsonObject root = request.response;
+  if(slotIndex >= slots)
+    return InvalidReading;
+  return readings[slotIndex].reading;
+}
+
+int Device::toJson(JsonObject& target, JsonFlags displayFlags) const
+{
+  unsigned long long now = millis();
   const char* driver = getDriverName();
-  root["alias"] = getAlias();
+  const char* statename = DeviceStateName(getState());
+  String alias = getAlias();
+  if(alias.length()>0)
+    target["alias"] = alias;
   if(driver)
-    root["driver"] = getDriverName();
-  root["flags"] = getFlags();
-  root["state"] = DeviceStateName(getState());
+    target["driver"] = driver;
+  target["flags"] = getFlags();
+  target["state"] = statename;
 
-//  jsonGetReadings(root);
+  if(now < nextUpdate)
+    target["nextUpdate"] = nextUpdate - now;
 
+  if(displayFlags & JsonStatistics)
+    statistics.toJson(target);
+    
+  if(displayFlags & JsonSlots)
+    jsonGetReadings(target);
   return 200;
 }
 
+void Device::Statistics::toJson(JsonObject& target) const
+{
+  target["updates"] = updates;
+  JsonObject _errors = target.createNestedObject("errors");
+  _errors["bus"] = errors.bus;
+  _errors["sensing"] = errors.sensing;
+}

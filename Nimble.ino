@@ -426,9 +426,8 @@ void setup() {
   DeviceManager.begin( server, ntp );
   DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
   DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
-  #if 1
-  DeviceManager.add( *new DHTSensor(4, 12) );      // D6
-  DeviceManager.add( *new MotionIR(6, 14) );       // D5
+  DeviceManager.add( *new DHTSensor(4, 14, DHT22) );      // D5
+  DeviceManager.add( *new MotionIR(6, 12) );       // D6
 
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus
@@ -438,7 +437,7 @@ void setup() {
   DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
-#endif
+
   DeviceManager.restoreAliasesFile();
 
   Serial.print("Host: ");
