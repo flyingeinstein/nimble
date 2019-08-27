@@ -313,6 +313,9 @@ void sendToInflux()
 
 
 void setup() {
+  ESP.wdtDisable();
+  ESP.wdtEnable(WDTO_8S);
+  
   Serial.begin(115200);
   Serial.println("Nimble Multi-Sensor");
   Serial.println("(c)2018 FlyingEinstein.com");
