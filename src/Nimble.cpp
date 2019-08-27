@@ -16,15 +16,15 @@ const char* hostname = "nimbl";
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
 #if !defined(CAPTIVE_PORTAL)
-const char* ssid = "Yogi";
-const char* password = "cholera0625";
+const char* ssid = SSID_NAME;
+const char* password = SSID_PASSWORD;
 #endif
 
 
 bool enable_influx = false;
-const char* influx_server = "http://192.168.2.115";
-const char* influx_database = "gem";
-const char* influx_measurement = "walls";
+const char* influx_server = INFLUX_SERVER;
+const char* influx_database = INFLUX_DATABASE;
+const char* influx_measurement = INFLUX_MEASUREMENT;
 
 #if 0
 #include <ESP8266WiFi.h>
