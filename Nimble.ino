@@ -21,7 +21,7 @@ const char* password = "cholera0625";
 #endif
 
 
-boolean enable_influx = false;
+bool enable_influx = false;
 const char* influx_server = "http://192.168.2.115";
 const char* influx_database = "gem";
 const char* influx_measurement = "walls";
