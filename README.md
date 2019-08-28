@@ -27,8 +27,26 @@ Currently supports the popular SSD1306 OLED LCD (popular 0.96" OLED display) wit
 * Supports Over-the-Air (OTA) software updates
 * Registers hostname and services using mDNS
 
+# Dependancies
+* ArduinoJson
+* Restfully by me (Colin MacKenzie)
+* Adafruit GFX Library by Adafruit 
+* Adafruit SSD1306 by Adafruit
+* Adafruit DHT sensor library
+* Adafruit Unified Sensor
+* NTPClient by Fabrice Wienberg
+* OneWire from Paul Stoffregen
+* Dallas Temperature by Miles Burton, Tim Newsome, Guil Barros, Rob Tillaart
+
+# Optional Dependancies
+* AutoConnect library by Hieromon (provides Captive AccessPoint for initial node configuration)
+
 # Development Plan
 These items remain in development. As items are completed they are removed from this list.
+* Adafruit Universal Sensor support (possibly migrate my sensor model to work on top of Universal Sensor support and add devices to that project)
+* Support Wemos SSD1306 library
+* Support ArduinoJson v5 and lower
+* Make the device dependancies optional
 
 ## Version 1.0
 * DeviceManager on() methods handle Rest URLs and handlers of ArduinoJson type

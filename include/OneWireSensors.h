@@ -2,7 +2,7 @@
 #pragma once
 
 
-#include "DeviceManager.h"
+#include "NimbleAPI.h"
 
 #include <ArduinoJson.h>
 
@@ -31,6 +31,7 @@ class OneWireSensor : public Device
     DallasTemperature DS18B20;
 
   protected:
-    void httpDevices();
+    int httpDevices(RestRequest& request);
+    
     void getDeviceInfo(JsonObject& node);
 };

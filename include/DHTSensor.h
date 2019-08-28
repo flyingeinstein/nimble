@@ -2,15 +2,9 @@
 #pragma once
 
 
-#include "DeviceManager.h"
+#include "NimbleAPI.h"
 
 #include <DHT.h>
-
-// Uncomment whatever type you're using!
-// todo: this needs to be an argument to the sensor
-//#define DHTTYPE DHT11   // DHT 11
-#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -28,7 +22,7 @@
 class DHTSensor : public Device
 {
   public:
-    DHTSensor(short id, int _pin);
+    DHTSensor(short id, uint8_t _pin, uint8_t _type);
     DHTSensor(const DHTSensor& copy);
     DHTSensor& operator=(const DHTSensor& copy);
 

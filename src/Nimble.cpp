@@ -6,7 +6,7 @@
 // If set, enables a captive portal by creating an access point
 // you can connect to and set the actual Wifi network to connect.
 // Enabling captive portal can take significant program resources.
-#define CAPTIVE_PORTAL
+//#define CAPTIVE_PORTAL
 
 //#define ALLOW_OTA_UPDATE
 
@@ -16,22 +16,26 @@ const char* hostname = "nimbl";
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
 #if !defined(CAPTIVE_PORTAL)
-const char* ssid = "";
-const char* password = "";
+const char* ssid = SSID_NAME;
+const char* password = SSID_PASSWORD;
 #endif
 
-boolean enable_influx = false;
-const char* influx_server = "http://192.168.2.115";
-const char* influx_database = "gem";
-const char* influx_measurement = "walls";
 
+bool enable_influx = false;
+const char* influx_server = INFLUX_SERVER;
+const char* influx_database = INFLUX_DATABASE;
+const char* influx_measurement = INFLUX_MEASUREMENT;
+
+#if 0
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
-#include <FS.h>   // Include the SPIFFS library
 #include <WiFiUdp.h>
 #include <NTPClient.h>
+#endif
+
+#include <FS.h>   // Include the SPIFFS library
 
 #if defined(ALLOW_OTA_UPDATE)
 #include <ArduinoOTA.h>
@@ -59,6 +63,8 @@ const char* influx_measurement = "walls";
 #include "Display.h"
 #include "AtlasScientific.h"
 
+#include <Restfully.h>
+
 // our fonts
 #include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
@@ -70,7 +76,7 @@ const char* influx_measurement = "walls";
 #include <Fonts/FreeMono18pt7b.h>
 #include <Fonts/Org_01.h>
 #include <Fonts/Picopixel.h>
-#include <Fonts/Tiny3x3a2pt7b.h>
+//#include <Fonts/Tiny3x3a2pt7b.h>
 
 const FontInfo display_fonts[] = {  
   FONT(FreeSans9pt7b),
@@ -83,7 +89,7 @@ const FontInfo display_fonts[] = {
   FONT(FreeMono18pt7b),
   FONT(Org_01),
   FONT(Picopixel),
-  FONT(Tiny3x3a2pt7b)
+//  FONT(Tiny3x3a2pt7b)
 };
 Display* display;
 
@@ -103,6 +109,7 @@ InfluxTarget targets[] = {
 
 ESP8266WebServer server(80);
 
+
 #if defined(CAPTIVE_PORTAL)
 AutoConnect Portal(server);
 #endif
@@ -120,7 +127,7 @@ void SendHeaders()
 {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.sendHeader("Access-Control-Allow-Methods", "GET");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
 }
 
 String getContentType(String filename) { // convert the file extension to the MIME type
@@ -306,7 +313,10 @@ void sendToInflux()
 
 
 void setup() {
-  Serial.begin(230400);
+  ESP.wdtDisable();
+  ESP.wdtEnable(WDTO_8S);
+  
+  Serial.begin(115200);
   Serial.println("Nimble Multi-Sensor");
   Serial.println("(c)2018 FlyingEinstein.com");
 
@@ -416,12 +426,11 @@ void setup() {
    *   todo: Eventually this will be configurable or via probing where possible
    * 
    */
-  DeviceManager.begin( ntp );
-  DeviceManager.setWebServer( server );
-  DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
-  DeviceManager.add( *new DHTSensor(4, 12) );      // D6
+  DeviceManager.begin( server, ntp );
   DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
-  DeviceManager.add( *new MotionIR(6, 14) );       // D5
+  DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
+  DeviceManager.add( *new DHTSensor(4, 14, DHT22) );      // D5
+  DeviceManager.add( *new MotionIR(6, 12) );       // D6
 
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus

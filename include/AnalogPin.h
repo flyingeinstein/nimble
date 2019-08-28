@@ -2,7 +2,7 @@
 #pragma once
 
 
-#include "DeviceManager.h"
+#include "NimbleAPI.h"
 
 struct NoConversion {
   inline short operator()(short value) const { return value; }
