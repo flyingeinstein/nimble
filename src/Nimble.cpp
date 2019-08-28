@@ -26,15 +26,6 @@ const char* influx_server = INFLUX_SERVER;
 const char* influx_database = INFLUX_DATABASE;
 const char* influx_measurement = INFLUX_MEASUREMENT;
 
-#if 0
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266HTTPClient.h>
-#include <WiFiUdp.h>
-#include <NTPClient.h>
-#endif
-
 #include <FS.h>   // Include the SPIFFS library
 
 #if defined(ALLOW_OTA_UPDATE)
@@ -109,14 +100,13 @@ InfluxTarget targets[] = {
 
 ESP8266WebServer server(80);
 
+WiFiUDP ntpUDP;
+NTPClient ntp(ntpUDP);
+
 
 #if defined(CAPTIVE_PORTAL)
 AutoConnect Portal(server);
 #endif
-
-WiFiUDP ntpUDP;
-NTPClient ntp(ntpUDP);
-
 
 
 

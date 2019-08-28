@@ -2,7 +2,6 @@
 #pragma once
 
 #include "NimbleConfig.h"
-#include "SensorReading.h"
 
 
 #define F_BIT(x) (1<<x)
