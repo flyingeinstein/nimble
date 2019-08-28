@@ -1,4 +1,13 @@
-
+/**
+ * @file DeviceManager.h
+ * @author Colin F. MacKenzie (nospam2@colinmackenzie.net)
+ * @brief Manages a hierarchy of attached devices
+ * @version 0.1
+ * @date 2019-08-27
+ * 
+ * @copyright Copyright (c) 2019
+ * 
+ */
 #pragma once
 
 #include "NimbleConfig.h"

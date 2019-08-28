@@ -1,4 +1,13 @@
-
+/**
+ * @file Device.h
+ * @author Colin F. MacKenzie (nospam2@colinmackenzie.net)
+ * @brief Base class for devices
+ * @version 0.1
+ * @date 2019-08-27
+ * 
+ * @copyright Copyright (c) 2019
+ * 
+ */
 #pragma once
 
 #include "NimbleConfig.h"
