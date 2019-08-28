@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "command": "platformio",
+            "args": [
+                "run",
+                "--target",
+                "docs"
+            ],
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "Doxygen: Generate Documentation"
+        }
+    ]
+}
+
