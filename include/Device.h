@@ -12,7 +12,7 @@
 
 #include "NimbleConfig.h"
 #include "SensorReading.h"
-#include "DeviceManager.h"
+#include "Devices.h"
 
 // Device Flags
 #define DF_DISPLAY       F_BIT(0)             /// Device is some sort of display device

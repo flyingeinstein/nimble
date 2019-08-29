@@ -46,7 +46,7 @@ const char* influx_measurement = INFLUX_MEASUREMENT;
 //#define ENABLE_INFLUX
 
 
-#include "DeviceManager.h"
+#include "Devices.h"
 #include "Motion.h"
 #include "AnalogPin.h"
 #include "DHTSensor.h"

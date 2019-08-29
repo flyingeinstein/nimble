@@ -1,5 +1,5 @@
 
 #pragma once
 
-#include "DeviceManager.h"
+#include "Devices.h"
 #include "Device.h"

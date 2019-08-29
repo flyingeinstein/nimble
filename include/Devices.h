@@ -1,5 +1,5 @@
 /**
- * @file DeviceManager.h
+ * @file Devices.h
  * @author Colin F. MacKenzie (nospam2@colinmackenzie.net)
  * @brief Manages a hierarchy of attached devices
  * @version 0.1

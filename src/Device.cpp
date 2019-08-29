@@ -8,6 +8,8 @@ Device NullDevice(-1, 0);
 Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
   : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
+  if(_slots > MAX_SLOTS) 
+    _slots = MAX_SLOTS;
   if(_slots>0)
     readings = (Slot*)calloc(slots, sizeof(Slot));
 }
@@ -65,7 +67,7 @@ void Device::alloc(unsigned short _slots)
     Serial.print(_slots);
     Serial.print(" slots requested, limit is ");
     Serial.println(MAX_SLOTS);
-    while(1) delay(10);
+    while(1) ::delay(10);
   }
   
   if(_slots != slots || !readings) {
@@ -152,79 +154,6 @@ void Device::jsonGetReadings(JsonObject& node) const
     r.toJson(jr);
   }
 }
-
-#if 0
-void Device::httpGetReading(short slot) {
-  ESP8266WebServer* http = getWebServer();
-  if(http!=NULL && slot >=0 && slot < slots) {
-    String value;
-    SensorReading r = (*this)[slot];
-    value += "{ \"address\": \"";
-    value += id;
-    value += ':';
-    value += slot;
-    value += "\", ";
-    value += " \"type\": \"";
-    value += SensorTypeName(r.sensorType);
-    
-    value += "\", \"valueType\": \"";
-    value += r.valueType;
-
-    value += "\", \"value\": ";
-    value += r.toString();
-    value += " }";
-
-    http->send(200, "application/json", value);
-  } else if(http!=NULL)
-    http->send(400, "text/plain", "invalid slot");
-}
-
-void Device::httpPostValue(short slot) {
-  ESP8266WebServer* http = getWebServer();
-  if(http!=NULL && slot >=0 && slot < slots) {
-    String value = http->arg("plain");
-    SensorReading r = readings[slot];
-    switch(r.valueType) {
-      case 'i': 
-      case 'l': r.l = value.toInt(); break;
-      case 'f': r.l = atof(value.c_str()); break;
-      case 'b': r.b = (value=="true"); break;      
-    }
-    readings[slot] = r;
-
-    // echo back the value
-    httpGetReading(slot);
-  } else if(http!=NULL)
-    http->send(400, "text/plain", "invalid slot");
-}
-
-void Device::enableDirect(short slot, bool _get, bool _post)
-{
-  ESP8266WebServer* http = getWebServer();
-  if(http) {
-    String prefix = prefixUri(String(), slot);
-
-    // attach handler that can get the value
-    if(_get) {
-      Serial.print("GET (direct) ");
-      Serial.println(prefix);
-      http->on(
-        prefix, 
-        HTTP_GET, 
-        std::bind(&Device::httpGetReading, this, slot)   // bind instance method to callable THanderFunction (std::function)
-      );
-    }
-
-    // attach a handler that can set a value
-    if(_post)
-      http->on(
-        prefix+"/value", 
-        HTTP_POST, 
-        std::bind(&Device::httpPostValue, this, slot)   // bind instance method to callable THanderFunction (std::function)
-      );  
-  }
-}
-#endif  // old Rest functions
 
 String Device::getSlotAlias(short slotIndex) const
 {

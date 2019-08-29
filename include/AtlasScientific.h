@@ -43,7 +43,7 @@ namespace AtlasScientific {
       virtual const char* getDriverName() const;
 
       /**
-       * @brief Called by the framework to take another measurement
+       * @brief Called by the framework to take another measurement of the Ezo probe
        * 
        */
       virtual void handleUpdate();
