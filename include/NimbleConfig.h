@@ -36,28 +36,5 @@ class ModuleSet;
 class SensorReading;
 
 
-/// @todo Create influx module
-typedef struct _InfluxTarget {
-    String database;
-    String measurement;
-} InfluxTarget;
-
-/// @todo I think SensorInfo can be deprecated now that modules are more generic, possibly just need Module generic config stuff (and maybe keep as json)
-typedef struct _SensorInfo {
-    String channelName;
-    String driver;
-    // influx target?
-    uint8_t pin;  //todo: should be pinmap
-    unsigned long updateFrequency;
-} SensorInfo;
-
-
-typedef Module* (*ModuleFactory)(SensorInfo* info);
-
-typedef struct _ModuleInfo {
-    const char* name;
-    const char* category;
-    ModuleFactory factory;
-} ModuleInfo;
 
 

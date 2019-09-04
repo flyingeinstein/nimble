@@ -142,16 +142,6 @@ public:
     void jsonGetModules(JsonObject &root);
     void jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues=true);
 
-    /// @todo the Module factory should be factored out into a static interface
-public:
-    static void registerDriver(const ModuleInfo* driver);
-    static const ModuleInfo* findDriver(const char* name);
-protected:
-    static const ModuleInfo** drivers;
-    static short driversSize;
-    static short driversCount;
-
-
 protected:
     short update_iterator;  // ordinal of next device update
     NTPClient* ntp;

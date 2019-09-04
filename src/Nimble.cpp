@@ -92,11 +92,12 @@ typedef enum {
   JsonFull
 } JsonPart;
 
+#if 0 /// @todo influx targets needs to be refactored into the influx module
 InfluxTarget targets[] = {
   { "gem", "walls" },
   { "gem", "motion" }
 };
-
+#endif
 
 ESP8266WebServer server(80);
 

@@ -86,21 +86,31 @@ These items remain in development. As items are completed they are removed from 
 * Enable cloud support (either customer created or mine)
      * brings all a users nimbles together
      * enables sharing of nimbles with other users and groups (like weather data, power, gps) for crowd-sourced analytics
-   
-# Refactor
+
+# Refactoring
+
+### Refactor Device/Devices into Module and ModuleSet classes
+All these sensors, devices and controllers could be just devices (renamed to modules) and if we also implement ModuleSet class derived from a module it can organize config into 
+a subset of config modules. Also means influx module could be inserted multiple times for multiple servers (but keeps the influx module simpler as a singleton). Root Http or Rest
+controller would parse a module/slot address into X:Y:Z:W, where each : identifies the next module ID, or finally the slot ID.
+* get/set alias file should be moved to a config module
+* move root rest/http handler out into global object (ModuleSet::rest/http will then be relative to the set's base path url)
+* write module/slot resolver function that takes a string and returns the ModuleSet, Module and (if present) the Slot number.
+* implement influx module
+
+### Refactor Module rest handlers
 * We intercept /api/device/[id_or_alias]
-* interceptor looks up Module* by id or alias
-* it checks if Module* has RESTAPI flag, if so, then it delegates request to device's rest controller
-* otherwise, it passes to the default rest device endpoints handler
-* We can probably refactor the default device rest controller into it's own class,
+     * interceptor looks up Module* by id or alias
+     * it checks if Module* has valid RestAPI endpoints, if so it delegates request to device's rest controller
+     * otherwise, if no Module endpoints or endpoint not matched, it passes to the default rest device endpoints handler
+* Refactor the default device rest controller into it's own class/module
 * developers can extend the default Rest API controller or the specific one for a device
 * also refactor other config/etc APIs into their own controller and attach to root one
      * ModuleSet Aliases controller
      * Influx controller
      * Config Controller
      * Display controller (if we want to have multiple displays but only one programming protocol)
-     * IMPORTANT all these controllers could be just devices (renamed to modules) and if we implement ModuleSet class as a module it can organize config into a moduleid (including alias).
-     *    also means influx module could be inserted multiple times for multiple servers (but keeps the influx module simpler as a singleton)
+
 * Can we refactor so that Restfully methods can take a RestRequest or HttpRequest, and HttpRequest just provide raw content interfaces?
 *     but HttpRequest would still allow parameters in the URL
 

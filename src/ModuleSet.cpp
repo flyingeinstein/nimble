@@ -13,29 +13,6 @@
 // the main device manager
 ModuleSet ModuleManager;
 
-const ModuleInfo** ModuleSet::drivers = NULL;
-short ModuleSet::driversSize = 0;
-short ModuleSet::driversCount = 0;
-
-void ModuleSet::registerDriver(const ModuleInfo* driver)
-{
-  if(drivers == NULL) {
-    // first init
-    drivers = (const ModuleInfo**)calloc(driversSize=16, sizeof(ModuleInfo*));
-  }
-  drivers[driversCount++] = driver;
-}
-
-const ModuleInfo* ModuleSet::findDriver(const char* name)
-{
-  // todo: split name into category if exists
-  for(short i=0; i<driversCount; i++) {
-    if(strcmp(name, drivers[i]->name)==0)
-      return drivers[i];
-  }
-  return NULL;
-}
-
 ModuleSet::ModuleSet(short maxModules)
   : slots(maxModules), devices(NULL), update_iterator(0), ntp(NULL), httpServer(NULL), restHandler(NULL) {
     devices = (Module**)calloc(slots, sizeof(Module*));
