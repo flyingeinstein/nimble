@@ -87,4 +87,20 @@ These items remain in development. As items are completed they are removed from 
      * brings all a users nimbles together
      * enables sharing of nimbles with other users and groups (like weather data, power, gps) for crowd-sourced analytics
    
-   
+# Refactor
+* We intercept /api/device/[id_or_alias]
+* interceptor looks up Device* by id or alias
+* it checks if Device* has RESTAPI flag, if so, then it delegates request to device's rest controller
+* otherwise, it passes to the default rest device endpoints handler
+* We can probably refactor the default device rest controller into it's own class,
+* developers can extend the default Rest API controller or the specific one for a device
+* also refactor other config/etc APIs into their own controller and attach to root one
+     * Devices Aliases controller
+     * Influx controller
+     * Config Controller
+     * Display controller (if we want to have multiple displays but only one programming protocol)
+     * IMPORTANT all these controllers could be just devices (renamed to modules) and if we implement Devices class as a module it can organize config into a moduleid (including alias).
+     *    also means influx module could be inserted multiple times for multiple servers (but keeps the influx module simpler as a singleton)
+* Can we refactor so that Restfully methods can take a RestRequest or HttpRequest, and HttpRequest just provide raw content interfaces?
+*     but HttpRequest would still allow parameters in the URL
+
