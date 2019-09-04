@@ -27,3 +27,24 @@ def generate_docs(*args, **kwargs):
 env.AlwaysBuild(env.Alias("docs",
     None,
     generate_docs))
+
+
+
+def generate_sensor_drivers():
+    device_defines = []
+    device_names = []
+    for devgroup, items in config.items("devices"):
+        devices = items.split('\n')
+        #print(devgroup+" => " + ':'.join(devices))
+        for dev in devices:
+            if dev:
+                devdef = devgroup.upper() + '_' + dev.upper().replace(' ','_')
+                #print("   "+devdef)
+                device_defines.append(devdef)
+                device_names.append(dev.lower())
+    env.Append(CPPDEFINES=device_defines)
+    print("CONFIGURED NIMBLE DRIVERS: "+", ".join(device_names))
+
+
+# build sensor factory source file
+generate_sensor_drivers()
