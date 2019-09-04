@@ -25,7 +25,11 @@ class Devices;
 class Device;
 class SensorReading;
 
-
+/**
+ * @brief Manages a collection of sensor or other devices
+ * This class is the root device manager but can also hold a collection of sub devices.
+ * 
+ */
 class Devices {
   public:
     using WebServer = ESP8266WebServer;

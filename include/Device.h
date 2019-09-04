@@ -129,7 +129,7 @@ class Device {
     inline String getAlias() const { return alias; }
 
     /// @brief Return the number of slots for this device
-    /// Although a device many have any number of slots up to MAX_SLOTS (typicall 256, configured in NimbleConfig.h) this count
+    /// Although a device may have any number of slots up to MAX_SLOTS (typicall 256, configured in NimbleConfig.h) this count
     /// should not change once the sensor has been initialized and readings are taking place.
     inline short slotCount() const { return slots; }
 
