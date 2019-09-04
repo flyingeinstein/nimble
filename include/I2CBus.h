@@ -6,7 +6,7 @@
 #include "NimbleAPI.h"
 
 
-class I2CBus : public Device
+class I2CBus : public Module
 {
   public:
     I2CBus(short id);
@@ -23,7 +23,7 @@ class I2CBus : public Device
 
 
 
-class I2CDevice : public Device
+class I2CDevice : public Module
 {
   public:
     I2CDevice(short _id, short _address, short _slots);

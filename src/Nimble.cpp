@@ -46,7 +46,7 @@ const char* influx_measurement = INFLUX_MEASUREMENT;
 //#define ENABLE_INFLUX
 
 
-#include "Devices.h"
+#include "ModuleSet.h"
 #include "Motion.h"
 #include "AnalogPin.h"
 #include "DHTSensor.h"
@@ -163,7 +163,7 @@ void handleRoot() {
   // so that sensors of the same group are grouped together
   SensorReading r;
   for(short dt=FirstSensorType; dt <= LastSensorType; dt++) {
-    Devices::ReadingIterator itr = DeviceManager.forEach((SensorType)dt);
+    ModuleSet::ReadingIterator itr = ModuleManager.forEach((SensorType)dt);
     short n = 0;
     String typeName = SensorTypeName((SensorType)dt);
     
@@ -314,8 +314,6 @@ void setup() {
  
   server.addHandler(&optionsRequestHandler);
   server.on("/", handleRoot);
-  //server.on("/status", JsonSendStatus);
-  //server.on("/devices", JsonSendDevices);
 
   //server.onNotFound(handleNotFound);
   // our 404 handler tries to load documents from SPIFFS
@@ -416,22 +414,22 @@ void setup() {
    *   todo: Eventually this will be configurable or via probing where possible
    * 
    */
-  DeviceManager.begin( server, ntp );
-  DeviceManager.add( *new OneWireSensor(5, 2) );   // D4
-  DeviceManager.add( *(display = new Display()) );             // OLED on I2C bus
-  DeviceManager.add( *new DHTSensor(4, 14, DHT22) );      // D5
-  DeviceManager.add( *new MotionIR(6, 12) );       // D6
+  ModuleManager.begin( server, ntp );
+  ModuleManager.add( *new OneWireSensor(5, 2) );   // D4
+  ModuleManager.add( *(display = new Display()) );             // OLED on I2C bus
+  ModuleManager.add( *new DHTSensor(4, 14, DHT22) );      // D5
+  ModuleManager.add( *new MotionIR(6, 12) );       // D6
 
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus
-  //DeviceManager.add( *new I2CBus(2) );       // Place Wire bus at 1:0
+  //ModuleManager.add( *new I2CBus(2) );       // Place Wire bus at 1:0
   AtlasScientific::EzoProbe* pHsensor = new AtlasScientific::EzoProbe(8, pH);
   //pHsensor->setBus( SensorAddress(2,0) );   // attach i2c sensor to a specific bus
-  DeviceManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
+  ModuleManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
 
-  DeviceManager.restoreAliasesFile();
+  ModuleManager.restoreAliasesFile();
 
   Serial.print("Host: ");
   Serial.print(hostname);
@@ -460,7 +458,7 @@ void loop() {
 
   ntp.update();
 
-  DeviceManager.handleUpdate();
+  ModuleManager.handleUpdate();
 
 #ifdef ENABLE_INFLUX
   if (enable_influx && influx_server != NULL && millis() > nextInfluxWrite) {

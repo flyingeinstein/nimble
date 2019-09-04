@@ -12,7 +12,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-class OneWireSensor : public Device
+class OneWireSensor : public Module
 {
   public:
     OneWireSensor(short id, int _pin);

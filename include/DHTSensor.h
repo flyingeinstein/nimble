@@ -19,7 +19,7 @@
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 
 
-class DHTSensor : public Device
+class DHTSensor : public Module
 {
   public:
     DHTSensor(short id, uint8_t _pin, uint8_t _type);

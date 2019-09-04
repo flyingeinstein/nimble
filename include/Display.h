@@ -61,7 +61,7 @@ class DisplayPage
     bool owns_mem;
 };
 
-class Display : public Device
+class Display : public Module
 {
   public:
     Adafruit_SSD1306 display;

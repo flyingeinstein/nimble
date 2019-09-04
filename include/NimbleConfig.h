@@ -31,70 +31,33 @@
 
 #define MAX_SLOTS     256
 
-class Device;
-class Devices;
+class Module;
+class ModuleSet;
 class SensorReading;
 
-typedef enum SensorType {
-  Invalid,
-  ChildDevice,   // slot is a child-device (such as a device on a bus)
-  Numeric,       // general numeric value
-  Timestamp,     // a unix timestamp
-  Milliseconds,  // a measurement in milliseconds
-  Humidity,      // Relative Humidity (RH)
-  Hygrometer,
-  Temperature,   // Celcius or Farenheit
-  HeatIndex,     // Celcius or Farenheit (adjusted with RH)
-  Illuminance,   // Lux
-  pH,
-  ORP,           // unitless
-  DissolvedOxygen, // mg/L
-  Conductivity,  // microS/cm (Atlas Scientific)
-  CO2,           // ppm
-  Pressure,      // KPa?
-  Flow,          // liquid or gas flow
-  Altitude,      // meters or feet
-  AirPressure,
-  AirQuality,
-  Voltage,
-  Current,
-  Watts,
-  Motion,
-  FirstSensorType=Humidity,   // types before this are considered generic such as configuration values
-  LastSensorType=Motion
-} SensorType;
 
-const char* SensorTypeName(SensorType st);
-
-
-typedef enum  {
-  Offline,
-  Degraded,
-  Nominal
-} DeviceState;
-
-const char* DeviceStateName(DeviceState st);
-
-
+/// @todo Create influx module
 typedef struct _InfluxTarget {
-  String database;
-  String measurement;
+    String database;
+    String measurement;
 } InfluxTarget;
 
-
+/// @todo I think SensorInfo can be deprecated now that modules are more generic, possibly just need Module generic config stuff (and maybe keep as json)
 typedef struct _SensorInfo {
-  String channelName;
-  String driver;
-  // influx target?
-  uint8_t pin;  //todo: should be pinmap
-  unsigned long updateFrequency;
+    String channelName;
+    String driver;
+    // influx target?
+    uint8_t pin;  //todo: should be pinmap
+    unsigned long updateFrequency;
 } SensorInfo;
 
 
-typedef Device* (*DriverFactory)(SensorInfo* info);
+typedef Module* (*ModuleFactory)(SensorInfo* info);
 
-typedef struct _DeviceDriverInfo {
-  const char* name;
-  const char* category;
-  DriverFactory factory;
-} DeviceDriverInfo;
+typedef struct _ModuleInfo {
+    const char* name;
+    const char* category;
+    ModuleFactory factory;
+} ModuleInfo;
+
+

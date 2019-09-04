@@ -2,7 +2,7 @@
 
 
 OneWireSensor::OneWireSensor(short id, int _pin=0)
-  : Device(id, 0, 1000), pin(_pin), oneWire(_pin), DS18B20(&oneWire)
+  : Module(id, 0, 1000), pin(_pin), oneWire(_pin), DS18B20(&oneWire)
 {
   pinMode(pin, INPUT);
 
@@ -12,13 +12,13 @@ OneWireSensor::OneWireSensor(short id, int _pin=0)
 }
 
 OneWireSensor::OneWireSensor(const OneWireSensor& copy)
-  : Device(copy), pin(copy.pin), oneWire(copy.oneWire), DS18B20(&oneWire)
+  : Module(copy), pin(copy.pin), oneWire(copy.oneWire), DS18B20(&oneWire)
 {
 }
 
 OneWireSensor& OneWireSensor::operator=(const OneWireSensor& copy)
 {
-  Device::operator=(copy);
+  Module::operator=(copy);
   pin = copy.pin;
   oneWire = copy.oneWire;
   DS18B20 = copy.DS18B20;
@@ -59,8 +59,8 @@ void OneWireSensor::begin()
       .GET(&OneWireSensor::httpDevices);
   
   //FakeHandler h = GET(std::bind(&handler_class::m, &c, std::placeholders::_1));
-  //Devices::HandlerType h = GET(std::bind(&OneWireSensor::httpDewices, this, std::placeholders::_1));
-  //Rest::Handler< Devices::RestRequest& > h = GET(std::bind(&OneWireSensor::httpDewices, this, std::placeholders::_1));
+  //ModuleSet::HandlerType h = GET(std::bind(&OneWireSensor::httpDewices, this, std::placeholders::_1));
+  //Rest::Handler< ModuleSet::RestRequest& > h = GET(std::bind(&OneWireSensor::httpDewices, this, std::placeholders::_1));
   //endpoints.on("dewices", GET(std::bind(&OneWireSensor::httpDewices, this, std::placeholders::_1)));
   #endif
 }

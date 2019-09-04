@@ -6,69 +6,27 @@
 #include <FS.h>
 
 
-#include "Devices.h"
-#include "Device.h"
+#include "ModuleSet.h"
+#include "Module.h"
 
-
-const char* SensorTypeName(SensorType st)
-{
-  switch(st) {
-    case Invalid: return "invalid";
-    case ChildDevice: return "device";
-    case Numeric: return "numeric";
-    case Timestamp: return "timestamp";
-    case Milliseconds: return "milliseconds";
-    case Humidity: return "humidity";
-    case Hygrometer: return "hygrometer";
-    case Temperature: return "temperature";
-    case HeatIndex: return "heatindex";
-    case Illuminance: return "illuminance";
-    case pH: return "pH";
-    case ORP: return "ORP";
-    case DissolvedOxygen: return "dissolved oxygen";
-    case Conductivity: return "conductivity";
-    case CO2: return "CO2";
-    case Pressure: return "pressure";
-    case Flow: return "flow";
-    case Altitude: return "altitude";
-    case AirPressure: return "air pressure";
-    case AirQuality: return "air quality";
-    case Voltage: return "voltage";
-    case Current: return "current";
-    case Watts: return "watts";
-    case Motion: return "motion";
-    default: return "n/a";
-  }
-}
-
-const char* DeviceStateName(DeviceState dt)
-{
-  switch(dt) {
-    case Offline: return "offline";
-    case Degraded: return "degraded";
-    case Nominal: return "nominal";
-    default:
-      return "unknown";
-  }
-}
 
 // the main device manager
-Devices DeviceManager;
+ModuleSet ModuleManager;
 
-const DeviceDriverInfo** Devices::drivers = NULL;
-short Devices::driversSize = 0;
-short Devices::driversCount = 0;
+const ModuleInfo** ModuleSet::drivers = NULL;
+short ModuleSet::driversSize = 0;
+short ModuleSet::driversCount = 0;
 
-void Devices::registerDriver(const DeviceDriverInfo* driver)
+void ModuleSet::registerDriver(const ModuleInfo* driver)
 {
   if(drivers == NULL) {
     // first init
-    drivers = (const DeviceDriverInfo**)calloc(driversSize=16, sizeof(DeviceDriverInfo*));
+    drivers = (const ModuleInfo**)calloc(driversSize=16, sizeof(ModuleInfo*));
   }
   drivers[driversCount++] = driver;
 }
 
-const DeviceDriverInfo* Devices::findDriver(const char* name)
+const ModuleInfo* ModuleSet::findDriver(const char* name)
 {
   // todo: split name into category if exists
   for(short i=0; i<driversCount; i++) {
@@ -78,28 +36,28 @@ const DeviceDriverInfo* Devices::findDriver(const char* name)
   return NULL;
 }
 
-Devices::Devices(short _maxDevices)
-  : slots(_maxDevices), devices(NULL), update_iterator(0), ntp(NULL), httpServer(NULL), restHandler(NULL) {
-    devices = (Device**)calloc(slots, sizeof(Device*));
+ModuleSet::ModuleSet(short maxModules)
+  : slots(maxModules), devices(NULL), update_iterator(0), ntp(NULL), httpServer(NULL), restHandler(NULL) {
+    devices = (Module**)calloc(slots, sizeof(Module*));
 }
 
-Devices::~Devices() {
+ModuleSet::~ModuleSet() {
   if(devices) free(devices);
 }
 
 #if 0
-Devices& Devices::operator=(const Devices& copy) {
+ModuleSet& ModuleSet::operator=(const ModuleSet& copy) {
     size=copy.size;
     count=copy.count;
     writePos=copy.writePos;
-    Serial.print("Devices.alloc assignment:"); Serial.println(size);
+    Serial.print("ModuleSet.alloc assignment:"); Serial.println(size);
     values = (SensorReading*)calloc(size, sizeof(SensorReading));
     memcpy(values, copy.values, copy.count*sizeof(SensorReading));
     return *this;
 }
 #endif
 
-void Devices::begin(WebServer& _http, NTPClient& _ntp)
+void ModuleSet::begin(WebServer& _http, NTPClient& _ntp)
 {
   httpServer = &_http;
   ntp = &_ntp;
@@ -111,7 +69,7 @@ void Devices::begin(WebServer& _http, NTPClient& _ntp)
   }
 }
 
-void Devices::setupRestHandler()
+void ModuleSet::setupRestHandler()
 {  
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
     String s("Hello ");
@@ -126,17 +84,17 @@ void Devices::setupRestHandler()
     return 200;
   };
 
-  // resolves a device number to a Device object
-  std::function<Device*(Rest::UriRequest&)> device_resolver = [this](Rest::UriRequest& request) -> Device* {
+  // resolves a device number to a Module object
+  std::function<Module*(Rest::UriRequest&)> device_resolver = [this](Rest::UriRequest& request) -> Module* {
     Rest::Argument req_dev = request["xxx"];
-    Device& dev = (req_dev.isInteger())
+    Module& dev = (req_dev.isInteger())
           ? find( (long)req_dev )
           : (req_dev.isString())
             ? find( (const char*)req_dev )
-            : NullDevice;
+            : NullModule;
 
     // check for NOT FOUND
-    if (&dev == &NullDevice) {
+    if (&dev == &NullModule) {
       request.abort(404);
       return nullptr;
     }
@@ -144,16 +102,16 @@ void Devices::setupRestHandler()
     return &dev;
   };
 
-  std::function<const Device*(Rest::UriRequest&)> const_device_resolver = [this](Rest::UriRequest& request) -> const Device* {
+  std::function<const Module*(Rest::UriRequest&)> const_device_resolver = [this](Rest::UriRequest& request) -> const Module* {
     Rest::Argument req_dev = request["xxx"];
-    Device& dev = (req_dev.isInteger())
+    Module& dev = (req_dev.isInteger())
           ? find( (long)req_dev )
           : (req_dev.isString())
             ? find( (const char*)req_dev )
-            : NullDevice;
+            : NullModule;
 
     // check for NOT FOUND
-    if (&dev == &NullDevice) {
+    if (&dev == &NullModule) {
       request.abort(404);
       return nullptr;
     }
@@ -163,13 +121,13 @@ void Devices::setupRestHandler()
 
   auto device_api_resolver = [this](Rest::ParserState& lhs_request) -> Endpoints::Handler {
     Rest::Argument req_dev = lhs_request.request.args["id"];
-    Device& dev = (req_dev.isInteger())
+    Module& dev = (req_dev.isInteger())
           ? find( (long)req_dev )
           : (req_dev.isString())
             ? find( (const char*)req_dev )
-            : NullDevice;
+            : NullModule;
     
-    if (&dev != &NullDevice) {
+    if (&dev != &NullModule) {
       // device found, see of the device has an API extension
       typename Endpoints::Node rhs_node;
 
@@ -196,17 +154,17 @@ void Devices::setupRestHandler()
   // Playground
   on("/api/echo/:msg(string|integer)").GET( func );
   
-  // Devices API
+  // ModuleSet API
   on("/api/devices")
-    .GET([this](RestRequest& request) { jsonGetDevices(request.response); return 200; });
+    .GET([this](RestRequest& request) { jsonGetModules(request.response); return 200; });
   on("/api/dev/:xxx(string|integer)")
     .with(const_device_resolver)
-    .GET(&Device::restDetail)
-    .GET("status", &Device::restStatus)
-    .GET("slots", &Device::restSlots)
-    .GET("statistics", &Device::restStatistics);
+    .GET(&Module::restDetail)
+    .GET("status", &Module::restStatus)
+    .GET("slots", &Module::restSlots)
+    .GET("statistics", &Module::restStatistics);
   
-  // delegate device API requests to the Device or the default device API controller
+  // delegate device API requests to the Module or the default device API controller
   on("/api/device/:id(string|integer)")
     .otherwise(device_api_resolver);
 
@@ -233,7 +191,7 @@ void Devices::setupRestHandler()
 
 
 
-short Devices::add(Device& dev)
+short ModuleSet::add(Module& dev)
 {
   for(short i=0; i<slots; i++) 
   {
@@ -248,7 +206,7 @@ short Devices::add(Device& dev)
   return -1;
 }
 
-void Devices::remove(short deviceId) {
+void ModuleSet::remove(short deviceId) {
   for(short i=0; i<slots; i++) {
     if(devices[i] && devices[i]->id == deviceId) {
       devices[i] = NULL;
@@ -256,7 +214,7 @@ void Devices::remove(short deviceId) {
   }
 }
 
-void Devices::remove(Device& dev) {
+void ModuleSet::remove(Module& dev) {
   for(short i=0; i<slots; i++) {
     if(devices[i] && devices[i] == &dev) {
       devices[i] = NULL;
@@ -264,53 +222,53 @@ void Devices::remove(Device& dev) {
   }
 }
 
-const Device& Devices::find(short deviceId) const
+const Module& ModuleSet::find(short deviceId) const
 {
   for(short i=0; i<slots; i++) 
     if(devices[i] && devices[i]->id == deviceId)
       return *devices[i];
-  return NullDevice;
+  return NullModule;
 }
 
-Device& Devices::find(short deviceId)
+Module& ModuleSet::find(short deviceId)
 {
   for(short i=0; i<slots; i++) 
     if(devices[i] && devices[i]->id == deviceId)
       return *devices[i];
-  return NullDevice;
+  return NullModule;
 }
 
-const Device& Devices::find(String deviceAlias) const
+const Module& ModuleSet::find(String deviceAlias) const
 {
   if(deviceAlias.length()!=0) {
     for(short i=0; i<slots; i++) 
       if(devices[i] && devices[i]->alias == deviceAlias)
         return *devices[i];
   }
-  return NullDevice;
+  return NullModule;
 }
 
-Device& Devices::find(String deviceAlias)
+Module& ModuleSet::find(String deviceAlias)
 {
   if(deviceAlias.length()!=0) {
     for(short i=0; i<slots; i++) 
       if(devices[i] && devices[i]->alias == deviceAlias)
         return *devices[i];
   }
-  return NullDevice;
+  return NullModule;
 }
 
-SensorReading Devices::getReading(const SensorAddress& sa) const 
+SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 { 
   return getReading(sa.device, sa.slot); 
 }
 
-SensorReading Devices::getReading(short deviceId, unsigned short slotId) const
+SensorReading ModuleSet::getReading(short deviceId, unsigned short slotId) const
 {
   for(short i=0; i<slots; i++) {
     if(devices[i] && devices[i]->id == deviceId) {
       // get the slot
-      Device* device = devices[i];
+      Module* device = devices[i];
       return (slotId < device->slotCount())
         ? (*device)[slotId]
         : SensorReading(); 
@@ -319,38 +277,38 @@ SensorReading Devices::getReading(short deviceId, unsigned short slotId) const
   return SensorReading();
 }
 
-Devices::ReadingIterator::ReadingIterator(Devices* _manager)
+ModuleSet::ReadingIterator::ReadingIterator(ModuleSet* _manager)
   : sensorTypeFilter(Invalid), valueTypeFilter(0), tsFrom(0), tsTo(0), 
-    device(NULL), slot(0), manager(_manager), singleDevice(false), deviceOrdinal(0)
+    device(NULL), slot(0), manager(_manager), singleModule(false), deviceOrdinal(0)
 {
 }
 
-Devices::ReadingIterator& Devices::ReadingIterator::OfType(SensorType st)
+ModuleSet::ReadingIterator& ModuleSet::ReadingIterator::OfType(SensorType st)
 {
   sensorTypeFilter = st;
   return *this;
 }
 
-Devices::ReadingIterator& Devices::ReadingIterator::TimeBetween(unsigned long from, unsigned long to)
+ModuleSet::ReadingIterator& ModuleSet::ReadingIterator::TimeBetween(unsigned long from, unsigned long to)
 {
   tsFrom = from;
   tsTo = to;
   return *this;
 }
 
-Devices::ReadingIterator& Devices::ReadingIterator::Before(unsigned long ts)
+ModuleSet::ReadingIterator& ModuleSet::ReadingIterator::Before(unsigned long ts)
 {
   tsTo = ts;
   return *this;
 }
 
-Devices::ReadingIterator& Devices::ReadingIterator::After(unsigned long ts)
+ModuleSet::ReadingIterator& ModuleSet::ReadingIterator::After(unsigned long ts)
 {
   tsFrom = (ts==0) ? 0 : ts-1;
   return *this;
 }
 
-SensorReading Devices::ReadingIterator::next()
+SensorReading ModuleSet::ReadingIterator::next()
 {
   if(manager==NULL)
     return InvalidReading;  // nothing to iterate
@@ -359,7 +317,6 @@ SensorReading Devices::ReadingIterator::next()
     deviceOrdinal=0; slot=0;
     device = manager->devices[0];
     if(device==NULL) {
-      Serial.println("NoDevices");
       return InvalidReading;
     }
   } else
@@ -379,7 +336,7 @@ SensorReading Devices::ReadingIterator::next()
     }
 
     // must advance to next device
-    if(singleDevice)
+    if(singleModule)
       return InvalidReading;  // only read from one device
     device = manager->devices[++deviceOrdinal];
     slot = 0;
@@ -387,44 +344,44 @@ SensorReading Devices::ReadingIterator::next()
   return InvalidReading;  // end of readings
 }
 
-Devices::ReadingIterator Devices::forEach()
+ModuleSet::ReadingIterator ModuleSet::forEach()
 {
   return ReadingIterator(this);
 }
 
-Devices::ReadingIterator Devices::forEach(short deviceId)
+ModuleSet::ReadingIterator ModuleSet::forEach(short deviceId)
 {
   for(short i=0; i<slots; i++) {
     if(devices[i] && devices[i]->id == deviceId) {
       ReadingIterator itr = ReadingIterator(this);
       itr.deviceOrdinal = i;
       itr.device = devices[i];
-      itr.singleDevice = true;
+      itr.singleModule = true;
       return itr;
     }
   }
   return ReadingIterator(NULL);
 }
 
-Devices::ReadingIterator Devices::forEach(SensorType st)
+ModuleSet::ReadingIterator ModuleSet::forEach(SensorType st)
 {
   ReadingIterator itr = ReadingIterator(this);
   itr.sensorTypeFilter = st;
   return itr;  
 }
 
-void Devices::clearAll()
+void ModuleSet::clearAll()
 {
   for(short i=0; i<slots; i++)
     if(devices[i]!=NULL)
       devices[i]->clear();
 }
 
-void Devices::handleUpdate()
+void ModuleSet::handleUpdate()
 {
   unsigned long long _now = millis();
   for(short n = slots; n>0; n--) {
-    Device* device = devices[update_iterator];
+    Module* device = devices[update_iterator];
     update_iterator = (update_iterator+1) % slots;  // rolling iterator
 
     if(device!=NULL && device->isStale(_now)) {
@@ -435,12 +392,12 @@ void Devices::handleUpdate()
   }
 }
 
-String Devices::getAliasesFile()
+String ModuleSet::getAliasesFile()
 {
   String out;
   ReadingIterator itr = forEach();
   SensorReading r;
-  Device* lastDev = NULL;
+  Module* lastDev = NULL;
   while( (r = itr.next()) ) {
     if(lastDev != itr.device) {
       // check for device alias
@@ -466,7 +423,7 @@ String Devices::getAliasesFile()
   return out;
 }
 
-int Devices::parseAliasesFile(const char* aliases)
+int ModuleSet::parseAliasesFile(const char* aliases)
 {
   int parsed = 0;
   
@@ -533,7 +490,7 @@ int Devices::parseAliasesFile(const char* aliases)
         aliases++;
 
       // now set the alias
-      Device& dev = find(devid);
+      Module& dev = find(devid);
       if(dev) {
         if(slotid>=0) {
           // set slot alias
@@ -550,7 +507,7 @@ int Devices::parseAliasesFile(const char* aliases)
   return parsed;
 }
 
-int Devices::restoreAliasesFile() {
+int ModuleSet::restoreAliasesFile() {
   File f = SPIFFS.open("/aliases.txt", "r");
   if(f) {
     String aliases = f.readString();
@@ -562,7 +519,7 @@ int Devices::restoreAliasesFile() {
   return 0;
 }
 
-bool Devices::saveAliasesFile(const char* aliases)
+bool ModuleSet::saveAliasesFile(const char* aliases)
 {
   File f = SPIFFS.open("/aliases.txt", "w");
   if(f) {
@@ -573,14 +530,14 @@ bool Devices::saveAliasesFile(const char* aliases)
   return false;
 }
 
-void Devices::jsonGetDevices(JsonObject& root)
+void ModuleSet::jsonGetModules(JsonObject &root)
 {
   // list all devices
   JsonArray devs = root.createNestedArray("devices");
   for(short i=0; i < slots; i++) {
     if(devices[i]) {
       // get the slot
-      Device* device = devices[i];
+      Module* device = devices[i];
       const char* driverName = device->getDriverName();
       JsonObject jdev = devs.createNestedObject();
 
@@ -615,7 +572,7 @@ void Devices::jsonGetDevices(JsonObject& root)
   }  
 }
 
-void Devices::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues)
+void ModuleSet::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues)
 {
   SensorReading r;
   JsonArray groups[LastSensorType];
@@ -641,185 +598,4 @@ void Devices::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bo
   }
 }
 
-#if 0
-void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json)
-{
-  String content;
-  serializeJson(json, content);
-  server.send(responseCode, "application/json", content);
-}
-
-
-template<class T>
-bool expectNumeric(ESP8266WebServer& server, const char*& p, T& n) {
-  auto limits = std::numeric_limits<T>();
-  return expectNumeric<T>(server, p, limits.min, limits.max, n);
-}
-
-template<class T>
-bool expectNumeric(ESP8266WebServer& server, const char*& p, T _min, T _max, T& n) {
-  if(!isdigit(*p)) {
-    String e;
-    e += "expected numeric value near ";
-    e += p;
-    server.send(400, "text/plain", e);
-    return false;
-  }
-
-  // read the number
-  int v = atoi(p);
-  while(*p && isdigit(*p))
-    p++;
-
-  // check limits
-  if(v < _min || v > _max) {
-    String e;
-    e += "value ";
-    e += v;
-    e += " outslide limits, expected numeric between ";
-    e += _min;
-    e += " and ";
-    e += _max;
-    server.send(400, "text/plain", e);
-    return false;
-  } else {
-    // passed limit checks, return numeric
-    n = (T)v;
-    return true;
-  }
-
-  return false;
-}
-
-bool Devices::RequestHandler::expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev) {
-  short id;
-  Device* d = &NullDevice;
-  if(isdigit(*p) && expectNumeric(server, p, (short)0, owner->slots, id)) {
-    // got an ID
-    d = &owner->find(id);
-  } else if(isalpha(*p)) {
-    // possibly a device alias
-    String alias;
-    while(*p && *p!='/')
-      alias += *p++;
-
-    // search for alias
-    d = &owner->find(alias);
-  } else
-    return false;
-
-  // see if we found a valid device
-  if(d != &NullDevice) {
-    dev = d;
-    return true;
-  } else
-    return false;
-}
-
-
-
-bool Devices::RequestHandler::canHandle(HTTPMethod method, String uri) { 
-  return owner!=NULL && (uri.startsWith("/aliases") || uri.startsWith("/sensors") || uri.startsWith("/devices") || uri.startsWith("/device/"));
-}
-
-
-bool Devices::RequestHandler::handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
-  Device* dev;
-  const char* p = requestUri.c_str();
-  DynamicJsonDocument doc;
-  JsonObject root = doc.to<JsonObject>();
-
-  if(strncmp(p, "/sensors", 8)==0) {
-    p += 8;
-    if(*p==0 || strcmp(p, "/values")==0) {
-      Devices::ReadingIterator itr = DeviceManager.forEach();
-      owner->jsonForEachBySensorType(root, itr, *p==0);
-      goto output_doc;
-    }
-  } else if(strcmp(p, "/devices")==0) {
-    owner->jsonGetDevices(root);
-    goto output_doc;
-  } else if(strncmp(p, "/device/", 8)==0) {
-    p += 8;
-    if(!expectDevice(server, p, dev))
-      return true;  // because we sent a response
-
-    if(*p==0) {
-      dev->jsonGetReadings(root);
-      goto output_doc;
-    } else if(*p=='/') {
-      // parse device sub-command
-      p++;
-      
-      if(strncmp(p, "slot/", 5)==0) {
-        p += 5;
-
-        short slot;
-        if(isalpha(*p)) {
-          // test if alias
-          String alias;
-          while(*p && *p!='/')
-            alias += *p++;
-
-          // search for alias
-          slot = dev->findSlotByAlias(alias);
-          if(slot<0)
-            return false;
-        } else if(!expectNumeric<short>(server, p, 0, dev->slotCount()-1, slot))
-          return false;
-          
-        
-        if(*p==0) {
-          // get dev:slot value
-          dev->jsonGetReading(root, slot);
-          goto output_doc;
-        } else if(*p=='/') {
-          // get dev:slot sub-command
-          p++;
-
-          if(strcmp(p, "alias")==0) {
-            if(requestMethod == HTTP_POST) {
-              // set the slot alias
-              String alias = server.arg("plain");
-              dev->setSlotAlias(slot, alias);
-            }
-
-            // get slot alias
-            root["alias"] = dev->getSlotAlias(slot);
-            goto output_doc;
-          }
-        }
-      } else if(strcmp(p, "alias")==0) {
-            if(requestMethod == HTTP_POST) {
-              // set the slot alias
-              String alias = server.arg("plain");
-              dev->alias = alias;
-            }
-
-            // get slot alias
-            root["alias"] = dev->alias;
-            goto output_doc;
-          }
-    }
-  } else if(strcmp(p, "/aliases")==0) {
-    p += 8;
-
-    if(requestMethod == HTTP_POST) {
-      // read an aliases file
-      String aliases = server.arg("plain");
-      if(owner->parseAliasesFile(aliases.c_str()) >0)
-        owner->saveAliasesFile(aliases.c_str());
-    }
-
-    // output the aliases
-    String aliases = owner->getAliasesFile();
-    server.send(200, "text/plain", aliases);
-    return true;
-  }
-  return false;
-output_doc:
-  httpSend(server, 200, root);
-  return true;  
-}
-#endif  // disabled old handler code
 

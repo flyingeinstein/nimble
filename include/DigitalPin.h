@@ -4,7 +4,7 @@
 
 #include "NimbleAPI.h"
 
-class DigitalPin : public Device
+class DigitalPin : public Module
 {
   public:
     DigitalPin(short id, SensorType _pinType, int _pin, unsigned long _updateInterval=1000, bool _reversePolarity=false);

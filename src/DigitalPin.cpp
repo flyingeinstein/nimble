@@ -2,19 +2,19 @@
 
 
 DigitalPin::DigitalPin(short id, SensorType _pinType, int _pin=0, unsigned long _updateInterval, bool _reversePolarity)
-  : Device(id, 1, _updateInterval), pinType(_pinType), pin(_pin), reversePolarity(_reversePolarity)
+  : Module(id, 1, _updateInterval), pinType(_pinType), pin(_pin), reversePolarity(_reversePolarity)
 {
     pinMode(pin, INPUT);
 }
 
 DigitalPin::DigitalPin(const DigitalPin& copy)
-  : Device(copy), pinType(copy.pinType), pin(copy.pin)
+  : Module(copy), pinType(copy.pinType), pin(copy.pin)
 {
 }
 
 DigitalPin& DigitalPin::operator=(const DigitalPin& copy)
 {
-  Device::operator=(copy);
+  Module::operator=(copy);
   pinType = copy.pinType;
   pin = copy.pin;
   return *this;

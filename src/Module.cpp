@@ -1,11 +1,11 @@
 
-#include "Device.h"
+#include "Module.h"
 
 // a do-nothing device, returned whenever find fails
-Device NullDevice(-1, 0);
+Module NullModule(-1, 0);
 
 
-Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
+Module::Module(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
   : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), _endpoints(nullptr), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
   if(_slots > MAX_SLOTS) 
@@ -14,7 +14,7 @@ Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned 
     readings = (Slot*)calloc(slots, sizeof(Slot));
 }
 
-Device::Device(const Device& copy)
+Module::Module(const Module& copy)
   : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), _endpoints(nullptr), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
 {
   if(slots>0) {
@@ -23,7 +23,7 @@ Device::Device(const Device& copy)
   }
 }
 
-Device::~Device()
+Module::~Module()
 {
   // todo: notify our owner we are dying
   if(owner)
@@ -32,7 +32,7 @@ Device::~Device()
     free(readings);
 }
 
-Device& Device::operator=(const Device& copy)
+Module& Module::operator=(const Module& copy)
 {
   owner=copy.owner;
   id=copy.id;
@@ -46,7 +46,7 @@ Device& Device::operator=(const Device& copy)
     if(_endpoints)
       *_endpoints = *copy._endpoints;
     else
-      *_endpoints = new Devices::Endpoints(*copy._endpoints);
+      *_endpoints = new ModuleSet::Endpoints(*copy._endpoints);
   } else if(_endpoints) {
     // clear out our endpoints
     delete _endpoints;
@@ -61,12 +61,12 @@ Device& Device::operator=(const Device& copy)
   return *this;
 }
 
-void Device::setOwner(Devices* _owner)
+void Module::setOwner(ModuleSet* _owner)
 {
   owner = _owner;
 }
 
-void Device::alloc(unsigned short _slots)
+void Module::alloc(unsigned short _slots)
 {
   if(_slots >=MAX_SLOTS) {
     // essentially crash, an unrealistic number of slots requested
@@ -85,35 +85,35 @@ void Device::alloc(unsigned short _slots)
   }
 }
 
-const char* Device::getDriverName() const
+const char* Module::getDriverName() const
 {
   return NULL; // indicates no name
 }
 
-Device::operator bool() const { 
-  return this!=&NullDevice && id>=0; 
+Module::operator bool() const {
+  return this!=&NullModule && id>=0;
 }
 
-void Device::begin()
+void Module::begin()
 {
 }
 
-void Device::reset()
+void Module::reset()
 {
 }
 
-void Device::clear()
+void Module::clear()
 {
   for(int i=0; i<slots; i++)
     (*this)[i].clear();
 }
 
-void Device::delay(unsigned long _delay)
+void Module::delay(unsigned long _delay)
 {
   nextUpdate = millis() + _delay;
 }
 
-String Device::prefixUri(const String& uri, short slot) const
+String Module::prefixUri(const String& uri, short slot) const
 {
   String u;
   u += "/dev/";
@@ -129,22 +129,22 @@ String Device::prefixUri(const String& uri, short slot) const
   return u;
 }
 
-void Device::onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler)
+void Module::onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler)
 {
     http().on( prefixUri(uri), handler);
 }
 
-void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
+void Module::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
 {
     http().on( prefixUri(uri), method, fn);
 }
 
-void Device::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
+void Module::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
 {
     http().on( prefixUri(uri), method, fn, ufn);
 }
 
-void Device::jsonGetReading(JsonObject& node, short slot) const
+void Module::jsonGetReading(JsonObject& node, short slot) const
 {
   if(slot >=0 && slot < slots) {
     SensorReading r = (*this)[slot];
@@ -152,7 +152,7 @@ void Device::jsonGetReading(JsonObject& node, short slot) const
   }
 }
 
-void Device::jsonGetReadings(JsonObject& node) const
+void Module::jsonGetReadings(JsonObject& node) const
 {
   JsonArray jslots = node.createNestedArray("slots");
   for(short i=0, _i=slotCount(); i<_i; i++) {
@@ -162,20 +162,20 @@ void Device::jsonGetReadings(JsonObject& node) const
   }
 }
 
-String Device::getSlotAlias(short slotIndex) const
+String Module::getSlotAlias(short slotIndex) const
 {
   return (slotIndex>=0 && slotIndex < slots)
     ? readings[slotIndex].alias
     : "";
 }
 
-void Device::setSlotAlias(short slotIndex, String alias)
+void Module::setSlotAlias(short slotIndex, String alias)
 {
   if (slotIndex>=0 && slotIndex < slots)
     readings[slotIndex].alias = alias;
 }
 
-short Device::findSlotByAlias(String slotAlias) const
+short Module::findSlotByAlias(String slotAlias) const
 {
   if(slotAlias.length()>0) {
     for(short i=0, _i=slotCount(); i<_i; i++) {
@@ -186,41 +186,41 @@ short Device::findSlotByAlias(String slotAlias) const
   return -1;
 }
 
-void Device::handleUpdate()
+void Module::handleUpdate()
 {
 }
 
-bool Device::isStale(unsigned long _now) const
+bool Module::isStale(unsigned long _now) const
 {
   if(_now==0)
     _now = millis();
   return _now > nextUpdate;
 }
 
-DeviceState Device::getState() const
+ModuleState Module::getState() const
 {
   return state;
 }
 
-SensorReading& Device::operator[](unsigned short slotIndex)
+SensorReading& Module::operator[](unsigned short slotIndex)
 {
   if(slotIndex >= slots)
     alloc( slotIndex+1 );
   return readings[slotIndex].reading;
 }
 
-const SensorReading& Device::operator[](unsigned short slotIndex) const
+const SensorReading& Module::operator[](unsigned short slotIndex) const
 {
   if(slotIndex >= slots)
     return InvalidReading;
   return readings[slotIndex].reading;
 }
 
-int Device::toJson(JsonObject& target, JsonFlags displayFlags) const
+int Module::toJson(JsonObject& target, JsonFlags displayFlags) const
 {
   unsigned long long now = millis();
   const char* driver = getDriverName();
-  const char* statename = DeviceStateName(getState());
+  const char* statename = ModuleStateName(getState());
   String alias = getAlias();
   if(alias.length()>0)
     target["alias"] = alias;
@@ -240,7 +240,7 @@ int Device::toJson(JsonObject& target, JsonFlags displayFlags) const
   return 200;
 }
 
-void Device::Statistics::toJson(JsonObject& target) const
+void Module::Statistics::toJson(JsonObject& target) const
 {
   target["updates"] = updates;
   JsonObject _errors = target.createNestedObject("errors");

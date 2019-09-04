@@ -3,12 +3,12 @@
 #include <Wire.h>
 
 I2CBus::I2CBus(short id)
-  : Device(id, 1, 60000, DF_I2C_BUS), wire(&Wire)
+  : Module(id, 1, 60000, MF_I2C_BUS), wire(&Wire)
 {
 }
 
 I2CBus::I2CBus(const I2CBus& copy)
-  : Device(copy), wire(copy.wire)
+  : Module(copy), wire(copy.wire)
 {
 }
 
@@ -19,7 +19,7 @@ const char* I2CBus::getDriverName() const
 
 I2CBus& I2CBus::operator=(const I2CBus& copy)
 {
-  Device::operator=(copy);
+  Module::operator=(copy);
   wire = copy.wire;
   return *this;
 }
@@ -32,23 +32,23 @@ void I2CBus::handleUpdate()
 
 
 I2CDevice::I2CDevice(short id, short _address, short _slots)
-  : Device(id, _slots, 1000), address(_address), bus(NULL)
+  : Module(id, _slots, 1000), address(_address), bus(NULL)
 {
 }
 
 I2CDevice::I2CDevice(short id, SensorAddress _busId, short _address, short _slots)
-  : Device(id, _slots, 1000), busId(_busId), address(_address), bus(NULL)
+  : Module(id, _slots, 1000), busId(_busId), address(_address), bus(NULL)
 {
 }
 
 I2CDevice::I2CDevice(const I2CDevice& copy)
-  : Device(copy), busId(copy.busId), address(copy.address), bus(NULL)
+  : Module(copy), busId(copy.busId), address(copy.address), bus(NULL)
 {
 }
 
 I2CDevice& I2CDevice::operator=(const I2CDevice& copy)
 {
-  Device::operator=(copy);
+  Module::operator=(copy);
   busId = copy.busId;
   address = copy.address;
   bus = NULL;

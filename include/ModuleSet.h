@@ -1,5 +1,5 @@
 /**
- * @file Devices.h
+ * @file ModuleSet.h
  * @author Colin F. MacKenzie (nospam2@colinmackenzie.net)
  * @brief Manages a hierarchy of attached devices
  * @version 0.1
@@ -11,6 +11,7 @@
 #pragma once
 
 #include "NimbleConfig.h"
+#include "NimbleEnum.h"
 
 #include <NTPClient.h>
 
@@ -21,8 +22,8 @@
 #include "SensorReading.h"
 
 
-class Devices;
-class Device;
+class ModuleSet;
+class Module;
 class SensorReading;
 
 /**
@@ -30,7 +31,7 @@ class SensorReading;
  * This class is the root device manager but can also hold a collection of sub devices.
  * 
  */
-class Devices {
+class ModuleSet {
   public:
     using WebServer = ESP8266WebServer;
     
@@ -40,7 +41,7 @@ class Devices {
     using Endpoints = typename RestRequestHandler::Endpoints;
     
     short slots;
-    Device** devices;
+    Module** devices;
     
     class ReadingIterator
     {
@@ -49,7 +50,7 @@ class Devices {
         char valueTypeFilter;
         unsigned long tsFrom, tsTo;
     
-        Device* device;
+        Module* device;
         unsigned short slot;
 
         ReadingIterator& OfType(SensorType st);
@@ -62,52 +63,39 @@ class Devices {
         SensorReading next();
         
       protected:
-        Devices* manager;
-        bool singleDevice;
+        ModuleSet* manager;
+        bool singleModule;
         short deviceOrdinal;
 
-        ReadingIterator(Devices* manager);
+        ReadingIterator(ModuleSet* manager);
 
         // web handlers
-        void httpGetDevices();
+        void httpGetModules();
         
-      friend class Devices;
-      friend class DevicesRequestHandler;
+      friend class ModuleSet;
     };
 
-  protected:  
-    /*class RequestHandler : public ::RequestHandler {
-      public:
-        RequestHandler(Devices* _owner) : owner(_owner) {}
-        virtual bool canHandle(HTTPMethod method, String uri);
-        virtual bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri);
-
-        bool expectDevice(ESP8266WebServer& server, const char*& p, Device*& dev);
-      private:
-        Devices* owner;
-    };*/
-    
 public:
-    Devices(short maxDevices=32);
-    ~Devices();
+    ModuleSet(short maxModules=32);
+    ~ModuleSet();
 
     void begin(WebServer& _http, NTPClient& client);
 
     // clear all devices
     void clearAll();
 
-    short add(Device& dev);
+    short add(Module& dev);
     
     void remove(short deviceId);
-    void remove(Device& dev);
+    void remove(Module& dev);
 
     // find a device by id
-    const Device& find(short deviceId) const;
-    Device& find(short deviceId);
+    const Module& find(short deviceId) const;
+    Module& find(short deviceId);
 
     // find a device by its alias
-    const Device& find(String deviceAlias) const;
-    Device& find(String deviceAlias);
+    const Module& find(String deviceAlias) const;
+    Module& find(String deviceAlias);
 
     // find a reading by device:slot
     // for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
@@ -151,12 +139,20 @@ public:
     }
 
     // json interface
-    void jsonGetDevices(JsonObject& root);
+    void jsonGetModules(JsonObject &root);
     void jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, bool detailedValues=true);
 
-    static void registerDriver(const DeviceDriverInfo* driver);
-    
-  protected:
+    /// @todo the Module factory should be factored out into a static interface
+public:
+    static void registerDriver(const ModuleInfo* driver);
+    static const ModuleInfo* findDriver(const char* name);
+protected:
+    static const ModuleInfo** drivers;
+    static short driversSize;
+    static short driversCount;
+
+
+protected:
     short update_iterator;  // ordinal of next device update
     NTPClient* ntp;
     WebServer* httpServer;
@@ -165,18 +161,14 @@ public:
     void alloc(short n);
 
     // do not allow copying
-    Devices(const Devices& copy) = delete;
-    Devices& operator=(const Devices& copy) = delete;
+    ModuleSet(const ModuleSet& copy) = delete;
+    ModuleSet& operator=(const ModuleSet& copy) = delete;
 
   protected:
-    static const DeviceDriverInfo** drivers;
-    static short driversSize;
-    static short driversCount;
 
     void setupRestHandler();
-    static const DeviceDriverInfo* findDriver(const char* name);
 };
 
-extern Devices DeviceManager;
+extern ModuleSet ModuleManager;
 
 void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json);

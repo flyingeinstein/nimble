@@ -17,7 +17,7 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
 }
 
 Display::Display(short id)
-	: Device(id, 0, 500, DF_DISPLAY), display(OLED_RESET), fonts(NULL), nfonts(0), pages(NULL), npages(6), activePage(0),
+	: Module(id, 0, 500, MF_DISPLAY), display(OLED_RESET), fonts(NULL), nfonts(0), pages(NULL), npages(6), activePage(0),
 	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
 	  w(0), str(NULL), gx(6), gy(9), relativeCoords(false)
 {
@@ -377,7 +377,7 @@ void Display::httpPageGetFonts() {
 }
 
 void Display::httpPageSetActivePage() {
-  Devices::WebServer& server = http();
+  ModuleSet::WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   if(n>=0 && n < npages) {
@@ -390,7 +390,7 @@ void Display::httpPageSetActivePage() {
 
 
 void Display::httpPageGetCode() {
-  Devices::WebServer& server = http();
+  ModuleSet::WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   if(n>=0 && n < npages) {
@@ -401,7 +401,7 @@ void Display::httpPageGetCode() {
 }
 
 void Display::httpPageSetCode() {
-  Devices::WebServer& server = http();
+  ModuleSet::WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   String fs = server.arg("fs");

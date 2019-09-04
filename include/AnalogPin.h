@@ -30,23 +30,23 @@ struct NoConversion {
  * @tparam Converter=NoConversion 
  */
 template<class Converter=NoConversion>
-class AnalogPin : public Device
+class AnalogPin : public Module
 {
   public:
     AnalogPin(short id, SensorType _pinType, int _pin=0)
-      : Device(id, 1, 250), pinType(_pinType), pin(_pin)
+      : Module(id, 1, 250), pinType(_pinType), pin(_pin)
     {
         pinMode(pin, INPUT);
     }
     
     AnalogPin(const AnalogPin& copy)
-      : Device(copy), pinType(copy.pinType), pin(copy.pin)
+      : Module(copy), pinType(copy.pinType), pin(copy.pin)
     {
     }
     
     AnalogPin& operator=(const AnalogPin& copy)
     {
-      Device::operator=(copy);
+      Module::operator=(copy);
       pinType = copy.pinType;
       pin = copy.pin;
       return *this;

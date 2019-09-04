@@ -2,19 +2,19 @@
 
 
 DHTSensor::DHTSensor(short id, uint8_t _pin, uint8_t _type)
-  : Device(id, 3, 2500), dht(_pin, _type), attempts(0), backoffDelay(10000)
+  : Module(id, 3, 2500), dht(_pin, _type), attempts(0), backoffDelay(10000)
 {
   dht.begin();
 }
 
 DHTSensor::DHTSensor(const DHTSensor& copy)
-  : Device(copy), dht(copy.dht), attempts(copy.attempts), backoffDelay(copy.backoffDelay)
+  : Module(copy), dht(copy.dht), attempts(copy.attempts), backoffDelay(copy.backoffDelay)
 {
 }
 
 DHTSensor& DHTSensor::operator=(const DHTSensor& copy)
 {
-  Device::operator=(copy);
+  Module::operator=(copy);
   dht = copy.dht;
   attempts = copy.attempts;
   backoffDelay = copy.backoffDelay;

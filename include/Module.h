@@ -1,5 +1,5 @@
 /**
- * @file Device.h
+ * @file Module.h
  * @author Colin F. MacKenzie (nospam2@colinmackenzie.net)
  * @brief Base class for devices
  * @version 0.1
@@ -12,16 +12,16 @@
 
 #include "NimbleConfig.h"
 #include "SensorReading.h"
-#include "Devices.h"
+#include "ModuleSet.h"
 
-// Device Flags
-#define DF_DISPLAY       F_BIT(0)             /// Device is some sort of display device
-#define DF_BUS           F_BIT(1)             /// Device is a bus containing sub-devices
-#define DF_I2C_BUS       (DF_BUS|F_BIT(2))    /// Device is an i2c bus (therefor DF_BUS flag will also be set)
-#define DF_SERIAL_BUS    (DF_BUS|F_BIT(3))    /// Device is a serial bus (therefor DF_BUS flag will also be set)
+// Module Flags
+#define MF_DISPLAY       F_BIT(0)             /// Module is some sort of display device
+#define MF_BUS           F_BIT(1)             /// Module is a bus containing sub-devices
+#define MF_I2C_BUS       (MF_BUS|F_BIT(2))    /// Module is an i2c bus (therefor DF_BUS flag will also be set)
+#define MF_SERIAL_BUS    (MF_BUS|F_BIT(3))    /// Module is a serial bus (therefor DF_BUS flag will also be set)
 
-class Device;
-class Devices;
+class Module;
+class ModuleSet;
 
 /**
  * @brief Base class for all devices.
@@ -29,7 +29,7 @@ class Devices;
  * Rest and Http endpoint services and sensor/slot management.
  * 
  */
-class Device {
+class Module {
   public:
     short id;
     String alias;
@@ -77,25 +77,25 @@ class Device {
 
   public:
     /**
-     * @brief Construct a new Device object
+     * @brief Construct a new Module object
      * 
      * @param id The device id.
      * @param _slots The number of slots for measurements this device has.
-     * @param _updateInterval The number of milliseconds between successive measurements. The framework will call Device::update() each time this timer expires.
-     * @param _flags Device flags; such as indicating if the device is a BUS with sub-devices.
+     * @param _updateInterval The number of milliseconds between successive measurements. The framework will call Module::update() each time this timer expires.
+     * @param _flags Module flags; such as indicating if the device is a BUS with sub-devices.
      */
-    Device(short id, short _slots, unsigned long _updateInterval=1000, unsigned long _flags=0);
+    Module(short id, short _slots, unsigned long _updateInterval=1000, unsigned long _flags=0);
 
     /**
-     * @brief Construct a new Device object
+     * @brief Construct a new Module object
      * 
      * @param copy Will make a copy of this device.
      */
-    Device(const Device& copy);
+    Module(const Module& copy);
 
-    virtual ~Device();
+    virtual ~Module();
 
-    Device& operator=(const Device& copy);
+    Module& operator=(const Module& copy);
 
     /**
      * @brief Get the display name for the driver.
@@ -115,7 +115,7 @@ class Device {
 
     /// @brief returns the state of the sensor
     /// Derived classes should override this to return of the sensor is operational or in a degraded state.
-    virtual DeviceState getState() const;
+    virtual ModuleState getState() const;
     
     /// @brief Requests the device reset.
     /// If possible the device should send physical reset events to the device. Otherwise, this will simply reset any internal device data.
@@ -182,22 +182,22 @@ class Device {
 
     /// @brief Return an endpoint node at the given path
     /// The endpoint will be relative to this device's endpoint, typically /api/device/[id_or_alias]. To add endpoints
-    /// to the API root you will need to use the DeviceManager::on(...) method.
-    inline Devices::Endpoints::Node on(const char* path) {
-      if(_endpoints==nullptr) _endpoints = new Devices::Endpoints();
+    /// to the API root you will need to use the ModuleSet::on(...) method.
+    inline ModuleSet::Endpoints::Node on(const char* path) {
+      if(_endpoints==nullptr) _endpoints = new ModuleSet::Endpoints();
       return _endpoints->on(path);
     }
 
     /// @brief Return the root endpoint node for this device
     /// The device endpoint is typically at /api/device/[id_or_alias]. To add endpoints to the API root you will need 
-    /// to use the DeviceManager::on(...) method.
-    inline Devices::Endpoints::Node on() {
-      if(_endpoints==nullptr) _endpoints = new Devices::Endpoints();
+    /// to use the ModuleSet::on(...) method.
+    inline ModuleSet::Endpoints::Node on() {
+      if(_endpoints==nullptr) _endpoints = new ModuleSet::Endpoints();
       return _endpoints->getRoot();
     }
 
   protected:
-    Devices* owner;
+    ModuleSet* owner;
     unsigned short slots;
     Slot* readings;
     unsigned long flags;
@@ -205,7 +205,7 @@ class Device {
     /// @brief Contains endpoints for this device only.
     /// By default this member will be null and is only created when a derived device requests 
     /// creation of API endpoints using the on(...) method.
-    Devices::Endpoints* _endpoints;
+    ModuleSet::Endpoints* _endpoints;
 
     /// @brief how many milliseconds between device updates
     unsigned long updateInterval;
@@ -215,7 +215,7 @@ class Device {
 
     /// @brief the current device state
     /// The state describes if the device is operating normally or possibly in a degraded state due to communication, hardware or other failure
-    DeviceState state;
+    ModuleState state;
 
     /// track statistics for this device
     Statistics statistics;
@@ -227,17 +227,17 @@ class Device {
     String prefixUri(const String& uri, short slot=-1) const;
     
     // Web interface
-    inline const Devices::WebServer& http() const { assert(owner); return owner->http(); }
-    inline Devices::WebServer& http() { assert(owner); return owner->http(); }
+    inline const ModuleSet::WebServer& http() const { assert(owner); return owner->http(); }
+    inline ModuleSet::WebServer& http() { assert(owner); return owner->http(); }
     
     // same as http's on() methods except uri is prefixed with device specific path
-    void onHttp(const String &uri, Devices::WebServer::THandlerFunction handler);
-    void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn);
-    void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn, Devices::WebServer::THandlerFunction ufn);
+    void onHttp(const String &uri, ModuleSet::WebServer::THandlerFunction handler);
+    void onHttp(const String &uri, HTTPMethod method, ModuleSet::WebServer::THandlerFunction fn);
+    void onHttp(const String &uri, HTTPMethod method, ModuleSet::WebServer::THandlerFunction fn, ModuleSet::WebServer::THandlerFunction ufn);
 
-    void setOwner(Devices* owner);
+    void setOwner(ModuleSet* owner);
     
-    friend class Devices;
+    friend class ModuleSet;
 };
 
-extern Device NullDevice;
+extern Module NullModule;
