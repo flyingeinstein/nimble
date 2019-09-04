@@ -180,42 +180,61 @@ class Device {
     inline int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
     /// @}
 
+    /// @brief Return an endpoint node at the given path
+    /// The endpoint will be relative to this device's endpoint, typically /api/device/[id_or_alias]. To add endpoints
+    /// to the API root you will need to use the DeviceManager::on(...) method.
+    inline Devices::Endpoints::Node on(const char* path) {
+      if(_endpoints==nullptr) _endpoints = new Devices::Endpoints();
+      return _endpoints->on(path);
+    }
+
+    /// @brief Return the root endpoint node for this device
+    /// The device endpoint is typically at /api/device/[id_or_alias]. To add endpoints to the API root you will need 
+    /// to use the DeviceManager::on(...) method.
+    inline Devices::Endpoints::Node on() {
+      if(_endpoints==nullptr) _endpoints = new Devices::Endpoints();
+      return _endpoints->getRoot();
+    }
+
   protected:
     Devices* owner;
     unsigned short slots;
     Slot* readings;
     unsigned long flags;
-    Devices::Endpoints endpoints;
 
+    /// @brief Contains endpoints for this device only.
+    /// By default this member will be null and is only created when a derived device requests 
+    /// creation of API endpoints using the on(...) method.
+    Devices::Endpoints* _endpoints;
 
+    /// @brief how many milliseconds between device updates
     unsigned long updateInterval;
-    unsigned long nextUpdate;       // timestamp next update is scheduled for this device
 
+    /// @brief timestamp next update is scheduled for this device
+    unsigned long nextUpdate;
+
+    /// @brief the current device state
+    /// The state describes if the device is operating normally or possibly in a degraded state due to communication, hardware or other failure
     DeviceState state;
+
+    /// track statistics for this device
     Statistics statistics;
     
+    /// @brief create a fixed number of sensor slots
     void alloc(unsigned short _slots);
 
+    // todo: @deprecate the use of prefixUrl
     String prefixUri(const String& uri, short slot=-1) const;
     
     // Web interface
     inline const Devices::WebServer& http() const { assert(owner); return owner->http(); }
     inline Devices::WebServer& http() { assert(owner); return owner->http(); }
     
-    // Rest interface
-    inline const RestRequestHandler& rest() const { assert(owner); return owner->rest(); }
-    inline RestRequestHandler& rest() { assert(owner); return owner->rest(); }
-
     // same as http's on() methods except uri is prefixed with device specific path
     void onHttp(const String &uri, Devices::WebServer::THandlerFunction handler);
     void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn);
     void onHttp(const String &uri, HTTPMethod method, Devices::WebServer::THandlerFunction fn, Devices::WebServer::THandlerFunction ufn);
 
-    Devices::Endpoints::Node on(const char *endpoint_expression) {
-        assert(owner);
-        return owner->on(endpoint_expression);   // add the rest (recursively)
-    }
-   
     void setOwner(Devices* owner);
     
     friend class Devices;

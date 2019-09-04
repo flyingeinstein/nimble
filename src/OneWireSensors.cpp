@@ -39,9 +39,6 @@ int OneWireSensor::httpDevices(RestRequest& request)
 void OneWireSensor::begin()
 {
   #if 1
-  //onHttp("devices", std::bind(&OneWireSensor::httpDevices, this));
-  //onn("dewices", GET(std::bind(&OneWireSensor::httpDewices, this)));
-
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
     String s("Hello ");
     auto msg = request["msg"];
@@ -54,10 +51,11 @@ void OneWireSensor::begin()
     request.response["reply"] = s;
     return 200;
   };
+
   on("/hello/:msg(string|integer)").GET( func );
   on("/onewire")
     .with(*this)
-    .on("devices")
+    .on("sensors")
       .GET(&OneWireSensor::httpDevices);
   
   //FakeHandler h = GET(std::bind(&handler_class::m, &c, std::placeholders::_1));

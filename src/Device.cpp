@@ -6,7 +6,7 @@ Device NullDevice(-1, 0);
 
 
 Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
-  : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
+  : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), _endpoints(nullptr), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
   if(_slots > MAX_SLOTS) 
     _slots = MAX_SLOTS;
@@ -15,7 +15,7 @@ Device::Device(short _id, short _slots, unsigned long _updateInterval, unsigned 
 }
 
 Device::Device(const Device& copy)
-  : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
+  : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), _endpoints(nullptr), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
 {
   if(slots>0) {
     readings = (Slot*)calloc(slots, sizeof(Slot));
@@ -39,6 +39,20 @@ Device& Device::operator=(const Device& copy)
   slots=copy.slots;
   readings=NULL;
   flags=copy.flags;
+  #if 0
+  // todo: Endpoints class needs a copy constructor/assignment
+  if(copy._endpoints) {
+    // copy the rhs endpoints
+    if(_endpoints)
+      *_endpoints = *copy._endpoints;
+    else
+      *_endpoints = new Devices::Endpoints(*copy._endpoints);
+  } else if(_endpoints) {
+    // clear out our endpoints
+    delete _endpoints;
+    _endpoints = nullptr;
+  }
+  #endif
   updateInterval=copy.updateInterval;
   nextUpdate=copy.nextUpdate;
   state=copy.state;
@@ -50,13 +64,6 @@ Device& Device::operator=(const Device& copy)
 void Device::setOwner(Devices* _owner)
 {
   owner = _owner;
-
-  std::function<int(RestRequest&)> func = [](RestRequest& request) {
-    request.response["error"] = "no device specific endpoint";
-    return 404;
-  };  
-  //endpoints.onDefault( func );
-  // endpoints.defaultHandler->setOwner( _owner );
 }
 
 void Device::alloc(unsigned short _slots)

@@ -161,6 +161,38 @@ void Devices::setupRestHandler()
     return &dev;
   };
 
+  auto device_api_resolver = [this](Rest::ParserState& lhs_request) -> Endpoints::Handler {
+    Rest::Argument req_dev = lhs_request.request.args["id"];
+    Device& dev = (req_dev.isInteger())
+          ? find( (long)req_dev )
+          : (req_dev.isString())
+            ? find( (const char*)req_dev )
+            : NullDevice;
+    
+    if (&dev != &NullDevice) {
+      // device found, see of the device has an API extension
+      typename Endpoints::Node rhs_node;
+
+      if(dev._endpoints != nullptr) {
+        // try to resolve the endpoint using the device's API extension
+        rhs_node = dev._endpoints->getRoot();
+      } else {
+        // device has no API extension, so use the default one
+        // todo: setup the device default API controller
+      }
+
+      if(rhs_node) {
+        Rest::ParserState rhs_request(lhs_request);
+        typename Endpoints::Handler handler = rhs_node.resolve(rhs_request);
+        if (handler!=nullptr)
+          return handler;   
+      }
+    }
+
+    // device or handler not found
+    return Endpoints::Handler();
+  };
+
   // Playground
   on("/api/echo/:msg(string|integer)").GET( func );
   
@@ -173,6 +205,10 @@ void Devices::setupRestHandler()
     .GET("status", &Device::restStatus)
     .GET("slots", &Device::restSlots)
     .GET("statistics", &Device::restStatistics);
+  
+  // delegate device API requests to the Device or the default device API controller
+  on("/api/device/:id(string|integer)")
+    .otherwise(device_api_resolver);
 
   // Config API
   on("/api/config/aliases")
