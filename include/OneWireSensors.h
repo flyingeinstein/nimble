@@ -12,7 +12,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-class OneWireSensor : public Module
+class OneWireSensor : public Nimble::Module
 {
   public:
     OneWireSensor(short id, int _pin);

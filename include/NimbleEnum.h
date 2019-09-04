@@ -4,6 +4,7 @@
 
 #pragma once
 
+namespace Nimble {
 
 typedef enum SensorType {
     Invalid,
@@ -45,3 +46,4 @@ typedef enum  {
 
 const char* ModuleStateName(ModuleState st);
 
+} // ns:Nimble

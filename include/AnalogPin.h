@@ -13,6 +13,8 @@
 
 #include "NimbleAPI.h"
 
+namespace Nimble {
+
 /**
  * @brief Default converter simply passes on the raw value
  * 
@@ -78,3 +80,5 @@ struct MoistureConversion {
 /// @brief A capacitive moisture sensor
 /// This also represents an example of an AnalogPin with a value conversion function supplied.
 typedef AnalogPin<MoistureConversion> MoistureSensor;
+
+} // ns:Nimble

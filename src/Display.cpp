@@ -6,6 +6,8 @@
 
 #define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
 
+using namespace Nimble;
+
 
 const char* ParseExceptionCodeToString(ParseExceptionCode code) {
   switch(code) {

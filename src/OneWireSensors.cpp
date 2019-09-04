@@ -97,7 +97,7 @@ void OneWireSensor::handleUpdate()
   int count = DS18B20.getDS18Count();
 
   if(count <=0) {
-    state = Offline;
+    state = Nimble::Offline;
     return;
   }
 
@@ -112,19 +112,19 @@ void OneWireSensor::handleUpdate()
   for (int i = 0; i < count; i++) {
     float f = DS18B20.getTempFByIndex(i);
     if (f > DEVICE_DISCONNECTED_F) {
-      (*this)[i] = SensorReading(Temperature, f);
+      (*this)[i] = Nimble::SensorReading(Nimble::Temperature, f);
       good++;
     } else {
-      (*this)[i] = InvalidReading;
+      (*this)[i] = Nimble::InvalidReading;
       bad++;
     }
   }
   
   state = (bad>0)
     ? (good>0)
-      ? Degraded
-      : Offline
-    : Nominal;
+      ? Nimble::Degraded
+      : Nimble::Offline
+    : Nimble::Nominal;
 
     if(updateAliases)
       owner->restoreAliasesFile();

@@ -21,6 +21,7 @@
 #include "NimbleConfig.h"
 #include "SensorReading.h"
 
+namespace Nimble {
 
 class ModuleSet;
 class Module;
@@ -162,3 +163,5 @@ protected:
 extern ModuleSet ModuleManager;
 
 void httpSend(ESP8266WebServer& server, short responseCode, const JsonObject& json);
+
+} // ns:Nimble

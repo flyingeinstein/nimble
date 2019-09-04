@@ -1,5 +1,6 @@
 #include "Motion.h"
 
+namespace Nimble {
 
 DigitalPin::DigitalPin(short id, SensorType _pinType, int _pin=0, unsigned long _updateInterval, bool _reversePolarity)
   : Module(id, 1, _updateInterval), pinType(_pinType), pin(_pin), reversePolarity(_reversePolarity)
@@ -31,3 +32,5 @@ void DigitalPin::handleUpdate()
   (*this)[0] = SensorReading(pinType, reversePolarity ? !v : v);
   state = Nominal;
 }
+
+} // ns:Nimble

@@ -9,6 +9,7 @@
 #include "ModuleSet.h"
 #include "Module.h"
 
+namespace Nimble {
 
 // the main device manager
 ModuleSet ModuleManager;
@@ -575,4 +576,4 @@ void ModuleSet::jsonForEachBySensorType(JsonObject& root, ReadingIterator& itr, 
   }
 }
 
-
+} // ns:Nimble

@@ -31,10 +31,12 @@
 
 #define MAX_SLOTS     256
 
+namespace Nimble {
+
 class Module;
 class ModuleSet;
 class SensorReading;
 
-
+} // ns:Nimble
 
 

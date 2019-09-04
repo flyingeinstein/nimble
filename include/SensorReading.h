@@ -28,6 +28,8 @@
 #define VT_BOOL     'b'
 //@}
 
+namespace Nimble {
+
 /**
  * @brief Indicates what sensor recorded the reading, as a device:slot address.
  * 
@@ -114,3 +116,5 @@ class SensorReading
 
 extern SensorReading NullReading;
 extern SensorReading InvalidReading;
+
+} // ns:Nimble

@@ -1,6 +1,8 @@
 
 #include "Module.h"
 
+namespace Nimble {
+
 // a do-nothing device, returned whenever find fails
 Module NullModule(-1, 0);
 
@@ -247,3 +249,5 @@ void Module::Statistics::toJson(JsonObject& target) const
   _errors["bus"] = errors.bus;
   _errors["sensing"] = errors.sensing;
 }
+
+} // ns:Nimble

@@ -4,6 +4,8 @@
 
 #include "NimbleAPI.h"
 
+namespace Nimble {
+
 class DigitalPin : public Module
 {
   public:
@@ -20,3 +22,5 @@ class DigitalPin : public Module
     int pin;
     bool reversePolarity;
 };
+
+} // ns:Nimble

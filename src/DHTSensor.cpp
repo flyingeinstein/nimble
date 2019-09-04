@@ -1,5 +1,7 @@
 #include "DHTSensor.h"
 
+using namespace Nimble;
+
 
 DHTSensor::DHTSensor(short id, uint8_t _pin, uint8_t _type)
   : Module(id, 3, 2500), dht(_pin, _type), attempts(0), backoffDelay(10000)

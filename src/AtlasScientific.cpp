@@ -7,11 +7,13 @@
 //#define DEBUG_PRINT(x)  Serial.println(x)
 #define DEBUG_PRINT(x)
 
+using namespace Nimble;
+
 
 namespace AtlasScientific {
 
-  EzoProbe::EzoProbe(short id, SensorType stype, short _address)
-    : I2CDevice(id, _address, 2), measurementTime(5000), sensorType(stype)
+  EzoProbe::EzoProbe(short id, Nimble::SensorType stype, short _address)
+    : Nimble::I2CDevice(id, _address, 2), measurementTime(5000), sensorType(stype)
   {
     switch(stype) {
       case pH: address = 99; break;

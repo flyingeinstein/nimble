@@ -23,7 +23,7 @@ namespace AtlasScientific {
   } EzoProbeResult;
 
   /// @brief Atlas Scientific pH, ORP, Dissolved Oxygen or Conductivity probe as a device
-  class EzoProbe : public I2CDevice
+  class EzoProbe : public Nimble::I2CDevice
   {
     public:
       /**
@@ -33,7 +33,7 @@ namespace AtlasScientific {
        * @param ptype Type of Ezo probe, typically pH, ORP, DissolvedOxygen or Conductivity.
        * @param address I2C address of Ezo probe.
        */
-      EzoProbe(short id, SensorType ptype, short address=0);
+      EzoProbe(short id, Nimble::SensorType ptype, short address=0);
 
       /**
        * @brief Get the Driver Name
@@ -52,7 +52,7 @@ namespace AtlasScientific {
       unsigned long measurementTime;
 
     protected:
-      SensorType sensorType;
+      Nimble::SensorType sensorType;
       char ph_data[20];
 
       EzoProbeResult readResponse();

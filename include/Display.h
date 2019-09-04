@@ -61,7 +61,7 @@ class DisplayPage
     bool owns_mem;
 };
 
-class Display : public Module
+class Display : public Nimble::Module
 {
   public:
     Adafruit_SSD1306 display;
@@ -124,7 +124,7 @@ class Display : public Module
     bool exec();
 
     void print(const char* str, short strLength);
-    void print(SensorReading r);
+    void print(Nimble::SensorReading r);
     void setCursorRC(short r, short c);
 
     // Rest interface

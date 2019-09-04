@@ -20,6 +20,8 @@
 #define MF_I2C_BUS       (MF_BUS|F_BIT(2))    /// Module is an i2c bus (therefor DF_BUS flag will also be set)
 #define MF_SERIAL_BUS    (MF_BUS|F_BIT(3))    /// Module is a serial bus (therefor DF_BUS flag will also be set)
 
+namespace Nimble {
+
 class Module;
 class ModuleSet;
 
@@ -241,3 +243,5 @@ class Module {
 };
 
 extern Module NullModule;
+
+} // ns:Nimble

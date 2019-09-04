@@ -4,6 +4,8 @@
 #include "NimbleConfig.h"
 #include "NimbleEnum.h"
 
+namespace Nimble {
+
 /// @todo Create influx module
 typedef struct _InfluxTarget {
     String database;
@@ -47,3 +49,5 @@ protected:
 
 /// @brief This should be the one and only module factory
 extern ModuleFactory DefaultModuleFactory;
+
+} // ns:Nimble

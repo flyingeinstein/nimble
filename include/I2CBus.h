@@ -5,6 +5,7 @@
 
 #include "NimbleAPI.h"
 
+namespace Nimble {
 
 class I2CBus : public Module
 {
@@ -40,3 +41,5 @@ class I2CDevice : public Module
     TwoWire* bus;  // cached i2c bus from busid
     TwoWire* getWire();
 };
+
+} // ns:Nimble

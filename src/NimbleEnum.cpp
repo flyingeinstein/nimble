@@ -4,6 +4,8 @@
 
 #include "NimbleEnum.h"
 
+namespace Nimble {
+
 const char* SensorTypeName(SensorType st)
 {
     switch(st) {
@@ -45,3 +47,5 @@ const char* ModuleStateName(ModuleState st)
             return "unknown";
     }
 }
+
+} // ns:Nimble

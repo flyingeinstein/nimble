@@ -1,6 +1,7 @@
 
 #include "SensorReading.h"
 
+namespace Nimble {
 
 SensorReading NullReading(Invalid, VT_NULL, 0);
 SensorReading InvalidReading(Invalid, VT_INVALID, 0);
@@ -63,3 +64,5 @@ void SensorReading::toJson(JsonObject& root, bool showType, bool showTimestamp) 
       root["value"] = (char*)NULL; break;
   }
 }
+
+} // ns:Nimble

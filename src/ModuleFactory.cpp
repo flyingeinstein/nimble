@@ -1,6 +1,7 @@
 
 #include "ModuleFactory.h"
 
+namespace Nimble {
 
 ModuleFactory::ModuleFactory()
     : drivers(nullptr), driversSize(0), driversCount(0)
@@ -26,3 +27,4 @@ const ModuleInfo* ModuleFactory::findDriver(const char* name)
     return NULL;
 }
 
+} // ns:Nimble

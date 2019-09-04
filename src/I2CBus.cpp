@@ -2,6 +2,8 @@
 
 #include <Wire.h>
 
+namespace Nimble {
+
 I2CBus::I2CBus(short id)
   : Module(id, 1, 60000, MF_I2C_BUS), wire(&Wire)
 {
@@ -76,3 +78,5 @@ TwoWire* I2CDevice::getWire()
   }
   return NULL;
 }
+
+} // ns:Nimble
