@@ -1,5 +1,7 @@
 
 #include "Module.h"
+#include "ModuleManager.h"
+
 
 namespace Nimble {
 
@@ -48,7 +50,7 @@ Module& Module::operator=(const Module& copy)
     if(_endpoints)
       *_endpoints = *copy._endpoints;
     else
-      *_endpoints = new ModuleSet::Endpoints(*copy._endpoints);
+      *_endpoints = new Endpoints(*copy._endpoints);
   } else if(_endpoints) {
     // clear out our endpoints
     delete _endpoints;
@@ -131,19 +133,30 @@ String Module::prefixUri(const String& uri, short slot) const
   return u;
 }
 
+WebServer& Module::http()
+{
+  return ModuleManager::Default.http();
+}
+
 void Module::onHttp(const String &uri, ESP8266WebServer::THandlerFunction handler)
 {
-    http().on( prefixUri(uri), handler);
+    ModuleManager::Default
+      .http()
+      .on( prefixUri(uri), handler);
 }
 
 void Module::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn)
 {
-    http().on( prefixUri(uri), method, fn);
+    ModuleManager::Default
+      .http()
+      .on( prefixUri(uri), method, fn);
 }
 
 void Module::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn)
 {
-    http().on( prefixUri(uri), method, fn, ufn);
+    ModuleManager::Default
+      .http()
+      .on( prefixUri(uri), method, fn, ufn);
 }
 
 void Module::jsonGetReading(JsonObject& node, short slot) const

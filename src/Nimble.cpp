@@ -47,6 +47,7 @@ const char* influx_measurement = INFLUX_MEASUREMENT;
 
 
 #include "ModuleSet.h"
+#include "ModuleManager.h"
 #include "Motion.h"
 #include "AnalogPin.h"
 #include "DHTSensor.h"
@@ -164,7 +165,7 @@ void handleRoot() {
   // so that sensors of the same group are grouped together
   Nimble::SensorReading r;
   for(short dt=Nimble::FirstSensorType; dt <= Nimble::LastSensorType; dt++) {
-    Nimble::ModuleSet::ReadingIterator itr = Nimble::ModuleManager.forEach((Nimble::SensorType)dt);
+    Nimble::ModuleSet::ReadingIterator itr = Nimble::ModuleManager::Default.modules().forEach((Nimble::SensorType)dt);
     short n = 0;
     String typeName = Nimble::SensorTypeName((Nimble::SensorType)dt);
     
@@ -415,22 +416,23 @@ void setup() {
    *   todo: Eventually this will be configurable or via probing where possible
    * 
    */
-  Nimble::ModuleManager.begin( server, ntp );
-  Nimble::ModuleManager.add( *new OneWireSensor(5, 2) );   // D4
-  Nimble::ModuleManager.add( *(display = new Display()) );             // OLED on I2C bus
-  Nimble::ModuleManager.add( *new DHTSensor(4, 14, DHT22) );      // D5
-  Nimble::ModuleManager.add( *new MotionIR(6, 12) );       // D6
+  Nimble::ModuleSet& modules = Nimble::ModuleManager::Default.modules();
+  Nimble::ModuleManager::Default.begin( server, ntp );
+  modules.add( *new OneWireSensor(5, 2) );   // D4
+  modules.add( *(display = new Display()) );             // OLED on I2C bus
+  modules.add( *new DHTSensor(4, 14, DHT22) );      // D5
+  modules.add( *new MotionIR(6, 12) );       // D6
 
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus
   //ModuleManager.add( *new I2CBus(2) );       // Place Wire bus at 1:0
   AtlasScientific::EzoProbe* pHsensor = new AtlasScientific::EzoProbe(8, Nimble::pH);
   //pHsensor->setBus( SensorAddress(2,0) );   // attach i2c sensor to a specific bus
-  Nimble::ModuleManager.add( *pHsensor );       // pH probe at 8 using default i2c bus
+  modules.add( *pHsensor );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
 
-  Nimble::ModuleManager.restoreAliasesFile();
+  Nimble::ModuleManager::Default.restoreAliasesFile();
 
   Serial.print("Host: ");
   Serial.print(hostname);
@@ -459,7 +461,7 @@ void loop() {
 
   ntp.update();
 
-  Nimble::ModuleManager.handleUpdate();
+  Nimble::ModuleManager::Default.handleUpdate();
 
 #ifdef ENABLE_INFLUX
   if (enable_influx && influx_server != NULL && millis() > nextInfluxWrite) {

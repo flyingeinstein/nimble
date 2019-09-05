@@ -182,19 +182,23 @@ class Module {
     inline int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
     /// @}
 
+    inline bool hasEndpoints() const { return _endpoints!=nullptr; }
+    inline const Endpoints* endpoints() const { return _endpoints; };
+    inline Endpoints* endpoints() { return _endpoints; };
+
     /// @brief Return an endpoint node at the given path
     /// The endpoint will be relative to this device's endpoint, typically /api/device/[id_or_alias]. To add endpoints
     /// to the API root you will need to use the ModuleSet::on(...) method.
-    inline ModuleSet::Endpoints::Node on(const char* path) {
-      if(_endpoints==nullptr) _endpoints = new ModuleSet::Endpoints();
+    inline Endpoints::Node on(const char* path) {
+      if(_endpoints==nullptr) _endpoints = new Endpoints();
       return _endpoints->on(path);
     }
 
     /// @brief Return the root endpoint node for this device
     /// The device endpoint is typically at /api/device/[id_or_alias]. To add endpoints to the API root you will need 
     /// to use the ModuleSet::on(...) method.
-    inline ModuleSet::Endpoints::Node on() {
-      if(_endpoints==nullptr) _endpoints = new ModuleSet::Endpoints();
+    inline Endpoints::Node on() {
+      if(_endpoints==nullptr) _endpoints = new Endpoints();
       return _endpoints->getRoot();
     }
 
@@ -207,7 +211,7 @@ class Module {
     /// @brief Contains endpoints for this device only.
     /// By default this member will be null and is only created when a derived device requests 
     /// creation of API endpoints using the on(...) method.
-    ModuleSet::Endpoints* _endpoints;
+    Endpoints* _endpoints;
 
     /// @brief how many milliseconds between device updates
     unsigned long updateInterval;
@@ -227,15 +231,15 @@ class Module {
 
     // todo: @deprecate the use of prefixUrl
     String prefixUri(const String& uri, short slot=-1) const;
-    
+
     // Web interface
-    inline const ModuleSet::WebServer& http() const { assert(owner); return owner->http(); }
-    inline ModuleSet::WebServer& http() { assert(owner); return owner->http(); }
-    
+    // used in Display class to send raw data to client
+    WebServer& http();
+
     // same as http's on() methods except uri is prefixed with device specific path
-    void onHttp(const String &uri, ModuleSet::WebServer::THandlerFunction handler);
-    void onHttp(const String &uri, HTTPMethod method, ModuleSet::WebServer::THandlerFunction fn);
-    void onHttp(const String &uri, HTTPMethod method, ModuleSet::WebServer::THandlerFunction fn, ModuleSet::WebServer::THandlerFunction ufn);
+    void onHttp(const String &uri, WebServer::THandlerFunction handler);
+    void onHttp(const String &uri, HTTPMethod method, WebServer::THandlerFunction fn);
+    void onHttp(const String &uri, HTTPMethod method, WebServer::THandlerFunction fn, WebServer::THandlerFunction ufn);
 
     void setOwner(ModuleSet* owner);
     

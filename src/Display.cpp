@@ -1,5 +1,6 @@
 
 #include "Display.h"
+#include "ModuleManager.h"
 
 #include <ctype.h>
 #include <FS.h>   // Include the SPIFFS library
@@ -379,7 +380,7 @@ void Display::httpPageGetFonts() {
 }
 
 void Display::httpPageSetActivePage() {
-  ModuleSet::WebServer& server = http();
+  WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   if(n>=0 && n < npages) {
@@ -392,7 +393,7 @@ void Display::httpPageSetActivePage() {
 
 
 void Display::httpPageGetCode() {
-  ModuleSet::WebServer& server = http();
+  WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   if(n>=0 && n < npages) {
@@ -403,7 +404,7 @@ void Display::httpPageGetCode() {
 }
 
 void Display::httpPageSetCode() {
-  ModuleSet::WebServer& server = http();
+  WebServer& server = http();
   String pageN = server.arg("n");
   int n = pageN.toInt();
   String fs = server.arg("fs");

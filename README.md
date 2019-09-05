@@ -93,8 +93,10 @@ These items remain in development. As items are completed they are removed from 
 All these sensors, devices and controllers could be just devices (renamed to modules) and if we also implement ModuleSet class derived from a module it can organize config into 
 a subset of config modules. Also means influx module could be inserted multiple times for multiple servers (but keeps the influx module simpler as a singleton). Root Http or Rest
 controller would parse a module/slot address into X:Y:Z:W, where each : identifies the next module ID, or finally the slot ID.
+* [done] rename Device/Devices to Module/ModuleSet
+* [done] move Module and related classes into Nimble namespace
 * get/set alias file should be moved to a config module
-* move root rest/http handler out into global object (ModuleSet::rest/http will then be relative to the set's base path url)
+* [done] move root rest/http handler out into new ModuleManager object (ModuleSet::rest/http will then be relative to the set's base path url)
 * write module/slot resolver function that takes a string and returns the ModuleSet, Module and (if present) the Slot number.
 * implement influx module
 

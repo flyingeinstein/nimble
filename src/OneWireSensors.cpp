@@ -1,4 +1,5 @@
 #include "OneWireSensors.h"
+#include "ModuleManager.h"
 
 
 OneWireSensor::OneWireSensor(short id, int _pin=0)
@@ -127,5 +128,5 @@ void OneWireSensor::handleUpdate()
     : Nimble::Nominal;
 
     if(updateAliases)
-      owner->restoreAliasesFile();
+      Nimble::ModuleManager::Default.restoreAliasesFile();
 }
