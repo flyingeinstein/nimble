@@ -12,7 +12,6 @@
 
 #include "NimbleConfig.h"
 #include "SensorReading.h"
-#include "ModuleSet.h"
 
 // Module Flags
 #define MF_DISPLAY       F_BIT(0)             /// Module is some sort of display device

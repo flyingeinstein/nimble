@@ -12,14 +12,10 @@
 
 #include "NimbleConfig.h"
 #include "NimbleEnum.h"
-
-
-#include "NimbleConfig.h"
 #include "SensorReading.h"
 
 namespace Nimble {
 
-class ModuleSet;
 class Module;
 class SensorReading;
 

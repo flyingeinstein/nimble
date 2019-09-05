@@ -11,7 +11,8 @@
 namespace Nimble {
 
 ModuleSet::ModuleSet(short maxModules)
-  : slots(maxModules), devices(NULL), update_iterator(0) {
+  : Module(0, 0, 0, MF_BUS), slots(maxModules), devices(NULL), update_iterator(0) 
+{
     devices = (Module**)calloc(slots, sizeof(Module*));
 }
 
@@ -30,10 +31,6 @@ ModuleSet& ModuleSet::operator=(const ModuleSet& copy) {
     return *this;
 }
 #endif
-
-void ModuleSet::begin()
-{
-}
 
 
 short ModuleSet::add(Module& dev)
@@ -215,7 +212,22 @@ ModuleSet::ReadingIterator ModuleSet::forEach(SensorType st)
   return itr;  
 }
 
-void ModuleSet::clearAll()
+void ModuleSet::begin()
+{
+  for(short i=0; i<slots; i++)
+    if(devices[i]!=NULL)
+      devices[i]->begin();
+}
+
+
+void ModuleSet::reset()
+{
+  for(short i=0; i<slots; i++)
+    if(devices[i]!=NULL)
+      devices[i]->reset();
+}
+
+void ModuleSet::clear()
 {
   for(short i=0; i<slots; i++)
     if(devices[i]!=NULL)

@@ -100,6 +100,11 @@ controller would parse a module/slot address into X:Y:Z:W, where each : identifi
 * write module/slot resolver function that takes a string and returns the ModuleSet, Module and (if present) the Slot number.
 * implement influx module
 
+### ModuleSet is a Module, Module can contain sub-modules
+* both ModuleSet and Module has member slots (misnomer on ModuleSet)
+* Can we modify Slot to be the modules array
+* Slot also has timestamp and alias, we can use these instead of storing inside Module
+
 ### Refactor Module rest handlers
 * We intercept /api/device/[id_or_alias]
      * interceptor looks up Module* by id or alias
