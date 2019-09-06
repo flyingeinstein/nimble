@@ -181,6 +181,8 @@ class Module {
     /// @brief return sensor reading for given slot index
     inline const SensorReading& operator[](String alias) const { return find(alias, AnySensorType); }
 
+    SensorReading& operator[](const Rest::Argument& arg);
+
     /// @brief Serialize a slot reading into a Json object
     void jsonGetReading(JsonObject& node, short slot) const;
 

@@ -11,8 +11,8 @@ class I2CBus : public ModuleSet
 {
   public:
     I2CBus(short id);
-    I2CBus(const I2CBus& copy);
-    I2CBus& operator=(const I2CBus& copy);
+    I2CBus(const I2CBus& copy) = delete;
+    I2CBus& operator=(const I2CBus& copy) = delete;
 
     virtual const char* getDriverName() const;
 

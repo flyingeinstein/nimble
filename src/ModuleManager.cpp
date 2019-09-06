@@ -53,11 +53,7 @@ void ModuleManager::setupRestHandler()
   // resolves a device number to a Module object
   std::function<Module*(Rest::UriRequest&)> device_resolver = [this](Rest::UriRequest& request) -> Module* {
     Rest::Argument req_dev = request["xxx"];
-    Module& dev = (req_dev.isInteger())
-          ? _modules.find( (long)req_dev )
-          : (req_dev.isString())
-            ? _modules.find( (const char*)req_dev )
-            : NullModule;
+    Module& dev = _modules[ req_dev ];
 
     // check for NOT FOUND
     if (&dev == &NullModule) {
@@ -70,12 +66,8 @@ void ModuleManager::setupRestHandler()
 
   std::function<const Module*(Rest::UriRequest&)> const_device_resolver = [this](Rest::UriRequest& request) -> const Module* {
     Rest::Argument req_dev = request["xxx"];
-    Module& dev = (req_dev.isInteger())
-          ? _modules[ (long)req_dev ]
-          : (req_dev.isString())
-            ? _modules[ (String)req_dev ]
-            : NullModule;
-
+    Module& dev = _modules[ req_dev ];
+         
     // check for NOT FOUND
     if (&dev == &NullModule) {
       request.abort(404);
@@ -87,12 +79,16 @@ void ModuleManager::setupRestHandler()
 
   auto device_api_resolver = [this](Rest::ParserState& lhs_request) -> Endpoints::Handler {
     Rest::Argument req_dev = lhs_request.request.args["id"];
+    #if 0
     Module& dev = (req_dev.isInteger())
           ? _modules[ (long)req_dev ]
           : (req_dev.isString())
             ? _modules[ (String)req_dev ]
             : NullModule;
-    
+    #else
+    Module& dev = _modules[ req_dev ];
+    #endif
+
     if (&dev != &NullModule) {
       // device found, see of the device has an API extension
       typename Endpoints::Node rhs_node;
@@ -256,7 +252,7 @@ int ModuleManager::parseAliasesFile(const char* aliases)
         aliases++;
 
       // now set the alias
-      Module& dev = _modules.find(devid);
+      Module& dev = _modules[devid];
       if(dev) {
         if(slotid>=0) {
           // set slot alias
@@ -301,9 +297,9 @@ void ModuleManager::jsonGetModules(ModuleSet& modset, JsonObject &root)
   // list all devices
   JsonArray devs = root.createNestedArray("devices");
   for(short i=0; i < modset.slots; i++) {
-    if(modset.devices[i]) {
+    if(modset.readings[i].reading.module != nullptr) {
       // get the slot
-      Module* device = modset.devices[i];
+      Module* device = modset.readings[i].reading.module;
       const char* driverName = device->getDriverName();
       JsonObject jdev = devs.createNestedObject();
 

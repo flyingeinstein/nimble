@@ -92,11 +92,21 @@ Module& ModuleSet::find(short deviceId)
       return *readings[i].reading.module;
   return NullModule;
 }
+
+
+const Module& find(const Rest::Argument& deviceAliasOrId) const {
+
+}
+
+Module& find(const Rest::Argument& deviceAliasOrId) {
+  
+}
+
 #else
 const Module& ModuleSet::operator[](short moduleID) const {
   // shortcut: check if indexed slot has module with matching ID
   if(moduleID < slots) {
-    const SensorReading& sr = readings[i].reading;
+    const SensorReading& sr = readings[moduleID].reading;
     if(sr.sensorType == SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
       return *sr.module;
   } else {
@@ -106,13 +116,13 @@ const Module& ModuleSet::operator[](short moduleID) const {
         return *sr.module;
     }
   }
-  return NullReading;
+  return NullModule;
 }
 
-Module& ModuleSet::operator[](short moduleID) const {
+Module& ModuleSet::operator[](short moduleID) {
   // shortcut: check if indexed slot has module with matching ID
   if(moduleID < slots) {
-    SensorReading& sr = readings[i].reading;
+    SensorReading& sr = readings[moduleID].reading;
     if(sr.sensorType == SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
       return *sr.module;
   } else {
@@ -122,7 +132,7 @@ Module& ModuleSet::operator[](short moduleID) const {
         return *sr.module;
     }
   }
-  return NullReading;
+  return NullModule;
 }
 
 
@@ -145,6 +155,22 @@ Module& ModuleSet::operator[](String alias) {
   } else
     return NullModule;
 }
+
+const Module& ModuleSet::operator[](const Rest::Argument& aliasOrId) const {
+  return aliasOrId.isInteger()
+      ? operator[]( (long)aliasOrId )
+      : aliasOrId.isString()
+        ? operator[]( (String)aliasOrId )
+        : NullModule;
+}
+
+Module& ModuleSet::operator[](const Rest::Argument& aliasOrId) {
+   return aliasOrId.isInteger()
+      ? operator[]( (long)aliasOrId )
+      : aliasOrId.isString()
+        ? operator[]( (String)aliasOrId )
+        : NullModule;
+}
 #endif
 
 SensorReading ModuleSet::getReading(const SensorAddress& sa) const
@@ -154,16 +180,10 @@ SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 
 SensorReading ModuleSet::getReading(short deviceId, unsigned short slotId) const
 {
-  for(short i=0; i<slots; i++) {
-    if(devices[i] && devices[i]->id == deviceId) {
-      // get the slot
-      Module* device = devices[i];
-      return (slotId < device->slotCount())
-        ? (*device)[slotId]
-        : SensorReading(); 
-    }
-  }
-  return SensorReading();
+  const Module& mod = operator[](deviceId);
+  return (mod != NullModule)
+    ? mod[slotId]
+    : NullReading;
 }
 
 ModuleSet::ReadingIterator::ReadingIterator(ModuleSet* _manager)
@@ -204,7 +224,9 @@ SensorReading ModuleSet::ReadingIterator::next()
   if(device ==NULL) {
     // get first device
     deviceOrdinal=0; slot=0;
-    device = manager->devices[0];
+    while(manager->readings[deviceOrdinal].reading.sensorType != SubModule && manager->readings[deviceOrdinal].reading.module!=nullptr)
+      deviceOrdinal++;
+    device = manager->readings[deviceOrdinal].reading.module;
     if(device==NULL) {
       return InvalidReading;
     }
@@ -227,7 +249,13 @@ SensorReading ModuleSet::ReadingIterator::next()
     // must advance to next device
     if(singleModule)
       return InvalidReading;  // only read from one device
-    device = manager->devices[++deviceOrdinal];
+    
+    // find the next device
+    deviceOrdinal++;
+    while(manager->readings[deviceOrdinal].reading.sensorType != SubModule && manager->readings[deviceOrdinal].reading.module!=nullptr)
+      deviceOrdinal++;
+    device = manager->readings[deviceOrdinal].reading.module;
+
     slot = 0;
   }
   return InvalidReading;  // end of readings
@@ -241,10 +269,11 @@ ModuleSet::ReadingIterator ModuleSet::forEach()
 ModuleSet::ReadingIterator ModuleSet::forEach(short deviceId)
 {
   for(short i=0; i<slots; i++) {
-    if(devices[i] && devices[i]->id == deviceId) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == SubModule && reading.module!=nullptr && reading.module->id == deviceId) {
       ReadingIterator itr = ReadingIterator(this);
       itr.deviceOrdinal = i;
-      itr.device = devices[i];
+      itr.device = reading.module;
       itr.singleModule = true;
       return itr;
     }
@@ -259,41 +288,78 @@ ModuleSet::ReadingIterator ModuleSet::forEach(SensorType st)
   return itr;  
 }
 
-void ModuleSet::begin()
+void ModuleSet::forEach(SlotCallback cb, void* pUserData, SensorType st)
 {
-  for(short i=0; i<slots; i++)
-    if(devices[i]!=NULL)
-      devices[i]->begin();
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == st) {
+      if(!cb(readings[i], pUserData))
+        return;
+    }
+  }
+}
+
+void ModuleSet::forEach(ReadingCallback cb, void* pUserData, SensorType st)
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == st) {
+      if(!cb(reading, pUserData))
+        return;
+    }
+  }
+}
+
+void ModuleSet::forEach(ModuleCallback cb, void* pUserData)
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == SubModule && reading.valueType==VT_PTR && reading.module!=nullptr) {
+      if(!cb(*reading.module, pUserData))
+        return;
+    }
+  }
 }
 
 
+void ModuleSet::begin()
+{
+  forEach( [](Module& mod, void* pUserData) -> bool { 
+    mod.begin(); 
+    return true; 
+  });
+}
+
 void ModuleSet::reset()
 {
-  for(short i=0; i<slots; i++)
-    if(devices[i]!=NULL)
-      devices[i]->reset();
+  forEach( [](Module& mod, void* pUserData) -> bool { 
+    mod.reset(); 
+    return true; 
+  });
 }
 
 void ModuleSet::clear()
 {
-  for(short i=0; i<slots; i++)
-    if(devices[i]!=NULL)
-      devices[i]->clear();
+  forEach( [](Module& mod, void* pUserData) -> bool { 
+    mod.clear(); 
+    return true; 
+  });
 }
 
 void ModuleSet::handleUpdate()
 {
   unsigned long long _now = millis();
-  for(short n = slots; n>0; n--) {
-    Module* device = devices[update_iterator];
+  update_iterator = (update_iterator+1) % slots;  // rolling iterator
+  while(readings[update_iterator].reading.sensorType != SubModule && readings[update_iterator].reading.module!=nullptr)
     update_iterator = (update_iterator+1) % slots;  // rolling iterator
+  Module* device = readings[update_iterator].reading.module;
 
-    if(device!=NULL && device->isStale(_now)) {
-        device->nextUpdate = _now + device->updateInterval;
-        device->handleUpdate();
-        return; // only handle one update at a time
-    }
+  if(device!=NULL && device->isStale(_now)) {
+      device->nextUpdate = _now + device->updateInterval;
+      device->handleUpdate();
+      return; // only handle one update at a time
   }
+
 }
 
 } // ns:Nimble

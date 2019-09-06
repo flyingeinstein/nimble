@@ -10,14 +10,10 @@ I2CBus::I2CBus(short id)
   flags |= MF_I2C_BUS;
 }
 
+#if 0
 I2CBus::I2CBus(const I2CBus& copy)
   : ModuleSet(copy), wire(copy.wire)
 {
-}
-
-const char* I2CBus::getDriverName() const
-{
-  return "i2c-bus";
 }
 
 I2CBus& I2CBus::operator=(const I2CBus& copy)
@@ -25,6 +21,12 @@ I2CBus& I2CBus::operator=(const I2CBus& copy)
   Module::operator=(copy);
   wire = copy.wire;
   return *this;
+}
+#endif
+
+const char* I2CBus::getDriverName() const
+{
+  return "i2c-bus";
 }
 
 void I2CBus::handleUpdate()
@@ -70,7 +72,7 @@ TwoWire* I2CDevice::getWire()
     return bus; // cached value
     
   if(owner && owner->hasFlags(MF_I2C_BUS) ) {
-    I2CBus& i2c = (I2CBus&)owner;
+    I2CBus& i2c = *(I2CBus*)owner;
     if(i2c.wire) {
       // todo: get the Nth i2c bus based on the slot, for now we only support 1 bus
       return bus = i2c.wire;

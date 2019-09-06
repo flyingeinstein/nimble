@@ -259,6 +259,14 @@ const SensorReading& Module::operator[](unsigned short slotIndex) const
   return readings[slotIndex].reading;
 }
 
+SensorReading& Module::operator[](const Rest::Argument& arg) {
+  return arg.isInteger()
+      ? operator[]( (long)arg )
+      : arg.isString()
+        ? operator[]( (String)arg )
+        : NullReading;
+}
+
 int Module::toJson(JsonObject& target, JsonFlags displayFlags) const
 {
   unsigned long long now = millis();

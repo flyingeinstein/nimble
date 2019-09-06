@@ -17,7 +17,17 @@
 namespace Nimble {
 
 class Module;
+class ModuleManager;
 class SensorReading;
+
+typedef bool (*SlotCallback)(Module::Slot& slot, void* pUserData);
+typedef bool (*ReadingCallback)(SensorReading& reading, void* pUserData);
+#if 0
+typedef bool (*ModuleCallback)(Module& module, void* pUserData);
+#else
+using ModuleCallback = std::function< bool(Module&, void*) >;
+#endif
+
 
 /**
  * @brief Manages a collection of sensor or other devices
@@ -25,6 +35,8 @@ class SensorReading;
  * 
  */
 class ModuleSet : public Module {
+  friend class ModuleManager;   // @todo we are all friends, but golly we shouldn't just sleep with everbody.
+
   public:
     class ReadingIterator
     {
@@ -64,21 +76,43 @@ public:
 
     void begin();
 
+    void reset();
+
     // clear all devices
-    void clearAll();
+    void clear();
 
     short add(Module& dev);
     
     void remove(short deviceId);
     void remove(Module& dev);
 
+#if 0
     // find a device by id
-    const Module& operator[](short moduleId) const;
-    Module& operator[](short moduleId);
+    const Module& find(short deviceId) const;
+    Module& find(short deviceId);
 
     // find a device by its alias
+    const Module& find(String deviceAlias) const;
+    Module& find(String deviceAlias);
+
+    // find a device by its alias
+    const Module& find(const Rest::Argument& deviceAliasOrId) const;
+    Module& find(const Rest::Argument& deviceAliasOrId);
+#else
+    /// find a device by id
+    const Module& operator[](short moduleID) const;
+    Module& operator[](short moduleID);
+
+    /// find a device by its alias
     const Module& operator[](String alias) const;
     Module& operator[](String alias);
+
+    /// @brief find a device from a Rest argument
+    /// This operator will determine if the argument is integer or string, and call the 
+    /// appropriate operator to find the module.
+    const Module& operator[](const Rest::Argument& aliasOrId) const;
+    Module& operator[](const Rest::Argument& aliasOrId);
+#endif
 
     // find a reading by device:slot
     // for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
@@ -96,6 +130,10 @@ public:
 
     // get an iterator over a type of reading
     ReadingIterator forEach(SensorType st);
+
+    void forEach(SlotCallback cb, void* pUserData, SensorType st = AnySensorType);
+    void forEach(ReadingCallback cb, void* pUserData, SensorType st = AnySensorType);
+    void forEach(ModuleCallback cb, void* pUserData = nullptr);
 
 protected:
     short update_iterator;  // ordinal of next device update
