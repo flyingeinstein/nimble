@@ -13,7 +13,7 @@ using namespace Nimble;
 namespace AtlasScientific {
 
   EzoProbe::EzoProbe(short id, Nimble::SensorType stype, short _address)
-    : Nimble::I2CDevice(id, _address, 2), measurementTime(5000), sensorType(stype)
+    : Nimble::I2C::Device(id, _address, 2), measurementTime(5000), sensorType(stype)
   {
     switch(stype) {
       case pH: address = 99; break;

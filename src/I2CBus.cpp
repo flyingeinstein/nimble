@@ -3,8 +3,9 @@
 #include <Wire.h>
 
 namespace Nimble {
+namespace I2C {
 
-I2CBus::I2CBus(short id)
+Bus::Bus(short id)
   : ModuleSet(id, 128), wire(&Wire)
 {
   flags |= MF_I2C_BUS;
@@ -24,34 +25,34 @@ I2CBus& I2CBus::operator=(const I2CBus& copy)
 }
 #endif
 
-const char* I2CBus::getDriverName() const
+const char* Bus::getDriverName() const
 {
   return "i2c-bus";
 }
 
-void I2CBus::handleUpdate()
+void Bus::handleUpdate()
 {
   state = Nominal;
 }
 
 
 
-I2CDevice::I2CDevice(short id, short _address, short _slots)
+Device::Device(short id, short _address, short _slots)
   : Module(id, _slots), address(_address), bus(NULL)
 {
 }
 
-I2CDevice::I2CDevice(short id, SensorAddress _busId, short _address, short _slots)
+Device::Device(short id, SensorAddress _busId, short _address, short _slots)
   : Module(id, _slots, 1000), busId(_busId), address(_address), bus(NULL)
 {
 }
 
-I2CDevice::I2CDevice(const I2CDevice& copy)
+Device::Device(const Device& copy)
   : Module(copy), busId(copy.busId), address(copy.address), bus(NULL)
 {
 }
 
-I2CDevice& I2CDevice::operator=(const I2CDevice& copy)
+Device& Device::operator=(const Device& copy)
 {
   Module::operator=(copy);
   busId = copy.busId;
@@ -60,19 +61,19 @@ I2CDevice& I2CDevice::operator=(const I2CDevice& copy)
   return *this;
 }
 
-void I2CDevice::setBus(SensorAddress _busId)
+void Device::setBus(SensorAddress _busId)
 {
   busId = _busId;
 }
 
 
-TwoWire* I2CDevice::getWire()
+TwoWire* Device::getWire()
 {
   if(bus!=NULL)
     return bus; // cached value
     
   if(owner && owner->hasFlags(MF_I2C_BUS) ) {
-    I2CBus& i2c = *(I2CBus*)owner;
+    Bus& i2c = *(Bus*)owner;
     if(i2c.wire) {
       // todo: get the Nth i2c bus based on the slot, for now we only support 1 bus
       return bus = i2c.wire;
@@ -82,4 +83,5 @@ TwoWire* I2CDevice::getWire()
   return NULL;
 }
 
+} // ns:I2C
 } // ns:Nimble

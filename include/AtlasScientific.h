@@ -23,7 +23,7 @@ namespace AtlasScientific {
   } EzoProbeResult;
 
   /// @brief Atlas Scientific pH, ORP, Dissolved Oxygen or Conductivity probe as a device
-  class EzoProbe : public Nimble::I2CDevice
+  class EzoProbe : public Nimble::I2C::Device
   {
     public:
       /**

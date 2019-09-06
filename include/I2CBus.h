@@ -6,13 +6,14 @@
 #include "NimbleAPI.h"
 
 namespace Nimble {
+namespace I2C {
 
-class I2CBus : public ModuleSet
+class Bus : public ModuleSet
 {
   public:
-    I2CBus(short id);
-    I2CBus(const I2CBus& copy) = delete;
-    I2CBus& operator=(const I2CBus& copy) = delete;
+    Bus(short id);
+    Bus(const Bus& copy) = delete;
+    Bus& operator=(const Bus& copy) = delete;
 
     virtual const char* getDriverName() const;
 
@@ -24,13 +25,13 @@ class I2CBus : public ModuleSet
 
 
 
-class I2CDevice : public Module
+class Device : public Module
 {
   public:
-    I2CDevice(short _id, short _address, short _slots);
-    I2CDevice(short _id, SensorAddress _busId, short _address, short _slots);
-    I2CDevice(const I2CDevice& copy);
-    I2CDevice& operator=(const I2CDevice& copy);
+    Device(short _id, short _address, short _slots);
+    Device(short _id, SensorAddress _busId, short _address, short _slots);
+    Device(const Device& copy);
+    Device& operator=(const Device& copy);
 
     void setBus(SensorAddress _busId);
 
@@ -42,4 +43,5 @@ class I2CDevice : public Module
     TwoWire* getWire();
 };
 
+} // ns:I2C
 } // ns:Nimble
