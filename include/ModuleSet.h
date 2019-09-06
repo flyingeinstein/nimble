@@ -20,14 +20,6 @@ class Module;
 class ModuleManager;
 class SensorReading;
 
-typedef bool (*SlotCallback)(Module::Slot& slot, void* pUserData);
-typedef bool (*ReadingCallback)(SensorReading& reading, void* pUserData);
-#if 0
-typedef bool (*ModuleCallback)(Module& module, void* pUserData);
-#else
-using ModuleCallback = std::function< bool(Module&, void*) >;
-#endif
-
 
 /**
  * @brief Manages a collection of sensor or other devices
@@ -74,36 +66,21 @@ public:
     ModuleSet(short id=0, short maxModules=32);
     virtual ~ModuleSet();
 
-    void begin();
-
-    void reset();
-
-    // clear all devices
-    void clear();
-
+    /// @brief Add a module to this module set.
+    /// This will also set the new owner in the sub-module.
     short add(Module& dev);
     
+    /// @brief Remove a sub-module from the collection by device ID.
     void remove(short deviceId);
+
+    /// @brief Remove a sub-module from the collection.
     void remove(Module& dev);
 
-#if 0
-    // find a device by id
-    const Module& find(short deviceId) const;
-    Module& find(short deviceId);
-
-    // find a device by its alias
-    const Module& find(String deviceAlias) const;
-    Module& find(String deviceAlias);
-
-    // find a device by its alias
-    const Module& find(const Rest::Argument& deviceAliasOrId) const;
-    Module& find(const Rest::Argument& deviceAliasOrId);
-#else
-    /// find a device by id
+    /// @brief find a device by id
     const Module& operator[](short moduleID) const;
     Module& operator[](short moduleID);
 
-    /// find a device by its alias
+    /// @brief find a device by its alias
     const Module& operator[](String alias) const;
     Module& operator[](String alias);
 
@@ -112,14 +89,18 @@ public:
     /// appropriate operator to find the module.
     const Module& operator[](const Rest::Argument& aliasOrId) const;
     Module& operator[](const Rest::Argument& aliasOrId);
-#endif
 
-    // find a reading by device:slot
-    // for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
+    /// @brief find a reading by device:slot address.
+    /// for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
     SensorReading getReading(short deviceId, unsigned short slotId) const;
     SensorReading getReading(const SensorAddress& sa) const;
 
-    // determine which devices need to interact with their hardware
+    /// @brief Update sub-modules
+    /// Internally this method determines which modules are scheduled to run now. For devices the schedule is typically synced
+    /// to when the driver needs to interact with hardware.
+    /// Internally the update only updates one module at a time, so this method should be called often. The default Nimble runtime
+    /// calls this method every loop() iteration but since it only updates 1 device max there is plenty of time left for WiFi
+    /// and other core OS services to run.
     void handleUpdate();
 
     // iterate every reading available
@@ -130,16 +111,13 @@ public:
 
     // get an iterator over a type of reading
     ReadingIterator forEach(SensorType st);
-
-    void forEach(SlotCallback cb, void* pUserData, SensorType st = AnySensorType);
-    void forEach(ReadingCallback cb, void* pUserData, SensorType st = AnySensorType);
-    void forEach(ModuleCallback cb, void* pUserData = nullptr);
+    
+    // also allow any calls to the Module::forEach methods
+    using Module::forEach;
 
 protected:
     short update_iterator;  // ordinal of next device update
     
-    void alloc(short n);
-
     // do not allow copying
     ModuleSet(const ModuleSet& copy) = delete;
     ModuleSet& operator=(const ModuleSet& copy) = delete;

@@ -24,6 +24,7 @@ namespace Nimble {
 class Module;
 class ModuleSet;
 
+
 /**
  * @brief Base class for all devices.
  * This class provides base functionality for all devices. It provides to a base class
@@ -31,6 +32,7 @@ class ModuleSet;
  * 
  */
 class Module {
+    friend class ModuleSet;
   public:
     short id;
     String alias;
@@ -77,6 +79,11 @@ class Module {
     };
 
   public:
+    using SlotCallback = std::function< bool(Module::Slot&, void*) >;
+    using ReadingCallback = std::function< bool(SensorReading&, void*) >;
+    using ModuleCallback = std::function< bool(Module&, void*) >;
+
+
     /**
      * @brief Construct a new Module object
      * 
@@ -125,7 +132,11 @@ class Module {
     /// @brief clear the readings
     virtual void clear();
 
-    /// Called when the device should start a new measurement
+    /// @brief Called when the device should start a new measurement
+    /// In your driver or module, you can expect this method to be called every `updateInterval` period (in milliseconds). You should
+    /// process your update code quickly. If you need to wait for hardware, then use the `Module::delay(millis)` method to have your 
+    /// update method called again after an appropriate delay. Your `handleUpdate()` method would then have to track if entry is a fresh
+    /// update or if you were waiting for a previous hardware event to complete. A simple switch() state machine usually works good.
     virtual void handleUpdate();
 
     /// @brief Retrieve the device alias as set by the user
@@ -155,9 +166,38 @@ class Module {
     /// @brief return sensor reading for given slot index
     SensorReading& find(String alias, SensorType stype);
 
-    /// @brief return sensor reading for given slot index
-    const SensorReading& find(String alias, SensorType stype) const;
+    /// @brief Call a function for each slot in this module
+    /// The forEach method will loop through all slots of the matching SensorType calling your callback function.
+    /// Use AnySensorType to match all types. You can supply any value to pUserData (including nullptr) and the pointer
+    /// value will be passed to your callback function as-is.
+    /// Your callback must return true if iteration should continue, or false to immediately return from the forEach loop.
+    /// You can either a real function or use a lambda expression in this form:
+    /// ```
+    /// forEach( [](Module::Slot& slot, void* pUserData) -> bool { slot.reading.clear(); return true; } );
+    /// ```
+    void forEach(SlotCallback cb, void* pUserData = nullptr, SensorType st = AnySensorType);
 
+    /// @brief Call a function for each sensor reading in this module
+    /// The forEach method will loop through all slots and thier sensor readings of the matching SensorType calling your
+    ///  callback function. Use AnySensorType to match all types. You can supply any value to pUserData (including nullptr) 
+    /// and the pointer value will be passed to your callback function as-is.
+    /// Your callback must return true if iteration should continue, or false to immediately return from the forEach loop.
+    /// You can either a real function or use a lambda expression in this form:
+    /// ```
+    /// forEach( [](SensorReading& reading, void* pUserData) -> bool { reading.clear(); return true; } );
+    /// ```
+    void forEach(ReadingCallback cb, void* pUserData = nullptr, SensorType st = AnySensorType);
+
+    /// @brief Call a function for each sub-module in this module
+    /// The forEach method will loop through all slots of the SubModule type calling your callback function. You can supply 
+    /// any value to pUserData (including nullptr) and the pointer value will be passed to your callback function as-is.
+    /// Your callback must return true if iteration should continue, or false to immediately return from the forEach loop.
+    /// You can either a real function or use a lambda expression in this form:
+    /// ```
+    /// forEach( [](Module& module, void* pUserData) -> bool { module.clear(); return true; } );
+    /// ```
+    void forEach(ModuleCallback cb, void* pUserData = nullptr);
+    
     /// @brief Schedule another update when the delay timer expires
     /// This will schedule handleUpdate() to be called after _delay milliseconds expires. It is useful for sensors that require
     /// a start measurement, then a delay, then a read from device.
@@ -168,6 +208,9 @@ class Module {
     /// @brief Returns true if the most recent measurement is considered old.
     /// Stale measurements should not typical exist, but may if the sensor hardware fails to respond or is busy.
     virtual bool isStale(unsigned long _now=0) const;
+
+    /// @brief return sensor reading for given slot index
+    const SensorReading& find(String alias, SensorType stype) const;
 
     /// @brief return sensor reading for given slot index
     SensorReading& operator[](unsigned short slotIndex);
@@ -261,8 +304,6 @@ class Module {
     void onHttp(const String &uri, HTTPMethod method, WebServer::THandlerFunction fn, WebServer::THandlerFunction ufn);
 
     void setOwner(ModuleSet* owner);
-    
-    friend class ModuleSet;
 };
 
 extern Module NullModule;

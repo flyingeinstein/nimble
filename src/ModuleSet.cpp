@@ -288,64 +288,6 @@ ModuleSet::ReadingIterator ModuleSet::forEach(SensorType st)
   return itr;  
 }
 
-void ModuleSet::forEach(SlotCallback cb, void* pUserData, SensorType st)
-{
-  for(short i=0; i<slots; i++) {
-    SensorReading reading = readings[i].reading;
-    if(reading.sensorType == st) {
-      if(!cb(readings[i], pUserData))
-        return;
-    }
-  }
-}
-
-void ModuleSet::forEach(ReadingCallback cb, void* pUserData, SensorType st)
-{
-  for(short i=0; i<slots; i++) {
-    SensorReading reading = readings[i].reading;
-    if(reading.sensorType == st) {
-      if(!cb(reading, pUserData))
-        return;
-    }
-  }
-}
-
-void ModuleSet::forEach(ModuleCallback cb, void* pUserData)
-{
-  for(short i=0; i<slots; i++) {
-    SensorReading reading = readings[i].reading;
-    if(reading.sensorType == SubModule && reading.valueType==VT_PTR && reading.module!=nullptr) {
-      if(!cb(*reading.module, pUserData))
-        return;
-    }
-  }
-}
-
-
-void ModuleSet::begin()
-{
-  forEach( [](Module& mod, void* pUserData) -> bool { 
-    mod.begin(); 
-    return true; 
-  });
-}
-
-void ModuleSet::reset()
-{
-  forEach( [](Module& mod, void* pUserData) -> bool { 
-    mod.reset(); 
-    return true; 
-  });
-}
-
-void ModuleSet::clear()
-{
-  forEach( [](Module& mod, void* pUserData) -> bool { 
-    mod.clear(); 
-    return true; 
-  });
-}
-
 void ModuleSet::handleUpdate()
 {
   unsigned long long _now = millis();

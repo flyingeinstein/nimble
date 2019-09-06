@@ -100,20 +100,38 @@ Module::operator bool() const {
 
 void Module::begin()
 {
+  forEach( [](Module& mod, void* pUserData) -> bool {
+    mod.begin();
+    return true;
+  });
 }
 
 void Module::reset()
 {
+  forEach( [](Module& module, void* pUserData) -> bool {
+    module.reset();
+    return true;
+  });
 }
 
 void Module::clear()
 {
-  for(int i=0; i<slots; i++)
-    (*this)[i].clear();
+  forEach( [](SensorReading& reading, void* pUserData) -> bool {
+    // if slot is a module, then call it's clear method...dont clear out the module itself!
+    if( reading.sensorType == SubModule && reading.valueType==VT_PTR && reading.module!=nullptr)
+      reading.module->clear();
+    else
+      reading.clear();
+    return true;
+  });
 }
 
 void Module::handleUpdate()
 {
+  forEach( [](Module& module, void* pUserData) -> bool {
+    module.handleUpdate();
+    return true;
+  });
 }
 
 void Module::delay(unsigned long _delay)
@@ -231,6 +249,39 @@ const SensorReading& Module::find(String alias, SensorType stype) const
       }
   }
   return NullReading;
+}
+
+void Module::forEach(SlotCallback cb, void* pUserData, SensorType st)
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == st) {
+      if(!cb(readings[i], pUserData))
+        return;
+    }
+  }
+}
+
+void Module::forEach(ReadingCallback cb, void* pUserData, SensorType st)
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == st) {
+      if(!cb(reading, pUserData))
+        return;
+    }
+  }
+}
+
+void Module::forEach(ModuleCallback cb, void* pUserData)
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == SubModule && reading.valueType==VT_PTR && reading.module!=nullptr) {
+      if(!cb(*reading.module, pUserData))
+        return;
+    }
+  }
 }
 
 bool Module::isStale(unsigned long _now) const
