@@ -10,14 +10,24 @@
 
 namespace Nimble {
 
-ModuleSet::ModuleSet(short maxModules)
-  : Module(0, 0, 0, MF_BUS), slots(maxModules), devices(NULL), update_iterator(0) 
+ModuleSet::ModuleSet(short id, short maxModules)
+  : Module(
+      id,          // module set defaults to ID0 but will be changed when added to a parent ModuleSet
+      maxModules,  // create maximum slots which hold the sub-module references
+      0,           // no update interval, meaning we always immediately update each iteration
+      MF_BUS       // set the flags on this module as containing sub-modules
+  )
+  , update_iterator(0) 
 {
-    devices = (Module**)calloc(slots, sizeof(Module*));
+  // update all slot types to Module
+  for(short i=0; i<slots; i++) {
+    SensorReading& sr = readings[i].reading;
+    sr.sensorType = SubModule;
+    sr.valueType = VT_PTR;
+  }
 }
 
 ModuleSet::~ModuleSet() {
-  if(devices) free(devices);
 }
 
 #if 0
@@ -38,8 +48,10 @@ short ModuleSet::add(Module& dev)
   for(short i=0; i<slots; i++) 
   {
     // look for a free slot
-    if(devices[i]==NULL) {
-      devices[i] = &dev;
+    if(readings[i].reading.module==NULL) {
+      SensorReading& sr = readings[i].reading;
+
+      sr.module = &dev;
       dev.owner = this;
       dev.begin();
       return i;
@@ -50,55 +62,90 @@ short ModuleSet::add(Module& dev)
 
 void ModuleSet::remove(short deviceId) {
   for(short i=0; i<slots; i++) {
-    if(devices[i] && devices[i]->id == deviceId) {
-      devices[i] = NULL;
+    if(readings[i].reading.module!=NULL && readings[i].reading.module->id == deviceId) {
+      readings[i].reading.module = NULL;
     }
   }
 }
 
 void ModuleSet::remove(Module& dev) {
   for(short i=0; i<slots; i++) {
-    if(devices[i] && devices[i] == &dev) {
-      devices[i] = NULL;
+    if(readings[i].reading.module!=NULL && readings[i].reading.module == &dev) {
+      readings[i].reading.module = NULL;
     }
   }
 }
 
+#if 0
 const Module& ModuleSet::find(short deviceId) const
 {
   for(short i=0; i<slots; i++) 
-    if(devices[i] && devices[i]->id == deviceId)
-      return *devices[i];
+    if(readings[i].reading.module!=NULL && readings[i].reading.module->id == deviceId) {
+      return *readings[i].reading.module;
   return NullModule;
 }
 
 Module& ModuleSet::find(short deviceId)
 {
   for(short i=0; i<slots; i++) 
-    if(devices[i] && devices[i]->id == deviceId)
-      return *devices[i];
+    if(readings[i].reading.module!=NULL && readings[i].reading.module->id == deviceId) {
+      return *readings[i].reading.module;
   return NullModule;
+}
+#else
+const Module& ModuleSet::operator[](short moduleID) const {
+  // shortcut: check if indexed slot has module with matching ID
+  if(moduleID < slots) {
+    const SensorReading& sr = readings[i].reading;
+    if(sr.sensorType == SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
+      return *sr.module;
+  } else {
+    for(short i=0; i<slots; i++) {
+      const SensorReading& sr = readings[i].reading;
+      if(sr.sensorType==SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
+        return *sr.module;
+    }
+  }
+  return NullReading;
 }
 
-const Module& ModuleSet::find(String deviceAlias) const
-{
-  if(deviceAlias.length()!=0) {
-    for(short i=0; i<slots; i++) 
-      if(devices[i] && devices[i]->alias == deviceAlias)
-        return *devices[i];
+Module& ModuleSet::operator[](short moduleID) const {
+  // shortcut: check if indexed slot has module with matching ID
+  if(moduleID < slots) {
+    SensorReading& sr = readings[i].reading;
+    if(sr.sensorType == SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
+      return *sr.module;
+  } else {
+    for(short i=0; i<slots; i++) {
+      SensorReading& sr = readings[i].reading;
+      if(sr.sensorType==SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
+        return *sr.module;
+    }
   }
-  return NullModule;
+  return NullReading;
 }
 
-Module& ModuleSet::find(String deviceAlias)
-{
-  if(deviceAlias.length()!=0) {
-    for(short i=0; i<slots; i++) 
-      if(devices[i] && devices[i]->alias == deviceAlias)
-        return *devices[i];
-  }
-  return NullModule;
+
+const Module& ModuleSet::operator[](String alias) const {
+  if(alias.length() >0) {
+    const SensorReading& reading = Module::find(alias, SubModule);
+    return (reading && reading.sensorType == SubModule && reading.module)
+      ? *reading.module
+      : NullModule;
+  } else
+    return NullModule;
 }
+
+Module& ModuleSet::operator[](String alias) {
+  if(alias.length() >0) {
+    SensorReading& reading = Module::find(alias, SubModule);
+    return (reading && reading.sensorType == SubModule && reading.module)
+      ? *reading.module
+      : NullModule;
+  } else
+    return NullModule;
+}
+#endif
 
 SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 { 

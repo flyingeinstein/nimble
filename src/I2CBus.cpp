@@ -5,12 +5,13 @@
 namespace Nimble {
 
 I2CBus::I2CBus(short id)
-  : Module(id, 1, 60000, MF_I2C_BUS), wire(&Wire)
+  : ModuleSet(id, 128), wire(&Wire)
 {
+  flags |= MF_I2C_BUS;
 }
 
 I2CBus::I2CBus(const I2CBus& copy)
-  : Module(copy), wire(copy.wire)
+  : ModuleSet(copy), wire(copy.wire)
 {
 }
 
@@ -34,7 +35,7 @@ void I2CBus::handleUpdate()
 
 
 I2CDevice::I2CDevice(short id, short _address, short _slots)
-  : Module(id, _slots, 1000), address(_address), bus(NULL)
+  : Module(id, _slots), address(_address), bus(NULL)
 {
 }
 
@@ -68,13 +69,13 @@ TwoWire* I2CDevice::getWire()
   if(bus!=NULL)
     return bus; // cached value
     
-  if(owner) {
-    I2CBus& i2c = (I2CBus&)owner->find(busId.device);
-    if(i2c) {
+  if(owner && owner->hasFlags(MF_I2C_BUS) ) {
+    I2CBus& i2c = (I2CBus&)owner;
+    if(i2c.wire) {
       // todo: get the Nth i2c bus based on the slot, for now we only support 1 bus
       return bus = i2c.wire;
     } else
-    return bus = &Wire; // return default i2c bus
+      return bus = &Wire; // return default i2c bus
   }
   return NULL;
 }

@@ -12,7 +12,7 @@
 
 #include "NimbleConfig.h"
 #include "NimbleEnum.h"
-#include "SensorReading.h"
+#include "Module.h"
 
 namespace Nimble {
 
@@ -24,11 +24,8 @@ class SensorReading;
  * This class is the root device manager but can also hold a collection of sub devices.
  * 
  */
-class ModuleSet {
+class ModuleSet : public Module {
   public:
-    short slots;
-    Module** devices;
-    
     class ReadingIterator
     {
       public:
@@ -62,8 +59,8 @@ class ModuleSet {
     };
 
 public:
-    ModuleSet(short maxModules=32);
-    ~ModuleSet();
+    ModuleSet(short id=0, short maxModules=32);
+    virtual ~ModuleSet();
 
     void begin();
 
@@ -76,12 +73,12 @@ public:
     void remove(Module& dev);
 
     // find a device by id
-    const Module& find(short deviceId) const;
-    Module& find(short deviceId);
+    const Module& operator[](short moduleId) const;
+    Module& operator[](short moduleId);
 
     // find a device by its alias
-    const Module& find(String deviceAlias) const;
-    Module& find(String deviceAlias);
+    const Module& operator[](String alias) const;
+    Module& operator[](String alias);
 
     // find a reading by device:slot
     // for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)

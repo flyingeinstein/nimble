@@ -26,9 +26,12 @@
 #define VT_LONG     'l'
 #define VT_INT      'l'
 #define VT_BOOL     'b'
+#define VT_PTR      'p'      // pointer to object value
 //@}
 
 namespace Nimble {
+
+class Module;
 
 /**
  * @brief Indicates what sensor recorded the reading, as a device:slot address.
@@ -65,6 +68,7 @@ class SensorReading
       float f;
       long l;
       bool b;
+      Module* module;
     };
 
     /**

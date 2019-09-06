@@ -125,6 +125,9 @@ class Module {
     /// @brief clear the readings
     virtual void clear();
 
+    /// Called when the device should start a new measurement
+    virtual void handleUpdate();
+
     /// @brief Retrieve the device alias as set by the user
     /// For example a device, such as humidity, temperature or motion sensor, can be associted with a room name by setting an alias.
     inline String getAlias() const { return alias; }
@@ -142,9 +145,18 @@ class Module {
 
     /// find a slot number using its alias name
     short findSlotByAlias(String slotAlias) const;
-    
-    /// Called when the device should start a new measurement
-    virtual void handleUpdate();
+
+    /// @brief return sensor reading for given slot index
+    SensorReading& find(short index, SensorType stype);
+
+    /// @brief return sensor reading for given slot index
+    const SensorReading& find(short index, SensorType stype) const;
+
+    /// @brief return sensor reading for given slot index
+    SensorReading& find(String alias, SensorType stype);
+
+    /// @brief return sensor reading for given slot index
+    const SensorReading& find(String alias, SensorType stype) const;
 
     /// @brief Schedule another update when the delay timer expires
     /// This will schedule handleUpdate() to be called after _delay milliseconds expires. It is useful for sensors that require
@@ -162,6 +174,12 @@ class Module {
 
     /// @brief return sensor reading for given slot index
     const SensorReading& operator[](unsigned short slotIndex) const;
+
+    /// @brief return sensor reading for given slot index
+    inline SensorReading& operator[](String alias) { return find(alias, AnySensorType); }
+
+    /// @brief return sensor reading for given slot index
+    inline const SensorReading& operator[](String alias) const { return find(alias, AnySensorType); }
 
     /// @brief Serialize a slot reading into a Json object
     void jsonGetReading(JsonObject& node, short slot) const;

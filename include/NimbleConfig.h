@@ -28,8 +28,14 @@
 // the Restfully library is available in the board manager or at https://github.com/flyingeinstein/Restfully
 #include <Restfully.h>
 
-
-#define MAX_SLOTS     256
+/**
+ * @brief Defines the maximum number of slots in a module and modules in a set.
+ * Setting this to 32 is a good balance for small 32bit devices. Most devices will request exactly the number of
+ * slots they require so this number is usually just an upper limit. Since a ModuleSet is also a module and uses
+ * the same slot collection to store sub-modules this number is the default number of entries for a ModuleSet so
+ * we want to keep it somewhat low.
+ */
+#define MAX_SLOTS     32
 
 namespace Nimble {
 

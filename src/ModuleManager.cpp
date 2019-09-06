@@ -71,9 +71,9 @@ void ModuleManager::setupRestHandler()
   std::function<const Module*(Rest::UriRequest&)> const_device_resolver = [this](Rest::UriRequest& request) -> const Module* {
     Rest::Argument req_dev = request["xxx"];
     Module& dev = (req_dev.isInteger())
-          ? _modules.find( (long)req_dev )
+          ? _modules[ (long)req_dev ]
           : (req_dev.isString())
-            ? _modules.find( (const char*)req_dev )
+            ? _modules[ (String)req_dev ]
             : NullModule;
 
     // check for NOT FOUND
@@ -88,9 +88,9 @@ void ModuleManager::setupRestHandler()
   auto device_api_resolver = [this](Rest::ParserState& lhs_request) -> Endpoints::Handler {
     Rest::Argument req_dev = lhs_request.request.args["id"];
     Module& dev = (req_dev.isInteger())
-          ? _modules.find( (long)req_dev )
+          ? _modules[ (long)req_dev ]
           : (req_dev.isString())
-            ? _modules.find( (const char*)req_dev )
+            ? _modules[ (String)req_dev ]
             : NullModule;
     
     if (&dev != &NullModule) {

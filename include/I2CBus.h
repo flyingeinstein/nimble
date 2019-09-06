@@ -7,7 +7,7 @@
 
 namespace Nimble {
 
-class I2CBus : public Module
+class I2CBus : public ModuleSet
 {
   public:
     I2CBus(short id);
