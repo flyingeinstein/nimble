@@ -122,3 +122,12 @@ controller would parse a module/slot address into X:Y:Z:W, where each : identifi
 *     [done] but HttpRequest would still allow parameters in the URL
 *     we can now attach handlers jus like Rest ones, limit contentType using the withContentType(...) method
 
+### Cleaner interfaces
+* possibly we dont even need ModuleSet anymore
+** A Module has slots as sub-modules and ModuleSet is now implemented by Module, so its not really differentiable from ModuleSet
+* improve forEach()
+** The new forEach(lamda...) is really slick. I bet we can convert ReadingIterator over to that
+** ReadingIterator has timeBetween and other filter methods, keep this support
+** Possibly forEach() could return ReadingIterator and that class would have a call(lambda) method that is like the forEach(lambda)
+** Move ReadingIterator into its own class though 
+* Possibly SensorReading needs to change names since it may be a SubModule now
