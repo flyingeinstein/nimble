@@ -78,38 +78,45 @@ void ModuleManager::setupRestHandler()
   };
 
   auto device_api_resolver = [this](Rest::ParserState& lhs_request) -> Endpoints::Handler {
-    Rest::Argument req_dev = lhs_request.request.args["id"];
-    #if 0
-    Module& dev = (req_dev.isInteger())
-          ? _modules[ (long)req_dev ]
-          : (req_dev.isString())
-            ? _modules[ (String)req_dev ]
-            : NullModule;
-    #else
-    Module& dev = _modules[ req_dev ];
-    #endif
+    Rest::Argument req_dev = lhs_request.request.args["devaddr"];
+    Module* dev = nullptr;
 
-    if (&dev != &NullModule) {
-      // device found, see of the device has an API extension
-      typename Endpoints::Node rhs_node;
+    if( req_dev.isString() ) {
+      auto slot = _modules.slotByAddress( (const char*)req_dev );
+      if(slot.reading.sensorType == SubModule)
+        dev = slot.reading.module;
+    } else if (req_dev.isNumber()) {
+      short module_id = (int)req_dev;
+      if(module_id < _modules.slotCount())
+        dev = &_modules[ module_id ];
+    }
 
-      if(dev.hasEndpoints()) {
-        // try to resolve the endpoint using the device's API extension
-        rhs_node = dev.endpoints()->getRoot();
-      } else {
-        // device has no API extension, so use the default one
-        // todo: setup the device default API controller
-      }
+    if(dev == nullptr || dev == &NullModule) {
+      // slot or module not found
+      lhs_request.request.status = 404;
+      return Endpoints::Handler();
+    }
 
-      if(rhs_node) {
-        Rest::ParserState rhs_request(lhs_request);
-        typename Endpoints::Handler handler = rhs_node.resolve(rhs_request);
-        if (handler!=nullptr) {
-            lhs_request = rhs_request;      // we resolved a handler, so we modify the lhs request with rhs (which may have extra args)
-            return handler;   
-        }
+    // device found, see of the device has an API extension
+    typename Endpoints::Node rhs_node;
+
+    if(dev->hasEndpoints()) {
+      // try to resolve the endpoint using the device's API extension
+      rhs_node = dev->endpoints()->getRoot();
+    } else {
+      // device has no API extension, so use the default one
+      // todo: setup the device default API controller
+    }
+
+    if(rhs_node) {
+      Rest::ParserState rhs_request(lhs_request);
+      typename Endpoints::Handler handler = rhs_node.resolve(rhs_request);
+      if (handler!=nullptr) {
+          lhs_request = rhs_request;      // we resolved a handler, so we modify the lhs request with rhs (which may have extra args)
+          return handler;   
       }
     }
+  
 
     // device or handler not found
     return Endpoints::Handler();
@@ -129,7 +136,7 @@ void ModuleManager::setupRestHandler()
     .GET("statistics", &Module::restStatistics);
   
   // delegate device API requests to the Module or the default device API controller
-  on("/api/device/:id(string|integer)")
+  on("/api/device/:devaddr(string|integer)")
     .otherwise(device_api_resolver);
 
   // Config API
