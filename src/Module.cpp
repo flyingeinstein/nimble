@@ -232,13 +232,13 @@ short Module::findSlotByAlias(String slotAlias) const
 SensorReading& Module::find(String alias, SensorType stype)
 {
   if(alias.length() >0) {
-    for(short i=0; i<slots; i++) 
-    if(readings[i].reading.module!=NULL 
-          && ((stype == AnySensorType) || (readings[i].reading.sensorType == stype))    // match sensor type (if set)
-          && readings[i].alias == alias                                                 // match alias name
-      ) {
-        return readings[i].reading;
-      }
+    for(short i=0; i<slots; i++) {
+      if(((stype == AnySensorType) || (readings[i].reading.sensorType == stype))    // match sensor type (if set)
+            && readings[i].alias == alias                                                 // match alias name
+        ) {
+          return readings[i].reading;
+        }
+    }
   }
   return NullReading;
 }
@@ -246,13 +246,13 @@ SensorReading& Module::find(String alias, SensorType stype)
 const SensorReading& Module::find(String alias, SensorType stype) const
 {
   if(alias.length() >0) {
-    for(short i=0; i<slots; i++) 
-    if(readings[i].reading.module!=NULL 
-          && ((stype == AnySensorType) || (readings[i].reading.sensorType == stype))    // match sensor type (if set)
-          && readings[i].alias == alias                                                 // match alias name
-      ) {
-        return readings[i].reading;
-      }
+    for(short i=0; i<slots; i++) {
+      if(((stype == AnySensorType) || (readings[i].reading.sensorType == stype))    // match sensor type (if set)
+            && readings[i].alias == alias                                                 // match alias name
+        ) {
+          return readings[i].reading;
+        }
+    }
   }
   return NullReading;
 }
