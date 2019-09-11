@@ -8,6 +8,12 @@ namespace Nimble {
 // a do-nothing device, returned whenever find fails
 Module NullModule(-1, 0);
 
+Module::Slot Module::Slot::makeError(long errorCode, String errstr) {
+  Slot s;
+  s.alias = errstr;
+  s.reading = SensorReading(ErrorCode, errorCode);
+  return s;
+}
 
 Module::Module(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
   : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), _endpoints(nullptr), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
@@ -249,6 +255,57 @@ const SensorReading& Module::find(String alias, SensorType stype) const
       }
   }
   return NullReading;
+}
+
+Module::Slot Module::slotByAddress(const char* slotId, SensorType requiredType)
+{
+  const char* b = slotId;
+  bool isNumeric = true;
+  short id = 0;
+  while( *slotId && *slotId !=':') {
+    if(isNumeric && isdigit(*slotId)) {
+      // accumulate ID value
+      id = id*10 + (*slotId - '0');
+    } else
+      isNumeric = false;
+  }
+
+  Slot* slot= nullptr;
+  if( slotId > b) {
+    // we processed at least 1 character, is it an ID or alias?
+    if(isNumeric) {
+      // find the slot by ID
+      slot = &readings[id];
+    } else {
+      // find the slot by alias
+      short len = slotId - b;
+      for(short i=0; i<slots; i++) {
+        if(strncmp(readings[i].alias.c_str(), b, len)==0) {
+          slot = &readings[i];
+          break;
+        }
+      }
+    }
+  }
+
+  if(slot != nullptr) {
+    // if there is more to the address, then recurse
+    if(*slotId) {
+      assert(*slotId == ':'); // must be since the while() above exits on only : or \0
+
+      // slot must then be a module
+      if(slot->reading.sensorType != SubModule)
+        return Slot::makeError(-2, "one or more address prefixes were not of module type");  // expected module
+      // recurse into module
+      return slot->reading.module->slotByAddress(slotId, requiredType);
+    } else {
+      // check that slot type matches
+      return (requiredType == AnySensorType || slot->reading.sensorType == requiredType)
+        ? *slot
+        : Slot::makeError(-3, "type mismatch");   // required type mismatch
+    }
+  }
+  return Slot::makeError(-1, "bad module or slot address");  // bad slot address
 }
 
 void Module::forEach(SlotCallback cb, void* pUserData, SensorType st)

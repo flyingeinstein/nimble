@@ -8,7 +8,8 @@ namespace Nimble {
 
 typedef enum SensorType {
     Invalid,      AnySensorType = Invalid,
-    SubModule,   // slot is a child-device (such as a device on a bus)
+    SubModule,     // slot is a child-device (such as a device on a bus)
+    ErrorCode,     // indicates an error code, value is an integer
     Numeric,       // general numeric value
     Timestamp,     // a unix timestamp
     Milliseconds,  // a measurement in milliseconds

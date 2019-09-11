@@ -97,7 +97,7 @@ controller would parse a module/slot address into X:Y:Z:W, where each : identifi
 * [done] move Module and related classes into Nimble namespace
 * get/set alias file should be moved to a config module
 * [done] move root rest/http handler out into new ModuleManager object (ModuleSet::rest/http will then be relative to the set's base path url)
-* write module/slot resolver function that takes a string and returns the ModuleSet, Module and (if present) the Slot number.
+* [done] write module/slot resolver function that takes a string and returns the ModuleSet, Module and (if present) the Slot number.
 * implement influx module
 
 ### ModuleSet is a Module, Module can contain sub-modules
@@ -118,6 +118,7 @@ controller would parse a module/slot address into X:Y:Z:W, where each : identifi
      * Config Controller
      * Display controller (if we want to have multiple displays but only one programming protocol)
 
-* Can we refactor so that Restfully methods can take a RestRequest or HttpRequest, and HttpRequest just provide raw content interfaces?
-*     but HttpRequest would still allow parameters in the URL
+* [done] Can we refactor so that Restfully methods can take a RestRequest or HttpRequest, and HttpRequest just provide raw content interfaces?
+*     [done] but HttpRequest would still allow parameters in the URL
+*     we can now attach handlers jus like Rest ones, limit contentType using the withContentType(...) method
 
