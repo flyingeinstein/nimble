@@ -42,4 +42,5 @@ Currently supports the popular SSD1306 OLED LCD (popular 0.96" OLED display) wit
 * AutoConnect library by Hieromon (provides Captive AccessPoint for initial node configuration)
 
 # Development Progress
-You can see my log of development in (TODO.md)[TODO.md].
+You can see my log of development in (TODO)[TODO.md].
+

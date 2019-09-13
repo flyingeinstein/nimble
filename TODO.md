@@ -85,6 +85,20 @@ method. We can even alllimitow application/json request data but also add suppor
 * [ ] implement influx module
 * [ ] implement a statistics logger, possibly this should be external and centralized...influx?
 
+
+### Event Log
+Consolidate the Module::Statistics into a global event log instead. This will be simpler, more robust among various modules, and will get the code out of Module class.
+* [ ] Event log will have members:
+     * SensorAddress     - defines the x:y:z address of the module that generated the event
+     * Severity (enum)   - debug, info, warning, error, fatal
+     * Category (enum)   - Core, Config, Data, File, Web, ... (need to define, should this be module defined? do we really need this?)
+     * Source (id)       - defined by the module
+     * detail (optional) - detailed text
+* [ ] Module defined dictionaries such as Source should be stored in the Module factory and loaded from filesystem. We could have the factory provide a dictionary interface for more than just events.
+* [ ] API to retrieve log events and dictionaries.
+* [ ] look at central event logging systems out there, there must be something that we can just send events too and forget  (geekflare, central logging)[https://geekflare.com/open-source-centralized-logging]
+* [ ] influx, mqmtt or SNMP or other module can be used to send the log to a central system (and then clear it?)
+
 ### Cleaner interfaces
 * [ ] possibly we dont even need ModuleSet anymore
 ** A Module has slots as sub-modules and ModuleSet is now implemented by Module, so its not really differentiable from ModuleSet
