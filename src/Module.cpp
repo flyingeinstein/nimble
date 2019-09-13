@@ -16,7 +16,7 @@ Module::Slot Module::Slot::makeError(long errorCode, String errstr) {
 }
 
 Module::Module(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
-  : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), _endpoints(nullptr), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
+  : id(_id), owner(NULL), slots(_slots), readings(NULL), flags(_flags), updateInterval(_updateInterval), nextUpdate(0), state(Offline)
 {
   if(_slots > MAX_SLOTS) 
     _slots = MAX_SLOTS;
@@ -25,7 +25,7 @@ Module::Module(short _id, short _slots, unsigned long _updateInterval, unsigned 
 }
 
 Module::Module(const Module& copy)
-  : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), _endpoints(nullptr), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
+  : id(copy.id), owner(copy.owner), slots(copy.slots), readings(NULL), flags(copy.flags), updateInterval(copy.updateInterval), nextUpdate(0), state(copy.state)
 {
   if(slots>0) {
     readings = (Slot*)calloc(slots, sizeof(Slot));
@@ -187,24 +187,6 @@ void Module::onHttp(const String &uri, HTTPMethod method, ESP8266WebServer::THan
       .on( prefixUri(uri), method, fn, ufn);
 }
 
-void Module::jsonGetReading(JsonObject& node, short slot) const
-{
-  if(slot >=0 && slot < slots) {
-    SensorReading r = (*this)[slot];
-    r.toJson(node);
-  }
-}
-
-void Module::jsonGetReadings(JsonObject& node) const
-{
-  JsonArray jslots = node.createNestedArray("slots");
-  for(short i=0, _i=slotCount(); i<_i; i++) {
-    JsonObject jr = jslots.createNestedObject();
-    SensorReading r = (*this)[i];
-    r.toJson(jr);
-  }
-}
-
 String Module::getSlotAlias(short slotIndex) const
 {
   return (slotIndex>=0 && slotIndex < slots)
@@ -341,6 +323,39 @@ void Module::forEach(ModuleCallback cb, void* pUserData)
   }
 }
 
+void Module::forEach(ConstSlotCallback cb, void* pUserData, SensorType st) const
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == st) {
+      if(!cb(readings[i], pUserData))
+        return;
+    }
+  }
+}
+
+void Module::forEach(ConstReadingCallback cb, void* pUserData, SensorType st) const
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == st) {
+      if(!cb(reading, pUserData))
+        return;
+    }
+  }
+}
+
+void Module::forEach(ConstModuleCallback cb, void* pUserData) const
+{
+  for(short i=0; i<slots; i++) {
+    SensorReading reading = readings[i].reading;
+    if(reading.sensorType == SubModule && reading.valueType==VT_PTR && reading.module!=nullptr) {
+      if(!cb(*reading.module, pUserData))
+        return;
+    }
+  }
+}
+
 bool Module::isStale(unsigned long _now) const
 {
   if(_now==0)
@@ -375,9 +390,26 @@ SensorReading& Module::operator[](const Rest::Argument& arg) {
         : NullReading;
 }
 
+void Module::jsonGetReading(JsonObject& node, short slot) const
+{
+  auto reading = find(slot);
+  reading.toJson(node);
+}
+
+void Module::jsonGetReadings(JsonObject& node) const
+{
+  JsonArray jslots = node.createNestedArray("slots");
+  forEach( [&jslots,&node](const SensorReading& reading, void* userData) -> bool {
+    JsonObject jr = jslots.createNestedObject();
+    reading.toJson(jr);
+    return true;
+  }, nullptr);
+}
+
 int Module::toJson(JsonObject& target, JsonFlags displayFlags) const
 {
   unsigned long long now = millis();
+  unsigned long nextUpdate = getNextUpdate();
   const char* driver = getDriverName();
   const char* statename = ModuleStateName(getState());
   String alias = getAlias();
@@ -392,7 +424,7 @@ int Module::toJson(JsonObject& target, JsonFlags displayFlags) const
     target["nextUpdate"] = nextUpdate - now;
 
   if(displayFlags & JsonStatistics)
-    statistics.toJson(target);
+    getStatistics().toJson(target);
     
   if(displayFlags & JsonSlots)
     jsonGetReadings(target);

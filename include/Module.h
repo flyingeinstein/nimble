@@ -12,6 +12,7 @@
 
 #include "NimbleConfig.h"
 #include "SensorReading.h"
+#include "NimbleInterfaces.h"
 
 // Module Flags
 #define MF_DISPLAY       F_BIT(0)             /// Module is some sort of display device
@@ -31,19 +32,13 @@ class ModuleSet;
  * Rest and Http endpoint services and sensor/slot management.
  * 
  */
-class Module {
+class Module : public DefaultEndpointsInterface {
     friend class ModuleSet;
   public:
     short id;
     String alias;
 
   public:
-    /// flags controlling toJson output detail
-    typedef enum : int {
-      JsonSlots        = 1,
-      JsonStatistics   = 2,
-      JsonDefault      = JsonSlots
-    } JsonFlags;
   
     /**
      * @brief Contains a single measurement or sensor reading.
@@ -88,6 +83,9 @@ class Module {
     using ReadingCallback = std::function< bool(SensorReading&, void*) >;
     using ModuleCallback = std::function< bool(Module&, void*) >;
 
+    using ConstSlotCallback = std::function< bool(const Module::Slot&, void*) >;
+    using ConstReadingCallback = std::function< bool(const SensorReading&, void*) >;
+    using ConstModuleCallback = std::function< bool(const Module&, void*) >;
 
     /**
      * @brief Construct a new Module object
@@ -163,13 +161,13 @@ class Module {
     short findSlotByAlias(String slotAlias) const;
 
     /// @brief return sensor reading for given slot index
-    SensorReading& find(short index, SensorType stype);
+    SensorReading& find(short index, SensorType stype = AnySensorType);
 
     /// @brief return sensor reading for given slot index
-    const SensorReading& find(short index, SensorType stype) const;
+    const SensorReading& find(short index, SensorType stype = AnySensorType) const;
 
     /// @brief return sensor reading for given slot index
-    SensorReading& find(String alias, SensorType stype);
+    SensorReading& find(String alias, SensorType stype = AnySensorType);
 
     /// @brief return a Slot (or sub-module) by giving a slot address.
     /// Slot addresses are colon seperated slot IDs or alias. Since sub-modules are stored in slots this can
@@ -188,6 +186,7 @@ class Module {
     /// forEach( [](Module::Slot& slot, void* pUserData) -> bool { slot.reading.clear(); return true; } );
     /// ```
     void forEach(SlotCallback cb, void* pUserData = nullptr, SensorType st = AnySensorType);
+    void forEach(ConstSlotCallback cb, void* pUserData = nullptr, SensorType st = AnySensorType) const;
 
     /// @brief Call a function for each sensor reading in this module
     /// The forEach method will loop through all slots and thier sensor readings of the matching SensorType calling your
@@ -199,6 +198,7 @@ class Module {
     /// forEach( [](SensorReading& reading, void* pUserData) -> bool { reading.clear(); return true; } );
     /// ```
     void forEach(ReadingCallback cb, void* pUserData = nullptr, SensorType st = AnySensorType);
+    void forEach(ConstReadingCallback cb, void* pUserData = nullptr, SensorType st = AnySensorType) const;
 
     /// @brief Call a function for each sub-module in this module
     /// The forEach method will loop through all slots of the SubModule type calling your callback function. You can supply 
@@ -209,7 +209,12 @@ class Module {
     /// forEach( [](Module& module, void* pUserData) -> bool { module.clear(); return true; } );
     /// ```
     void forEach(ModuleCallback cb, void* pUserData = nullptr);
+    void forEach(ConstModuleCallback cb, void* pUserData = nullptr) const;
     
+    /// @brief Return what time the next update should occur.
+    /// The timestamp returned should be in the future, and is expressed in milliseconds since init.
+    unsigned long getNextUpdate() const { return nextUpdate; }
+
     /// @brief Schedule another update when the delay timer expires
     /// This will schedule handleUpdate() to be called after _delay milliseconds expires. It is useful for sensors that require
     /// a start measurement, then a delay, then a read from device.
@@ -238,28 +243,6 @@ class Module {
 
     SensorReading& operator[](const Rest::Argument& arg);
 
-    /// @brief Serialize a slot reading into a Json object
-    void jsonGetReading(JsonObject& node, short slot) const;
-
-    /// @brief Serialize all slot readings for this device into a Json array
-    void jsonGetReadings(JsonObject& node) const;
-
-    /// @brief Standard RestAPI response when retrieving sensor readings for this device.
-    int toJson(JsonObject& target, JsonFlags displayFlags=JsonDefault) const;
-
-    /// @brief RestAPI methods
-    /// @{
-    // unfortunately we cannot bind constants in the rest handlers so we have to create these inline ones
-    inline int restStatus(RestRequest& request) const { return toJson(request.response, JsonDefault); }
-    inline int restSlots(RestRequest& request) const { return toJson(request.response, JsonSlots); }
-    inline int restStatistics(RestRequest& request) const { return toJson(request.response, JsonStatistics); }
-    inline int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
-    /// @}
-
-    inline bool hasEndpoints() const { return _endpoints!=nullptr; }
-    inline const Endpoints* endpoints() const { return _endpoints; };
-    inline Endpoints* endpoints() { return _endpoints; };
-
     /// @brief Return an endpoint node at the given path
     /// The endpoint will be relative to this device's endpoint, typically /api/device/[id_or_alias]. To add endpoints
     /// to the API root you will need to use the ModuleSet::on(...) method.
@@ -276,16 +259,16 @@ class Module {
       return _endpoints->getRoot();
     }
 
+    /// @brief @deprecated Return statistics for the module.
+    /// Per-module statistics will soon be removed in favor of a global statistics that any module can use to add 
+    /// statistic events to.
+    inline Statistics getStatistics() const { return statistics; }
+
   protected:
     ModuleSet* owner;
     unsigned short slots;
     Slot* readings;
     unsigned long flags;
-
-    /// @brief Contains endpoints for this device only.
-    /// By default this member will be null and is only created when a derived device requests 
-    /// creation of API endpoints using the on(...) method.
-    Endpoints* _endpoints;
 
     /// @brief how many milliseconds between device updates
     unsigned long updateInterval;
@@ -316,6 +299,33 @@ class Module {
     void onHttp(const String &uri, HTTPMethod method, WebServer::THandlerFunction fn, WebServer::THandlerFunction ufn);
 
     void setOwner(ModuleSet* owner);
+
+  public:
+    /// flags controlling toJson output detail
+    typedef enum : int {
+      JsonSlots        = 1,
+      JsonStatistics   = 2,
+      JsonDefault      = JsonSlots
+    } JsonFlags;
+
+      /// @brief Standard RestAPI response when retrieving sensor readings for this device.
+    int toJson(JsonObject& target, JsonFlags displayFlags=JsonDefault) const;
+
+    /// @brief Serialize a slot reading into a Json object
+    void jsonGetReading(JsonObject& node, short slot) const;
+
+    /// @brief Serialize all slot readings for this device into a Json array
+    void jsonGetReadings(JsonObject& node) const;
+
+   /// @brief RestAPI methods
+    /// @{
+    // unfortunately we cannot bind constants in the rest handlers so we have to create these inline ones
+    inline int restStatus(RestRequest& request) const { return toJson(request.response, JsonDefault); }
+    inline int restSlots(RestRequest& request) const { return toJson(request.response, JsonSlots); }
+    inline int restStatistics(RestRequest& request) const { return toJson(request.response, JsonStatistics); }
+    inline int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
+    /// @}
+    
 };
 
 extern Module NullModule;

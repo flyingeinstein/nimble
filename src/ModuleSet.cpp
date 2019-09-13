@@ -76,33 +76,6 @@ void ModuleSet::remove(Module& dev) {
   }
 }
 
-#if 0
-const Module& ModuleSet::find(short deviceId) const
-{
-  for(short i=0; i<slots; i++) 
-    if(readings[i].reading.module!=NULL && readings[i].reading.module->id == deviceId) {
-      return *readings[i].reading.module;
-  return NullModule;
-}
-
-Module& ModuleSet::find(short deviceId)
-{
-  for(short i=0; i<slots; i++) 
-    if(readings[i].reading.module!=NULL && readings[i].reading.module->id == deviceId) {
-      return *readings[i].reading.module;
-  return NullModule;
-}
-
-
-const Module& find(const Rest::Argument& deviceAliasOrId) const {
-
-}
-
-Module& find(const Rest::Argument& deviceAliasOrId) {
-  
-}
-
-#else
 const Module& ModuleSet::operator[](short moduleID) const {
   // shortcut: check if indexed slot has module with matching ID
   if(moduleID < slots) {
@@ -134,7 +107,6 @@ Module& ModuleSet::operator[](short moduleID) {
   }
   return NullModule;
 }
-
 
 const Module& ModuleSet::operator[](String alias) const {
   if(alias.length() >0) {
@@ -171,7 +143,6 @@ Module& ModuleSet::operator[](const Rest::Argument& aliasOrId) {
         ? operator[]( (String)aliasOrId )
         : NullModule;
 }
-#endif
 
 SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 { 

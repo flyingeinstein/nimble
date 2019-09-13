@@ -1,5 +1,7 @@
 
 #include "SensorReading.h"
+#include "Module.h"
+
 
 namespace Nimble {
 
@@ -52,16 +54,28 @@ void SensorReading::addTo(JsonArray& arr) const
 void SensorReading::toJson(JsonObject& root, bool showType, bool showTimestamp) const {
   if(showType)
     root["type"] = SensorTypeName(sensorType);
-  if(showTimestamp)
-    root["ts"] = timestamp;
-  switch(valueType) {
-    case 'i':
-    case 'l': root["value"] = l; break;
-    case 'f': if(!isnan(f)) root["value"] = f; break;
-    case 'b': root["value"] = b; break;
-    case 'n':
-    default:
-      root["value"] = (char*)NULL; break;
+    if(sensorType != Invalid) {
+      if(showTimestamp)
+        root["ts"] = timestamp;
+      switch(valueType) {
+        case 'i':
+        case 'l': root["value"] = l; break;
+        case 'f': if(!isnan(f)) root["value"] = f; break;
+        case 'b': root["value"] = b; break;
+        case VT_PTR: {
+          if(module == nullptr) {
+            root["value"] = nullptr;
+          } else {
+            String name = module->getDriverName();
+            if(module->alias.length())
+              name += " "+module->alias;
+            root["value"] = name;
+          }
+        }
+        case 'n':
+        default:
+          root["value"] = (char*)NULL; break;
+      }
   }
 }
 

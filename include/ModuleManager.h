@@ -12,6 +12,9 @@
 
 namespace Nimble {
 
+class EndpointsInterface;
+
+
 class ModuleManager : public ModuleFactory
 {
 public:
@@ -36,10 +39,6 @@ public:
     // add our default rest handler to the http web server
     void setupRestHandler();
 
-    // json interface
-    void jsonGetModules(ModuleSet& modset, JsonObject &root);
-    void jsonForEachBySensorType(JsonObject& root, ModuleSet::ReadingIterator& itr, bool detailedValues=true);
-
     ModuleSet& modules() { return _modules; }
     const ModuleSet& modules() const { return _modules; }
 
@@ -60,6 +59,7 @@ protected:
     NTPClient* ntp;
     WebServer* httpServer;
     RestRequestHandler* restHandler;
+    EndpointsInterface* _moduleEndpoints;
 
 public:
     /// @brief Should be the one and only module manager

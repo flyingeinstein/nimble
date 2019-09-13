@@ -10,7 +10,8 @@ const char* SensorTypeName(SensorType st)
 {
     switch(st) {
         case Invalid: return "invalid";
-//        case ChildModule: return "module";      /// @todo not sure I like SensorType::ChildModule (slots should be simpler and not contain other modules)
+        case SubModule: return "module";
+        case ErrorCode: return "error";
         case Numeric: return "numeric";
         case Timestamp: return "timestamp";
         case Milliseconds: return "milliseconds";
