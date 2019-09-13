@@ -22,7 +22,7 @@ DefaultModuleRestHandler::DefaultModuleRestHandler()
 
   // resolves a device number to a Module object
   std::function<Module*(Rest::UriRequest&)> device_resolver = [this,&_modules](Rest::UriRequest& request) -> Module* {
-    Rest::Argument req_dev = request["xxx"];
+    Rest::Argument req_dev = request["devaddr"];
     Module& dev = _modules[ req_dev ];
 
     // check for NOT FOUND
@@ -35,7 +35,7 @@ DefaultModuleRestHandler::DefaultModuleRestHandler()
   };
 
   std::function<const Module*(Rest::UriRequest&)> const_device_resolver = [this,&_modules](Rest::UriRequest& request) -> const Module* {
-    Rest::Argument req_dev = request["xxx"];
+    Rest::Argument req_dev = request["devaddr"];
     Module& dev = _modules[ req_dev ];
          
     // check for NOT FOUND
