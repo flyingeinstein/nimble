@@ -39,6 +39,7 @@ void ModuleManager::handleUpdate()
 void ModuleManager::setupRestHandler()
 {  
   on("/api")
+    .accept()
     .with(*_moduleEndpoints->endpoints());
 
   // Config API
