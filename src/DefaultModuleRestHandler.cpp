@@ -3,22 +3,26 @@
 
 namespace Nimble {
 
-DefaultModuleRestHandler::DefaultModuleRestHandler()
-{
-  ModuleSet& _modules = ModuleManager::Default.modules();
-
-  std::function<int(RestRequest&)> func = [&_modules](RestRequest& request) {
-    String s("Hello ");
+int EchoHandler(RestRequest& request) {
+      String s("Hello ");
     auto msg = request["msg"];
     if(msg.isString())
       s += msg.toString();
-    else {
+    else if(msg.isNumber()) {
       s += '#';
       s += (long)msg;
+    } else {
+      request.response["error"] = "unexpected type";
+      request.response["type"] = msg.type;
+      return 400;
     }
     request.response["reply"] = s;
     return 200;
-  };
+}
+
+DefaultModuleRestHandler::DefaultModuleRestHandler()
+{
+  ModuleSet& _modules = ModuleManager::Default.modules();
 
   // resolves a device number to a Module object
   std::function<Module*(Rest::UriRequest&)> device_resolver = [this,&_modules](Rest::UriRequest& request) -> Module* {
@@ -68,32 +72,32 @@ DefaultModuleRestHandler::DefaultModuleRestHandler()
     }
 
     // device found, see of the device has an API extension
-    typename Endpoints::Node rhs_node;
-
+    typename Endpoints::Handler handler;
+    Rest::ParserState rhs_state(state); // copy state and parse remaining
+  
+    // see if device wants to handle this request
+    // try to resolve the endpoint using the device's API extension
     if(dev->hasEndpoints()) {
-      // try to resolve the endpoint using the device's API extension
-      rhs_node = dev->endpoints()->getRoot();
-    } else {
+      handler = dev->endpoints()->getRoot().resolve(rhs_state);
+    }
+
+    // otherwise see if our default device handlers will
+    if(handler == nullptr) {
       // device has no API extension, so use the default one
       // todo: setup the device default API controller
-      rhs_node = this->_defaultModuleEndpoints.getRoot();
+      handler = this->_defaultModuleEndpoints.getRoot().resolve(rhs_state);
     }
 
-    if(rhs_node) {
-      Rest::ParserState rhs_state(state); // copy state and parse remaining
-      typename Endpoints::Handler handler = rhs_node.resolve(rhs_state);
-      if (handler!=nullptr) {
-          state = rhs_state;      // we resolved a handler, so we modify the lhs request with rhs (which may have extra args)
-          return handler;   
-      }
+    // if we found a handler, then update the incoming request
+    if (handler!=nullptr) {
+      state = rhs_state;      // we resolved a handler, so we modify the lhs request with rhs (which may have extra args)
     }
-  
-    // device or handler not found
-    return Endpoints::Handler();
+
+    return handler;   
   };
 
   // Playground
-  on("echo/:msg(string|integer)").GET( func );
+  on("echo/:msg(string|integer)").GET( EchoHandler );
   
   // ModuleSet API
   on("devices")

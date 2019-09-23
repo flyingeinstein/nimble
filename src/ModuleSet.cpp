@@ -82,13 +82,15 @@ const Module& ModuleSet::operator[](short moduleID) const {
     const SensorReading& sr = readings[moduleID].reading;
     if(sr.sensorType == SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
       return *sr.module;
-  } else {
-    for(short i=0; i<slots; i++) {
-      const SensorReading& sr = readings[i].reading;
-      if(sr.sensorType==SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
-        return *sr.module;
-    }
+  } 
+
+  // secondary check scans all slots
+  for(short i=0; i<slots; i++) {
+    const SensorReading& sr = readings[i].reading;
+    if(sr.sensorType==SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
+      return *sr.module;
   }
+  
   return NullModule;
 }
 
@@ -98,12 +100,13 @@ Module& ModuleSet::operator[](short moduleID) {
     SensorReading& sr = readings[moduleID].reading;
     if(sr.sensorType == SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
       return *sr.module;
-  } else {
-    for(short i=0; i<slots; i++) {
-      SensorReading& sr = readings[i].reading;
-      if(sr.sensorType==SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
-        return *sr.module;
-    }
+  }
+
+  // secondary check scans all slots
+  for(short i=0; i<slots; i++) {
+    SensorReading& sr = readings[i].reading;
+    if(sr.sensorType==SubModule && sr.valueType==VT_PTR && sr.module!=NULL && sr.module->id == moduleID)
+      return *sr.module;
   }
   return NullModule;
 }
