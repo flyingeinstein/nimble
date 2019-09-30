@@ -44,7 +44,8 @@ can be added to Nimble by just adding to platform.io config file.
 * Convert NTP to be a sensor (time sensor). It has a few timestamps as readings. Also, other sensors can have a slot that outputs a timestamp, such as timestamp since last event.
 * Perhaps Module class should just have a getReading() virtual method instead of an array. The sub-class can then decide to get the value on-request.
 * Enable cloud support (either customer created or mine)
-     ** brings all a users nimbles together
+     ** brings all a users nimbles together. API adds a prefix to all device addresses, so like host:module:slot like address. host/module can be ID or alias.
+     ** could have such a proxy, also be proxied. So multiple homes/businesses could each have a node-proxy then have a central proxy. node/slot addresses just keep prefixing. Raises questions of access control though.
      ** enables sharing of nimbles with other users and groups (like weather data, power, gps) for crowd-sourced analytics
      ** simple docker image of a node.js app should do it
 
@@ -67,12 +68,12 @@ module/slot address into X:Y:Z:W, where each : identifies the next module ID, or
 * [ ] Slot also has timestamp and alias, we can use these instead of storing inside Module
 
 ### Refactor Module rest handlers
-* [ ] We intercept /api/device/[id_or_alias]
+* [x] We intercept /api/device/[id_or_alias]
      * interceptor looks up Module* by id or alias
      * it checks if Module* has valid RestAPI endpoints, if so it delegates request to device's rest controller
      * otherwise, if no Module endpoints or endpoint not matched, it passes to the default rest device endpoints handler
-* [ ] Refactor the default device rest controller into it's own class/module
-* [ ] developers can extend the default Rest API controller or the specific one for a device
+* [x] Refactor the default device rest controller into it's own class/module
+* [x] developers can extend the default Rest API controller or the specific one for a device
 * [ ] also refactor other config/etc APIs into their own controller and attach to root one
      * Influx controller
      * Display controller (if we want to have multiple displays but only one programming protocol)
@@ -82,8 +83,11 @@ module/slot address into X:Y:Z:W, where each : identifies the next module ID, or
 method. We can even alllimitow application/json request data but also add support for other non-json mime types. 
 
 ### New classes
-* [ ] implement influx module
-* [ ] implement a statistics logger, possibly this should be external and centralized...influx?
+* [ ] implement influx module?
+* [ ] Kafka support for sending sensor values in realtime?
+* [ ] maybe we need support for sending sensor values on change? Probably we should just return a flag in update() when slot values have changed. Changed modules are then queued in ModuleManager and in idle the data is sent as a batch change.
+* [ ] implement a statistics/event logger, possibly this should be external and centralized...influx?
+* [ ] MongoDB support? Send matching sensorTypes to MongoDB as a document
 
 
 ### Event Log
@@ -95,8 +99,10 @@ Consolidate the Module::Statistics into a global event log instead. This will be
      * Source (id)       - defined by the module
      * detail (optional) - detailed text
 * [ ] Module defined dictionaries such as Source should be stored in the Module factory and loaded from filesystem. We could have the factory provide a dictionary interface for more than just events.
-* [ ] API to retrieve log events and dictionaries.
-* [ ] look at central event logging systems out there, there must be something that we can just send events too and forget  (geekflare, central logging)[https://geekflare.com/open-source-centralized-logging]
+* [x] look at central event logging systems out there, there must be something that we can just send events too and forget  (geekflare, central logging)[https://geekflare.com/open-source-centralized-logging]
+     * Graylog - looks like full centralized logging and UI. Use GELF format to send messages, its basically a json message via either UDP or TCP
+     * Fluentd - more a injestion and analysis pipeline which then pumps into another system. There is a ton of plugins though. Might be good if the React app would aggregate all nimble logs. Twilio for sms notifications, but also slack as well! Actually looks like this could be how sensor data is sent to any destination as well. The sheer amount of plugins makes it useful. FLUENTD is awesome!!! It's so easy to send json sensor data and it seems like it was made for Nimble!
+     * Nagios?
 * [ ] influx, mqmtt or SNMP or other module can be used to send the log to a central system (and then clear it?)
 
 ### Cleaner interfaces
