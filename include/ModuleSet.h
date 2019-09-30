@@ -62,7 +62,7 @@ class ModuleSet : public Module {
       friend class ModuleSet;
     };
 
-public:
+  public:
     ModuleSet(short id=0, short maxModules=32);
     virtual ~ModuleSet();
 

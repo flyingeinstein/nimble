@@ -54,6 +54,7 @@ const char* influx_measurement = INFLUX_MEASUREMENT;
 #include "OneWireSensors.h"
 #include "Display.h"
 #include "AtlasScientific.h"
+#include "GelfLogger.h"
 
 #include <Restfully.h>
 
@@ -420,6 +421,7 @@ void setup() {
   Nimble::ModuleManager::Default.begin( server, ntp );
   modules.add( *new OneWireSensor(5, 2) );   // D4
   modules.add( *(display = new Display()) );             // OLED on I2C bus
+  modules.add( *new GelfLogger(3) );             // Graylog logger
   modules.add( *new DHTSensor(4, 14, DHT22) );      // D5
   modules.add( *new MotionIR(6, 12) );       // D6
 

@@ -4,6 +4,7 @@
 #include "NimbleEnum.h"
 #include "ModuleFactory.h"
 #include "ModuleSet.h"
+#include "Logger.h"
 
 #include <NTPClient.h>
 #include <WiFiUdp.h>
@@ -36,6 +37,9 @@ public:
     // load aliases file from SPIFFS fs
     int restoreAliasesFile();
 
+    // send a message to the logger
+    inline Logger& logger() { return _logger; }
+
     // add our default rest handler to the http web server
     void setupRestHandler();
 
@@ -56,6 +60,7 @@ public:
 
 protected:
     ModuleSet _modules;
+    Logger _logger;
     NTPClient* ntp;
     WebServer* httpServer;
     RestRequestHandler* restHandler;
