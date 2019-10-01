@@ -21,5 +21,8 @@ class GelfLogger : public Nimble::Module
 
     protected:
         WiFiUDP Udp;
-        IPAddress dest;
+
+        IPAddress destip;
+        String host;
+        unsigned short port;
 };

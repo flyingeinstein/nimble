@@ -3,9 +3,8 @@
 
 
 GelfLogger::GelfLogger(short id)
-  : Module(id, 2, 2500)
+  : Module(id, 2, 2500), host("kuba.lan"), port(5000)
 {
-
 }
 
 const char* GelfLogger::getDriverName() const
@@ -20,7 +19,7 @@ void GelfLogger::log(JsonObject& node)
     serializeJson(node, content);
 
     // send the log message
-    Udp.beginPacket(dest, 12201);
+    Udp.beginPacket(destip, 12201);
     Udp.write(
         content.c_str(), 
         content.length()
@@ -37,7 +36,7 @@ void GelfLogger::begin()
     if (!request.hasJson || request.body.isNull()) {
         return 400;
     }
-    if(!dest.isSet()) {
+    if(!destip.isSet()) {
         Serial.println("log destination is not valid or not set");
         return 500;
     }
@@ -70,7 +69,13 @@ void GelfLogger::begin()
       .POST( log_src_cat )
       .POST(":cat(string)", log_src_cat );
 
-  WiFi.hostByName("kuba.lan", dest, 5000);
+  on("/config")
+    .withContentType("text/plain", true)    // todo: need to turn these into utility helpers
+    .PUT("host", [this](RestRequest& rr) { host = rr.server.arg("plain"); WiFi.hostByName(host.c_str(), destip, 5000); return 200; } )
+    .GET("host", [this](RestRequest& rr) { rr.response["host"] = host; rr.response["ip"] = destip.toString(); return 200; } )
+    .PUT("port", [this](RestRequest& rr) { port = atoi(rr.server.arg("plain").c_str()); return 200; } )
+    .GET("port", [this](RestRequest& rr) { rr.response["port"] = port; return 200; } );
+
   //dest.fromString("192.168.44.5");
 }
 
