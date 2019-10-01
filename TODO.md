@@ -84,26 +84,29 @@ method. We can even alllimitow application/json request data but also add suppor
 
 ### New classes
 * [ ] implement influx module?
-* [ ] Kafka support for sending sensor values in realtime?
 * [ ] maybe we need support for sending sensor values on change? Probably we should just return a flag in update() when slot values have changed. Changed modules are then queued in ModuleManager and in idle the data is sent as a batch change.
-* [ ] implement a statistics/event logger, possibly this should be external and centralized...influx?
+* [ ] fluentd support.
+* [x] implement a statistics/event logger, possibly this should be external and centralized.. Used Graylog.
 * [ ] MongoDB support? Send matching sensorTypes to MongoDB as a document
-
+     * Add Json as a SensorReading primitive type
+     * Add Json object into a slot, along with host info
+     * string values with $x:y:z will get replaced with sensor value (if $ is within other string contents, then value is embedded in string contents)
+     * we need to be able to specify variables such as influx/mongo host in config and reference in (ex.) Mongo slot config
+* [ ] Kafka support for sending sensor values in realtime? ...or just provided by fluentd?
 
 ### Event Log
 Consolidate the Module::Statistics into a global event log instead. This will be simpler, more robust among various modules, and will get the code out of Module class.
-* [ ] Event log will have members:
+* [x] Event log will have members:
      * SensorAddress     - defines the x:y:z address of the module that generated the event
      * Severity (enum)   - debug, info, warning, error, fatal
      * Category (enum)   - Core, Config, Data, File, Web, ... (need to define, should this be module defined? do we really need this?)
      * Source (id)       - defined by the module
      * detail (optional) - detailed text
-* [ ] Module defined dictionaries such as Source should be stored in the Module factory and loaded from filesystem. We could have the factory provide a dictionary interface for more than just events.
 * [x] look at central event logging systems out there, there must be something that we can just send events too and forget  (geekflare, central logging)[https://geekflare.com/open-source-centralized-logging]
      * Graylog - looks like full centralized logging and UI. Use GELF format to send messages, its basically a json message via either UDP or TCP
      * Fluentd - more a injestion and analysis pipeline which then pumps into another system. There is a ton of plugins though. Might be good if the React app would aggregate all nimble logs. Twilio for sms notifications, but also slack as well! Actually looks like this could be how sensor data is sent to any destination as well. The sheer amount of plugins makes it useful. FLUENTD is awesome!!! It's so easy to send json sensor data and it seems like it was made for Nimble!
      * Nagios?
-* [ ] influx, mqmtt or SNMP or other module can be used to send the log to a central system (and then clear it?)
+
 
 ### Cleaner interfaces
 * [ ] possibly we dont even need ModuleSet anymore
@@ -114,3 +117,4 @@ Consolidate the Module::Statistics into a global event log instead. This will be
 ** Possibly forEach() could return ReadingIterator and that class would have a call(lambda) method that is like the forEach(lambda)
 ** Move ReadingIterator into its own class though 
 * [ ] Possibly SensorReading needs to change names since it may be a SubModule now
+* [ ] I liked how the logger looks up a /api Endpoint handler and uses it directly to send log messages. We need a cleaner way to re-use this.
