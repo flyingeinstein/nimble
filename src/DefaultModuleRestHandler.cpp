@@ -134,14 +134,6 @@ Endpoints* DefaultModuleRestHandler::endpoints()
 
 void DefaultModuleRestHandler::jsonGetModules(ModuleSet& modset, JsonObject &root)
 {
-  ModuleManager::Default.logger()
-    .info()
-    .error(-3)
-    .module("manager")
-    .category("security")
-    .message("protected device enumeration")
-    .detail("A request was made to determine all modules attached to the device");
-
   // list all devices
   JsonArray devs = root.createNestedArray("devices");
   modset.forEach( [&devs](const Module& module, void* userData) {

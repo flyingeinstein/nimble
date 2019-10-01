@@ -11,7 +11,7 @@
 //#define ALLOW_OTA_UPDATE
 
 // hard code the node name of the device
-const char* hostname = "nimbl";
+const char* hostname = "nimbly";
 
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
@@ -417,7 +417,8 @@ void setup() {
    *   todo: Eventually this will be configurable or via probing where possible
    * 
    */
-  Nimble::ModuleSet& modules = Nimble::ModuleManager::Default.modules();
+  auto& manager = Nimble::ModuleManager::Default;
+  Nimble::ModuleSet& modules = manager.modules();
   Nimble::ModuleManager::Default.begin( server, ntp );
   modules.add( *new OneWireSensor(5, 2) );   // D4
   modules.add( *(display = new Display()) );             // OLED on I2C bus
@@ -434,12 +435,19 @@ void setup() {
   
   display->setFontTable(display_fonts);
 
-  Nimble::ModuleManager::Default.restoreAliasesFile();
+  manager.restoreAliasesFile();
 
+  String hostinfo;
+  hostinfo += hostname;
+  hostinfo += " (IP: ";
+  hostinfo += WiFi.localIP().toString();
+  hostinfo += ")";
   Serial.print("Host: ");
-  Serial.print(hostname);
-  Serial.print("   IP: ");
-  Serial.println(WiFi.localIP());
+  Serial.println(hostinfo);
+
+  manager.logger().warn("startup")
+    .module("core")
+    .detail("device "+hostinfo+" initialized");
 }
 
 

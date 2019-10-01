@@ -45,6 +45,8 @@ class SensorAddress {
     inline SensorAddress() : device(0), slot(0) {}
     inline SensorAddress(short _device, short _slot) : device(_device), slot(_slot) {}
 
+    inline operator bool() const { return device || slot; }
+
     inline bool operator==(const SensorAddress& sa) const { return sa.device==device && sa.slot==slot; }
     inline bool operator!=(const SensorAddress& sa) const { return sa.device!=device || sa.slot!=slot; }
     inline bool operator<(const SensorAddress& sa) const { return (sa.device==device) ? sa.slot<slot : sa.device<device; }

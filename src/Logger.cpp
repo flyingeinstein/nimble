@@ -18,7 +18,44 @@ LogEntry::LogEntry(LogEntry&& copy) {
 
 LogEntry::~LogEntry() {
   if(dest != nullptr)
-    dest->write(this);
+    dest->write(*this);
+}
+
+void LogEntry::print(Stream& s) {
+  switch(_severity) {
+    case Debug: s.print("DEBUG"); break;
+    case Info: s.print("INFO"); break;
+    case Warning: s.print("WARN"); break;
+    case Error: s.print("ERROR"); break;
+    case Fatal: s.print("FATAL"); break;
+    case Alert: s.print("ALERT"); break;
+  }
+  if(_module.length()) {
+    s.print(" [");
+    s.print(_module);
+    s.print("]");
+  }
+  if(_category.length()) {
+    s.print(" ");
+    s.print(_category);
+  }
+  if(_sensor) {
+    s.print(" $");
+    s.print(_sensor.toString());
+  }
+  if(_error > 0) {
+    s.print(" error ");
+    s.print(_error);
+  }
+
+  s.print(": ");
+  s.print(_message);
+
+  if(_detail.length()) {
+    s.print(" => ");
+    s.print(_detail);
+  }
+  s.println();
 }
 
 short LogEntry::toJson(JsonObject& msg) {
@@ -36,62 +73,59 @@ short LogEntry::toJson(JsonObject& msg) {
 
   String content;
   serializeJson(msg, content);
-  Serial.print("log => ");
-  Serial.println(content);
 
   return 0;
 }
 
 void Logger::write(JsonObject& msg)
 {
-  if(!logEndpoint.handler || !logEndpoint.handler.handler) {
-    Endpoints::Request request(Rest::HttpPost, "/log");
+  if(!remote)
+    return;
 
-    // find the logger
-    #if 0
+  if(!logEndpoint.handler.handler) {
+    // find the logger by scanning each root module
     ModuleManager::Default.modules().forEach([this](Module& mod, void* pData) -> bool {
-      if()
-    })
-    #endif
-    
-    Module& modLogger = ModuleManager::Default.modules()[ 3 ];
-
-    if(modLogger && modLogger.hasEndpoints()) {
-      Endpoints* ep = modLogger.endpoints();
-      if( ep->resolve(request) && request.isSuccessful()) {
-        logEndpoint = request;
-        Serial.print("found logger at ");
-        Serial.print(modLogger.getDriverName());
-        Serial.print(" id:");
-        Serial.println(modLogger.id);
-        if(!request.handler || !request.handler.handler)
-          Serial.println("yet still no handler");
+      if(mod && mod.hasEndpoints()) {
+        Endpoints* ep = mod.endpoints();
+        Endpoints::Request request = ep->resolve(Rest::HttpPost, "/log");
+        if(request.status == Rest::UriMatched && request.handler.handler != nullptr) {
+          logEndpoint = request;
+          Serial.print("Info: using logger ");
+          Serial.println(mod.getDriverName());
+          return false;
+        }
       }
-    }
+      return true;
+    });
   }
 
-  if(logEndpoint.handler && logEndpoint.handler.handler) {
+  if(logEndpoint.handler.handler) {
     RestRequest rr(*(WebServer*)nullptr, logEndpoint);
     rr.hasJson = true;
     rr.method = Rest::HttpPost;
     rr.body = msg;
     rr.timestamp = millis();
     rr.contentType = Rest::ApplicationJsonMimeType;
-        Serial.println("calling logger");
-
     logEndpoint.handler.handler(rr);
   } else {
     Serial.println("Warning: unable to find a logger module");
+    remote = false;
   }
 }
 
-void Logger::write(LogEntry* entry)
+void Logger::write(LogEntry& entry)
 {
-  DynamicJsonDocument doc(256);
-  JsonObject root = doc.to<JsonObject>();
-  if(entry->toJson(root) >=0) {
-    // write entry
-    write(root);
+  Severity sev = entry.severity();
+  if(sev <= consoleLevel)
+    entry.print(Serial);
+
+  if(sev <= remoteLevel) {
+    DynamicJsonDocument doc(256);
+    JsonObject root = doc.to<JsonObject>();
+    if(entry.toJson(root) >=0) {
+      // write entry
+      write(root);
+    }
   }
 }
 

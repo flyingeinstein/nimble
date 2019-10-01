@@ -61,6 +61,7 @@ module/slot address into X:Y:Z:W, where each : identifies the next module ID, or
 * [x] move root rest/http handler out into new ModuleManager object (ModuleSet::rest/http will then be relative to the set's base path url)
 * [x] write module/slot resolver function that takes a string and returns the ModuleSet, Module and (if present) the Slot number.
 * [x] get/set alias file should be moved to ModuleManager
+* [ ] SensorAddress needs an update to now support multiple components
 
 ### ModuleSet is a Module, Module can contain sub-modules
 * [x] both ModuleSet and Module has member slots (misnomer on ModuleSet)

@@ -43,18 +43,14 @@ void GelfLogger::begin()
     }
 
     JsonObject root = request.body.as<JsonObject>();
-    
-    // todo: validate that the required fields are present
-    if(!root.containsKey("short_message")) {
-        request.response["error"] = "requires short_message field";
-        return 400;
-    }
-
+ 
     // set some optional client fields, but are required in the message
     if(!root.containsKey("version"))
         root["version"] = "1.1";
     if(!root.containsKey("host"))
         root["host"] = WiFi.hostname();
+    if(!root.containsKey("_product"))
+        root["_product"] = "nimbl";
 
     if(src.isString())
         root["_module"] = (String)src;
