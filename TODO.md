@@ -79,6 +79,12 @@ module/slot address into X:Y:Z:W, where each : identifies the next module ID, or
      * Influx controller
      * Display controller (if we want to have multiple displays but only one programming protocol)
 
+### Configuration
+Slots will support JsonObject as a primitive type. Configuration will (by default) be stored as a Json object in a slot.
+* [ ] Two modes to do configuration
+     * [ ] Default handler /api/device/<addr>/config modifies root fields in the Config object. For now, only root fields can be set/modified. However, a root field is free to have a Json object (and more) as a value as supplied in the POST data. You just can't set an inner field.
+     * [ ] Modules are able to override the /config endpoint and provide their own config. A helper class will do the heavy lifting to map config Json fields to/from struct fields. This is the recommended way if the module wants to know exactly when a setting is set/modified.
+
 ### Http handlers
 [x] We can now attach handlers just like Rest ones but set expectation of a different contentType using the withContentType(...) 
 method. We can even alllimitow application/json request data but also add support for other non-json mime types. 
@@ -111,11 +117,11 @@ Consolidate the Module::Statistics into a global event log instead. This will be
 
 ### Cleaner interfaces
 * [ ] possibly we dont even need ModuleSet anymore
-** A Module has slots as sub-modules and ModuleSet is now implemented by Module, so its not really differentiable from ModuleSet
+     * A Module has slots as sub-modules and ModuleSet is now implemented by Module, so its not really differentiable from ModuleSet
 * [ ] improve forEach()
-** The new forEach(lamda...) is really slick. I bet we can convert ReadingIterator over to that
-** ReadingIterator has timeBetween and other filter methods, keep this support
-** Possibly forEach() could return ReadingIterator and that class would have a call(lambda) method that is like the forEach(lambda)
-** Move ReadingIterator into its own class though 
+     * The new forEach(lamda...) is really slick. I bet we can convert ReadingIterator over to that
+     * ReadingIterator has timeBetween and other filter methods, keep this support
+     * Possibly forEach() could return ReadingIterator and that class would have a call(lambda) method that is like the forEach(lambda)
+     * Move ReadingIterator into its own class though 
 * [ ] Possibly SensorReading needs to change names since it may be a SubModule now
 * [ ] I liked how the logger looks up a /api Endpoint handler and uses it directly to send log messages. We need a cleaner way to re-use this.
