@@ -11,10 +11,12 @@ const char* SensorTypeName(SensorType st)
     switch(st) {
         case Invalid: return "invalid";
         case SubModule: return "module";
+        case Config: return "Config";
         case ErrorCode: return "error";
         case Numeric: return "numeric";
         case Timestamp: return "timestamp";
         case Milliseconds: return "milliseconds";
+        case Json: return "Json";
         case Humidity: return "humidity";
         case Hygrometer: return "hygrometer";
         case Temperature: return "temperature";

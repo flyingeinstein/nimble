@@ -9,10 +9,12 @@ namespace Nimble {
 typedef enum SensorType {
     Invalid,      AnySensorType = Invalid,
     SubModule,     // slot is a child-device (such as a device on a bus)
+    Config,        // Json configuration fragment
     ErrorCode,     // indicates an error code, value is an integer
     Numeric,       // general numeric value
     Timestamp,     // a unix timestamp
     Milliseconds,  // a measurement in milliseconds
+    Json,          // a Json fragment
     Humidity,      // Relative Humidity (RH)
     Hygrometer,
     Temperature,   // Celcius or Farenheit

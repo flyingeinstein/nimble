@@ -27,6 +27,7 @@
 #define VT_INT      'l'
 #define VT_BOOL     'b'
 #define VT_PTR      'p'      // pointer to object value
+#define VT_JSON     'j'      // pointer to Json object
 //@}
 
 namespace Nimble {
@@ -118,6 +119,7 @@ class SensorReading
     inline SensorReading(SensorType st, long _l) : sensorType(st), valueType('l'), timestamp(millis()), l(_l) {}
     inline SensorReading(SensorType st, int _i) : sensorType(st), valueType('i'), timestamp(millis()), l(_i) {}
     inline SensorReading(SensorType st, bool _b) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
+    //inline SensorReading(SensorType st, JsonObject _json) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
 };
 
 extern SensorReading NullReading;
