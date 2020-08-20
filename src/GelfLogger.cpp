@@ -75,6 +75,7 @@ void GelfLogger::begin()
     .GET("host", [this](RestRequest& rr) { rr.response["host"] = host; rr.response["ip"] = destip.toString(); return 200; } )
     .PUT("port", [this](RestRequest& rr) { port = atoi(rr.server.arg("plain").c_str()); return 200; } )
     .GET("port", [this](RestRequest& rr) { rr.response["port"] = port; return 200; } );
+    //.GET("port", port );
 
   //dest.fromString("192.168.44.5");
 }

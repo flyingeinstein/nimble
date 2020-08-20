@@ -320,10 +320,10 @@ class Module : public DefaultEndpointsInterface {
    /// @brief RestAPI methods
     /// @{
     // unfortunately we cannot bind constants in the rest handlers so we have to create these inline ones
-    inline int restStatus(RestRequest& request) const { return toJson(request.response, JsonDefault); }
-    inline int restSlots(RestRequest& request) const { return toJson(request.response, JsonSlots); }
-    inline int restStatistics(RestRequest& request) const { return toJson(request.response, JsonStatistics); }
-    inline int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
+    int restStatus(RestRequest& request) const { return toJson(request.response, JsonDefault); }
+    int restSlots(RestRequest& request) const { return toJson(request.response, JsonSlots); }
+    int restStatistics(RestRequest& request) const { return toJson(request.response, JsonStatistics); }
+    int restDetail(RestRequest& request) const { return toJson(request.response, (JsonFlags)(JsonSlots|JsonStatistics) ); }
     /// @}
     
 };

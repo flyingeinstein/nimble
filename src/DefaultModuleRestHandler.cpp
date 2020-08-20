@@ -109,12 +109,13 @@ DefaultModuleRestHandler::DefaultModuleRestHandler()
 
   _defaultModuleEndpoints.getRoot()
     .with(const_device_resolver)
-    .GET(&Module::restDetail)
-    .GET("status", &Module::restStatus)
-    .GET("slots", &Module::restSlots)
-    .GET("statistics", &Module::restStatistics);
-  //on("/api/slot/:slotaddr(string|integer)")
-  //  .otherwise(slot_api_resolver);
+      .GET(&Module::restDetail)
+      .GET("status", &Module::restStatus)
+      .GET("slots", &Module::restSlots)
+      .GET("statistics", &Module::restStatistics);
+    
+    //on("/api/slot/:slotaddr(string|integer)")
+    //  .otherwise(slot_api_resolver);
 }
 
 bool DefaultModuleRestHandler::hasEndpoints() const {

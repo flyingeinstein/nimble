@@ -11,7 +11,7 @@
 //#define ALLOW_OTA_UPDATE
 
 // hard code the node name of the device
-const char* hostname = "nimbly";
+const char* hostname = SSID_HOSTNAME;
 
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
