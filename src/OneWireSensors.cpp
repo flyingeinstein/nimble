@@ -39,7 +39,8 @@ int OneWireSensor::httpDevices(RestRequest& request)
 
 void OneWireSensor::begin()
 {
-  #if 1
+  // todo: IMPLEMENT One Wire Sensor API
+  #if 0
   std::function<int(RestRequest&)> func = [](RestRequest& request) {
     String s("Hello ");
     auto msg = request["msg"];

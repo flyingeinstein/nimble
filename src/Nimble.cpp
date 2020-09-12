@@ -22,7 +22,7 @@ const char* password = SSID_PASSWORD;
 
 
 bool enable_influx = false;
-const char* influx_server = INFLUX_SERVER;
+//const char* influx_server = INFLUX_SERVER;
 const char* influx_database = INFLUX_DATABASE;
 const char* influx_measurement = INFLUX_MEASUREMENT;
 

@@ -131,22 +131,6 @@ Module& ModuleSet::operator[](String alias) {
     return NullModule;
 }
 
-const Module& ModuleSet::operator[](const Rest::Argument& aliasOrId) const {
-  return aliasOrId.isInteger()
-      ? operator[]( (long)aliasOrId )
-      : aliasOrId.isString()
-        ? operator[]( (String)aliasOrId )
-        : NullModule;
-}
-
-Module& ModuleSet::operator[](const Rest::Argument& aliasOrId) {
-   return aliasOrId.isInteger()
-      ? operator[]( (long)aliasOrId )
-      : aliasOrId.isString()
-        ? operator[]( (String)aliasOrId )
-        : NullModule;
-}
-
 SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 { 
   return getReading(sa.device, sa.slot); 

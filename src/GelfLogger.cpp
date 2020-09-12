@@ -29,8 +29,16 @@ void GelfLogger::log(JsonObject& node)
 
 void GelfLogger::begin()
 {
+}
+
+Rest::Endpoint GelfLogger::delegate(Rest::Endpoint &p) 
+{
+    // todo: IMPLEMENT log api call
+    return {};
+
+#if 0
   std::function<int(RestRequest&)> log_src_cat = [this](RestRequest& request) {
-    auto src = request["src"];
+    auto src = request.query("src");
     auto cat = request["cat"];
 
     if (!request.hasJson || request.body.isNull()) {
@@ -78,6 +86,7 @@ void GelfLogger::begin()
     //.GET("port", port );
 
   //dest.fromString("192.168.44.5");
+#endif
 }
 
 void GelfLogger::handleUpdate()

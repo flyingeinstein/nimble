@@ -82,14 +82,20 @@ void Logger::write(JsonObject& msg)
   if(!remote)
     return;
 
-  if(!logEndpoint.handler.handler) {
+// todo: should be able to reduce this to a single Request object
+  RestRequest rr(*(WebServer*)nullptr, Rest::HttpPost, "/log/write");
+  rr.hasJson = true;
+  rr.body = msg;
+  rr.timestamp = millis();
+  rr.contentType = Rest::ApplicationJsonMimeType;
+  Endpoint parser(rr);
+
+  if(!logEndpoint) {
     // find the logger by scanning each root module
-    ModuleManager::Default.modules().forEach([this](Module& mod, void* pData) -> bool {
-      if(mod && mod.hasEndpoints()) {
-        Endpoints* ep = mod.endpoints();
-        Endpoints::Request request = ep->resolve(Rest::HttpPost, "/log");
-        if(request.status == Rest::UriMatched && request.handler.handler != nullptr) {
-          logEndpoint = request;
+    ModuleManager::Default.modules().forEach([this, &parser](Module& mod, void* pData) -> bool {
+      if(mod) {
+        if(auto log_endpoint = mod.delegate(parser)) {
+          logEndpoint = &mod;
           Serial.print("Info: using logger ");
           Serial.println(mod.getDriverName());
           return false;
@@ -99,14 +105,8 @@ void Logger::write(JsonObject& msg)
     });
   }
 
-  if(logEndpoint.handler.handler) {
-    RestRequest rr(*(WebServer*)nullptr, logEndpoint);
-    rr.hasJson = true;
-    rr.method = Rest::HttpPost;
-    rr.body = msg;
-    rr.timestamp = millis();
-    rr.contentType = Rest::ApplicationJsonMimeType;
-    logEndpoint.handler.handler(rr);
+  if(logEndpoint) {
+    logEndpoint->delegate(parser);
   } else {
     Serial.println("Warning: unable to find a logger module");
     remote = false;

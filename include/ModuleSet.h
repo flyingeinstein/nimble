@@ -84,12 +84,6 @@ class ModuleSet : public Module {
     const Module& operator[](String alias) const;
     Module& operator[](String alias);
 
-    /// @brief find a device from a Rest argument
-    /// This operator will determine if the argument is integer or string, and call the 
-    /// appropriate operator to find the module.
-    const Module& operator[](const Rest::Argument& aliasOrId) const;
-    Module& operator[](const Rest::Argument& aliasOrId);
-
     /// @brief find a reading by device:slot address.
     /// for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)
     SensorReading getReading(short deviceId, unsigned short slotId) const;

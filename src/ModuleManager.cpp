@@ -13,7 +13,7 @@ ModuleManager ModuleManager::Default;
 
 
 ModuleManager::ModuleManager()
-    : ntp(NULL), httpServer(NULL), restHandler(NULL), _moduleEndpoints( new DefaultModuleRestHandler())
+    : ntp(NULL), httpServer(NULL), restHandler(NULL)//, _moduleEndpoints( new DefaultModuleRestHandler())
 {
 }
 
@@ -23,8 +23,8 @@ void ModuleManager::begin(WebServer& _http, NTPClient& _ntp)
   ntp = &_ntp;
 
   if(restHandler == NULL) {
-    restHandler = new RestRequestHandler();
-    setupRestHandler();
+    restHandler = new WebServerRequestHandler();
+    restHandler->endpoints = this;    // todo: handlers should take a collection of delegates
     httpServer->addHandler(restHandler);
   }
 
@@ -36,8 +36,21 @@ void ModuleManager::handleUpdate()
     _modules.handleUpdate();
 }
 
-void ModuleManager::setupRestHandler()
+Rest::Endpoint ModuleManager::delegate(Rest::Endpoint &p)
 {  
+  if(auto api = p / "api") {
+    String s;
+    auto echo = api / "echo" / &s / Rest::GET([&s](RestRequest& req) {
+      req.response["reply"] = s;
+      return 200;
+    });
+
+    return echo;
+  }
+  return {};
+
+  // todo: IMPLEMENT ModuleManager api endpoint
+  #if 0
   on("/api")
     .accept()
     .with(*_moduleEndpoints->endpoints());
@@ -61,6 +74,7 @@ void ModuleManager::setupRestHandler()
       request.server.send(200, "text/plain", aliases);
       return HTTP_RESPONSE_SENT;
     });
+    #endif
 }
 
 

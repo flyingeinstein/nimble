@@ -382,14 +382,6 @@ const SensorReading& Module::operator[](unsigned short slotIndex) const
   return readings[slotIndex].reading;
 }
 
-SensorReading& Module::operator[](const Rest::Argument& arg) {
-  return arg.isInteger()
-      ? operator[]( (long)arg )
-      : arg.isString()
-        ? operator[]( (String)arg )
-        : NullReading;
-}
-
 void Module::jsonGetReading(JsonObject& node, short slot) const
 {
   auto reading = find(slot);
@@ -404,6 +396,12 @@ void Module::jsonGetReadings(JsonObject& node) const
     reading.toJson(jr);
     return true;
   }, nullptr);
+}
+
+Rest::Endpoint Module::delegate(Rest::Endpoint &p)
+{
+  // todo: IMPLEMENT default Module API
+  return Rest::Endpoint();
 }
 
 int Module::toJson(JsonObject& target, JsonFlags displayFlags) const

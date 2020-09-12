@@ -12,7 +12,7 @@
 
 #include "NimbleConfig.h"
 #include "SensorReading.h"
-#include "NimbleInterfaces.h"
+
 
 // Module Flags
 #define MF_DISPLAY       F_BIT(0)             /// Module is some sort of display device
@@ -32,7 +32,7 @@ class ModuleSet;
  * Rest and Http endpoint services and sensor/slot management.
  * 
  */
-class Module : public DefaultEndpointsInterface {
+class Module : public Rest::Endpoint::Delegate {
     friend class ModuleSet;
   public:
     short id;
@@ -241,28 +241,13 @@ class Module : public DefaultEndpointsInterface {
     /// @brief return sensor reading for given slot index
     inline const SensorReading& operator[](String alias) const { return find(alias, AnySensorType); }
 
-    SensorReading& operator[](const Rest::Argument& arg);
-
-    /// @brief Return an endpoint node at the given path
-    /// The endpoint will be relative to this device's endpoint, typically /api/device/[id_or_alias]. To add endpoints
-    /// to the API root you will need to use the ModuleSet::on(...) method.
-    inline Endpoints::Node on(const char* path) {
-      if(_endpoints==nullptr) _endpoints = new Endpoints();
-      return _endpoints->on(path);
-    }
-
-    /// @brief Return the root endpoint node for this device
-    /// The device endpoint is typically at /api/device/[id_or_alias]. To add endpoints to the API root you will need 
-    /// to use the ModuleSet::on(...) method.
-    inline Endpoints::Node on() {
-      if(_endpoints==nullptr) _endpoints = new Endpoints();
-      return _endpoints->getRoot();
-    }
-
     /// @brief @deprecated Return statistics for the module.
     /// Per-module statistics will soon be removed in favor of a global statistics that any module can use to add 
     /// statistic events to.
     inline Statistics getStatistics() const { return statistics; }
+
+    /// @brief Handles Rest API requests on this module
+    Rest::Endpoint delegate(Rest::Endpoint &p) override;
 
   protected:
     ModuleSet* owner;

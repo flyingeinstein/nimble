@@ -44,7 +44,7 @@ class ModuleSet;
 class SensorReading;
 
 using WebServer = ESP8266WebServer;
-using Endpoints = typename RestRequestHandler::Endpoints;
+
 //typedef Esp8266RestRequestHandler RestRequestHandler;
 //typedef Esp8266RestRequest RestRequest;  // RestRequestHandler::RequestType RestRequest;
 //typedef typename RestRequestHandler::HandlerType HandlerType;

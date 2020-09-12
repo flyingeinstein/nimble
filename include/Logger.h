@@ -73,7 +73,7 @@ namespace Nimble {
         void write(JsonObject& msg);
 
         // we'll search for and resolve a logger module upon first logging request
-        Endpoints::Request logEndpoint;
+        Endpoint::Delegate* logEndpoint;
     };
 
 } // ns:Nimble

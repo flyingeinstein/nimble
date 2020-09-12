@@ -16,9 +16,11 @@ namespace Nimble {
 class EndpointsInterface;
 
 
-class ModuleManager : public ModuleFactory
+class ModuleManager : public ModuleFactory, public Rest::Endpoint::Delegate
 {
 public:
+    using WebServerRequestHandler = Rest::Platforms::Default::WebServerRequestHandler;
+
     ModuleManager();
 
     void begin(WebServer& _http, NTPClient& client);
@@ -40,9 +42,6 @@ public:
     // send a message to the logger
     inline Logger& logger() { return _logger; }
 
-    // add our default rest handler to the http web server
-    void setupRestHandler();
-
     ModuleSet& modules() { return _modules; }
     const ModuleSet& modules() const { return _modules; }
 
@@ -51,20 +50,18 @@ public:
     inline WebServer& http() { return *httpServer; }
     
     // Rest interface
-    inline const RestRequestHandler& rest() const { return *restHandler; }
-    inline RestRequestHandler& rest() { return *restHandler; }
+    inline const WebServerRequestHandler& restServer() const { return *restHandler; }
+    inline WebServerRequestHandler& restServer() { return *restHandler; }
 
-    Endpoints::Node on(const char *endpoint_expression ) {
-      return restHandler->on(endpoint_expression);   // add the rest (recursively)
-    }
+    /// @brief Handles Rest API requests on this module
+    Rest::Endpoint delegate(Rest::Endpoint &p) override;
 
 protected:
     ModuleSet _modules;
     Logger _logger;
     NTPClient* ntp;
     WebServer* httpServer;
-    RestRequestHandler* restHandler;
-    EndpointsInterface* _moduleEndpoints;
+    WebServerRequestHandler* restHandler;
 
 public:
     /// @brief Should be the one and only module manager

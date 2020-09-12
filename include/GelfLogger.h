@@ -19,6 +19,9 @@ class GelfLogger : public Nimble::Module
 
         void log(JsonObject& node);
 
+        /// @brief Handles Rest API requests on this module
+        Rest::Endpoint delegate(Rest::Endpoint &p) override;
+
     protected:
         WiFiUDP Udp;
 

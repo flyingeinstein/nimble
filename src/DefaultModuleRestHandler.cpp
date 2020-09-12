@@ -3,6 +3,7 @@
 
 namespace Nimble {
 
+#if 0
 int EchoHandler(RestRequest& request) {
       String s("Hello ");
     auto msg = request["msg"];
@@ -19,9 +20,14 @@ int EchoHandler(RestRequest& request) {
     request.response["reply"] = s;
     return 200;
 }
+#endif
 
-DefaultModuleRestHandler::DefaultModuleRestHandler()
+Endpoint DefaultModuleRestHandler::delegate(Endpoint& parent)
 {
+  // todo: IMPLEMENT the default module handling
+  return {};
+
+#if 0
   ModuleSet& _modules = ModuleManager::Default.modules();
 
   // resolves a device number to a Module object
@@ -116,22 +122,8 @@ DefaultModuleRestHandler::DefaultModuleRestHandler()
     
     //on("/api/slot/:slotaddr(string|integer)")
     //  .otherwise(slot_api_resolver);
+#endif
 }
-
-bool DefaultModuleRestHandler::hasEndpoints() const {
-    return true; 
-}
-
-const Endpoints* DefaultModuleRestHandler::endpoints() const 
-{
-   return &_endpoints; 
-}
-
-Endpoints* DefaultModuleRestHandler::endpoints() 
-{
-   return &_endpoints;
-}
-
 
 void DefaultModuleRestHandler::jsonGetModules(ModuleSet& modset, JsonObject &root)
 {
