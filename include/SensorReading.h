@@ -24,7 +24,7 @@
 #define VT_INVALID  '*'      // invalid reading
 #define VT_FLOAT    'f'
 #define VT_LONG     'l'
-#define VT_INT      'l'
+#define VT_INT      'i'
 #define VT_BOOL     'b'
 #define VT_PTR      'p'      // pointer to object value
 #define VT_JSON     'j'      // pointer to Json object
@@ -72,6 +72,7 @@ class SensorReading
       long l;
       bool b;
       Module* module;
+      JsonObject* json;
     };
 
     /**
@@ -119,6 +120,8 @@ class SensorReading
     inline SensorReading(SensorType st, long _l) : sensorType(st), valueType('l'), timestamp(millis()), l(_l) {}
     inline SensorReading(SensorType st, int _i) : sensorType(st), valueType('i'), timestamp(millis()), l(_i) {}
     inline SensorReading(SensorType st, bool _b) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
+
+    SensorReading(SensorType st);
     //inline SensorReading(SensorType st, JsonObject _json) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
 };
 
