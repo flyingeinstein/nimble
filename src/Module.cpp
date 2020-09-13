@@ -211,6 +211,32 @@ short Module::findSlotByAlias(String slotAlias) const
   return -1;
 }
 
+SensorReading& Module::find(short slotIndex, SensorType stype)
+{
+  if(slotIndex >= slots) {
+    alloc( slotIndex+1 );
+    auto& slot = readings[slotIndex];
+    slot.reading.sensorType = stype;
+    return slot.reading;
+  } else {
+    auto slot = readings[slotIndex];
+    return (stype == AnySensorType || slot.reading.sensorType == stype)
+      ? slot.reading
+      : NullReading;
+  }
+}
+
+const SensorReading& Module::find(short slotIndex, SensorType stype) const
+{
+  if(slotIndex >= slots)
+    return NullReading;
+
+  auto& slot = readings[slotIndex];
+  return (stype == AnySensorType || slot.reading.sensorType == stype)
+    ? slot.reading
+    : NullReading;
+}
+
 SensorReading& Module::find(String alias, SensorType stype)
 {
   if(alias.length() >0) {
