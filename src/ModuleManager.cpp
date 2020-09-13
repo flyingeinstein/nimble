@@ -39,42 +39,89 @@ void ModuleManager::handleUpdate()
 Rest::Endpoint ModuleManager::delegate(Rest::Endpoint &p)
 {  
   if(auto api = p / "api") {
+    // accept any Uri that starts with api
+    if(api.request().accept())
+      return api;
+
     String s;
     auto echo = api / "echo" / &s / Rest::GET([&s](RestRequest& req) {
       req.response["reply"] = s;
       return 200;
     });
 
+    // module by ID
+    if(auto device = api / "device") {
+      int devid = -1;
+      String devname;
+      Module* mod;
+      Endpoint module;
+      if(module = device / &devid) {
+        if(devid >= 0) {
+          // get module by ID
+          mod = &_modules[ devid ];
+          if (mod == &NullModule)
+            mod = nullptr;
+        } else
+          module.accept(Rest::NotFound);
+      } else if(module = device / &devname) {
+        if(!devname.isEmpty()) {
+          // get module by name
+          mod = &_modules[ devname ];
+          if (mod == &NullModule)
+            mod = nullptr;
+        } else
+          module.accept(Rest::NotFound);
+      }
+
+      if(mod) {
+        // delegate to the module, or if unhandles we can return some driver info
+        (module / *mod) || (module / Rest::GET( [&mod](RestRequest& req) {
+          req.response["driver"] = mod->getDriverName();
+          req.response["alias"] = mod->getAlias();
+          return 200;
+        }));
+      }
+    } else if(auto devices = api / "devices") {
+      // todo: handle API calls for all devices, like config, export, etc
+      devices / Rest::GET([this](RestRequest& req) {
+        auto mods = req.response.createNestedArray("modules");
+        _modules.forEach([this, &req, &mods](const Module& mod, void*) {
+          auto jmod = mods.createNestedObject();
+          jmod["id"] = mod.id;
+          mod.toJson(jmod, Module::JsonMinimum);
+          return true;
+        });
+        return 200;
+      });
+    }
+
+
+
+    // config API calls
+    if(auto config = api / "config" ) {
+      config / "aliases"
+        / Rest::GET([this](RestRequest& request) {
+            // retrieve the alias file
+            String aliases = getAliasesFile();
+            request.server.send(200, "text/plain", aliases);
+            return HTTP_RESPONSE_SENT;
+          })
+        / Rest::POST([this](RestRequest& request) {
+            // write an aliases file
+            String aliases = request.server.arg("plain");
+            if(parseAliasesFile(aliases.c_str()) >0)
+              saveAliasesFile(aliases.c_str());
+
+            // re-read the aliase file back
+            aliases = getAliasesFile();
+            request.server.send(200, "text/plain", aliases);
+            return HTTP_RESPONSE_SENT;
+          });
+    }
+
     return echo;
   }
   return {};
-
-  // todo: IMPLEMENT ModuleManager api endpoint
-  #if 0
-  on("/api")
-    .accept()
-    .with(*_moduleEndpoints->endpoints());
-
-  // Config API
-  on("/api/config/aliases")
-    .GET([this](RestRequest& request) {
-      // retrieve the alias file
-      String aliases = getAliasesFile();
-      request.server.send(200, "text/plain", aliases);
-      return HTTP_RESPONSE_SENT;
-    })
-    .POST([this](RestRequest& request) {
-      // write an aliases file
-      String aliases = request.server.arg("plain");
-      if(parseAliasesFile(aliases.c_str()) >0)
-        saveAliasesFile(aliases.c_str());
-
-      // re-read the aliase file back
-      aliases = getAliasesFile();
-      request.server.send(200, "text/plain", aliases);
-      return HTTP_RESPONSE_SENT;
-    });
-    #endif
 }
 
 

@@ -288,6 +288,7 @@ class Module : public Rest::Endpoint::Delegate {
   public:
     /// flags controlling toJson output detail
     typedef enum : int {
+      JsonMinimum      = 0,
       JsonSlots        = 1,
       JsonStatistics   = 2,
       JsonDefault      = JsonSlots

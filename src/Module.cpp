@@ -428,7 +428,24 @@ void Module::jsonGetReadings(JsonObject& node) const
 Rest::Endpoint Module::delegate(Rest::Endpoint &p)
 {
   // todo: IMPLEMENT default Module API
-  return Rest::Endpoint();
+  int slotid;
+  if (auto slot = p / &slotid) {
+    SensorReading& reading = operator[](slotid);
+    if(!reading)
+      return slot.accept(Rest::NotFound);
+
+    slot / Rest::GET([this, slotid](RestRequest& req) {
+      req.response["device"] = id;
+      req.response["slot"] = slotid;
+      jsonGetReading(req.response, slotid);
+      return Rest::OK;
+    });
+  } else
+    p / "slots" / Rest::GET([this](RestRequest& req) {
+      jsonGetReadings(req.response);
+      return Rest::OK;
+    });
+  return {};
 }
 
 int Module::toJson(JsonObject& target, JsonFlags displayFlags) const
