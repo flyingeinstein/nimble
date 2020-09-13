@@ -320,7 +320,7 @@ void Module::forEach(SlotCallback cb, void* pUserData, SensorType st)
 {
   for(short i=0; i<slots; i++) {
     SensorReading reading = readings[i].reading;
-    if(reading.sensorType == st) {
+    if(st == AnySensorType || reading.sensorType == st) {
       if(!cb(readings[i], pUserData))
         return;
     }
@@ -331,7 +331,7 @@ void Module::forEach(ReadingCallback cb, void* pUserData, SensorType st)
 {
   for(short i=0; i<slots; i++) {
     SensorReading reading = readings[i].reading;
-    if(reading.sensorType == st) {
+    if(st == AnySensorType || reading.sensorType == st) {
       if(!cb(reading, pUserData))
         return;
     }
@@ -353,7 +353,7 @@ void Module::forEach(ConstSlotCallback cb, void* pUserData, SensorType st) const
 {
   for(short i=0; i<slots; i++) {
     SensorReading reading = readings[i].reading;
-    if(reading.sensorType == st) {
+    if(st == AnySensorType || reading.sensorType == st) {
       if(!cb(readings[i], pUserData))
         return;
     }
@@ -364,7 +364,7 @@ void Module::forEach(ConstReadingCallback cb, void* pUserData, SensorType st) co
 {
   for(short i=0; i<slots; i++) {
     SensorReading reading = readings[i].reading;
-    if(reading.sensorType == st) {
+    if(st == AnySensorType || reading.sensorType == st) {
       if(!cb(reading, pUserData))
         return;
     }
@@ -410,8 +410,9 @@ const SensorReading& Module::operator[](unsigned short slotIndex) const
 
 void Module::jsonGetReading(JsonObject& node, short slot) const
 {
-  auto reading = find(slot);
-  reading.toJson(node);
+  auto reading = operator[](slot);
+  if(reading)
+    reading.toJson(node);
 }
 
 void Module::jsonGetReadings(JsonObject& node) const
