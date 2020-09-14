@@ -53,10 +53,15 @@ class Module : public Rest::Endpoint::Delegate {
         String alias;             /// slot alias (may be blank if not set)
         SensorReading reading;    /// the most recent sensor reading
 
+        inline Slot() {}
+        inline explicit Slot(SensorReading _reading) : reading(_reading) {}
+
+        inline operator bool() const { return reading; }
+
         /// @brief Constructs a special Slot with an ErrorCode
         /// The slot contains a reading of type ErrorCode with value as errorCode. Optionally the Slot alias
         /// member will bet set to the errstr.
-        static Slot makeError(long errorCode, String errstr);
+        static Slot& makeError(long errorCode, String errstr);
     };
 
     /**
@@ -169,12 +174,21 @@ class Module : public Rest::Endpoint::Delegate {
     /// @brief return sensor reading for given slot index
     SensorReading& find(String alias, SensorType stype = AnySensorType);
 
+    /// @brief return sensor reading for given slot index
+    const SensorReading& find(String alias, SensorType stype) const;
+
+    /// @brief return sensor reading for given slot index
+    Slot& getSlot(short index, SensorType stype = AnySensorType);
+
+    /// @brief return sensor reading for given slot index
+    const Slot& getSlot(short index, SensorType stype = AnySensorType) const;
+
     /// @brief return a Slot (or sub-module) by giving a slot address.
     /// Slot addresses are colon seperated slot IDs or alias. Since sub-modules are stored in slots this can
     /// also be used to return a sub-module or a slot attached to a sub-module.
     /// @param slotId string containing path to slot as a colon seperated list of slot IDs or aliases
     /// @param requiredType (optional) if supplied, require that the slot is of the expected type, or return an invalid object.
-    Slot slotByAddress(const char* slotId, SensorType requiredType = AnySensorType);
+    Slot& getSlotByAddress(const char* slotId, SensorType requiredType = AnySensorType);
 
     /// @brief Call a function for each slot in this module
     /// The forEach method will loop through all slots of the matching SensorType calling your callback function.
@@ -225,9 +239,6 @@ class Module : public Rest::Endpoint::Delegate {
     /// @brief Returns true if the most recent measurement is considered old.
     /// Stale measurements should not typical exist, but may if the sensor hardware fails to respond or is busy.
     virtual bool isStale(unsigned long _now=0) const;
-
-    /// @brief return sensor reading for given slot index
-    const SensorReading& find(String alias, SensorType stype) const;
 
     /// @brief return sensor reading for given slot index
     SensorReading& operator[](unsigned short slotIndex);

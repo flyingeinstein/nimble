@@ -149,17 +149,15 @@ void DefaultModuleRestHandler::jsonGetModules(ModuleSet& modset, JsonObject &roo
     // device slot metadata
     JsonArray jslots = jdev.createNestedArray("slots");
     for(int j=0, _j = module.slotCount(); j<_j; j++) {
-        SensorReading r = module[j];
-        if(r) {
+        if(auto slot = module.getSlot(j)) {
             JsonObject jslot = jslots.createNestedObject();
 
             // slot alias
-            String alias = module.getSlotAlias(j);
-            if(alias.length())
-                jslot["alias"] = alias;
+            if(!slot.alias.isEmpty())
+                jslot["alias"] = slot.alias;
 
             // slot sensor type
-            jslot["type"] = SensorTypeName(r.sensorType);
+            jslot["type"] = SensorTypeName(slot.reading.sensorType);
         }
     }
 

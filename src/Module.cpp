@@ -7,12 +7,15 @@ namespace Nimble {
 
 // a do-nothing device, returned whenever find fails
 Module NullModule(-1, 0);
+Module::Slot lastSlotError;
 
-Module::Slot Module::Slot::makeError(long errorCode, String errstr) {
-  Slot s;
-  s.alias = errstr;
-  s.reading = SensorReading(ErrorCode, errorCode);
-  return s;
+
+#define BAD_SLOT_ADDRESS Slot::makeError(-1, "bad address")
+
+Module::Slot& Module::Slot::makeError(long errorCode, String errstr) {
+  lastSlotError.alias = errstr;
+  lastSlotError.reading = SensorReading(ErrorCode, errorCode);
+  return lastSlotError;
 }
 
 Module::Module(short _id, short _slots, unsigned long _updateInterval, unsigned long _flags)
@@ -265,7 +268,33 @@ const SensorReading& Module::find(String alias, SensorType stype) const
   return NullReading;
 }
 
-Module::Slot Module::slotByAddress(const char* slotId, SensorType requiredType)
+Module::Slot& Module::getSlot(short slotIndex, SensorType stype)
+{
+  if(slotIndex >= slots) {
+    alloc( slotIndex+1 );
+    auto& slot = readings[slotIndex];
+    slot.reading.sensorType = stype;
+    return slot;
+  } else {
+    auto slot = readings[slotIndex];
+    return (stype == AnySensorType || slot.reading.sensorType == stype)
+      ? slot
+      : BAD_SLOT_ADDRESS;
+  }
+}
+
+const Module::Slot& Module::getSlot(short slotIndex, SensorType stype) const
+{
+  if(slotIndex >= slots)
+    return BAD_SLOT_ADDRESS;
+
+  auto& slot = readings[slotIndex];
+  return (stype == AnySensorType || slot.reading.sensorType == stype)
+    ? slot
+    : BAD_SLOT_ADDRESS;
+}
+
+Module::Slot& Module::getSlotByAddress(const char* slotId, SensorType requiredType)
 {
   const char* b = slotId;
   bool isNumeric = true;
@@ -305,7 +334,7 @@ Module::Slot Module::slotByAddress(const char* slotId, SensorType requiredType)
       if(slot->reading.sensorType != SubModule)
         return Slot::makeError(-2, "one or more address prefixes were not of module type");  // expected module
       // recurse into module
-      return slot->reading.module->slotByAddress(slotId, requiredType);
+      return slot->reading.module->getSlotByAddress(slotId, requiredType);
     } else {
       // check that slot type matches
       return (requiredType == AnySensorType || slot->reading.sensorType == requiredType)
@@ -313,7 +342,7 @@ Module::Slot Module::slotByAddress(const char* slotId, SensorType requiredType)
         : Slot::makeError(-3, "type mismatch");   // required type mismatch
     }
   }
-  return Slot::makeError(-1, "bad module or slot address");  // bad slot address
+  return BAD_SLOT_ADDRESS;  // bad slot address
 }
 
 void Module::forEach(SlotCallback cb, void* pUserData, SensorType st)
@@ -418,9 +447,11 @@ void Module::jsonGetReading(JsonObject& node, short slot) const
 void Module::jsonGetReadings(JsonObject& node) const
 {
   JsonArray jslots = node.createNestedArray("slots");
-  forEach( [&jslots,&node](const SensorReading& reading, void* userData) -> bool {
+  forEach( [&jslots,&node](const Slot& slot, void* userData) -> bool {
     JsonObject jr = jslots.createNestedObject();
-    reading.toJson(jr);
+    if(!slot.alias.isEmpty())
+      jr["alias"] = slot.alias;
+    slot.reading.toJson(jr);
     return true;
   }, nullptr);
 }
@@ -455,7 +486,7 @@ int Module::toJson(JsonObject& target, JsonFlags displayFlags) const
   const char* driver = getDriverName();
   const char* statename = ModuleStateName(getState());
   String alias = getAlias();
-  if(alias.length()>0)
+  if(!alias.isEmpty())
     target["alias"] = alias;
   if(driver)
     target["driver"] = driver;
