@@ -5,11 +5,9 @@ These items remain in development. As items are completed they are removed from 
 ** I would like my project to work more natively with the Universal Sensor support so that any Universal Sensor 
 can be added to Nimble by just adding to platform.io config file.
 * Support Wemos SSD1306 library
-* Support ArduinoJson v5 and lower
 * Make the device dependancies optional
 
 ## Version 1.0
-* ModuleManager on() methods handle Rest URLs and handlers of ArduinoJson type
 * Add Configuration API
   * Import/Export config via Json API
   * get/set via direct Rest API

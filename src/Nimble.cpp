@@ -86,25 +86,9 @@ const FontInfo display_fonts[] = {
 };
 Display* display;
 
-#define TIMESTAMP_MIN  1500000000   // time must be greater than this to be considered NTP valid time
 
-typedef enum {
-  JsonName,
-  JsonValue,
-  JsonFull
-} JsonPart;
-
-#if 0 /// @todo influx targets needs to be refactored into the influx module
-InfluxTarget targets[] = {
-  { "gem", "walls" },
-  { "gem", "motion" }
-};
-#endif
 
 ESP8266WebServer server(80);
-
-WiFiUDP ntpUDP;
-NTPClient ntp(ntpUDP);
 
 
 #if defined(CAPTIVE_PORTAL)
@@ -408,9 +392,6 @@ void setup() {
   MDNS.begin(hostname);
   MDNS.addService("http", "tcp", 80);
 
-  // begin the ntp client
-  ntp.begin();
-
   /**
    *   BEGIN SENSOR CONFIG
    *   
@@ -468,8 +449,6 @@ void loop() {
   // no further processing if we are not in station mode
   if(WiFi.getMode() != WIFI_STA)
     return;
-
-  ntp.update();
 
   Nimble::ModuleManager::Default.handleUpdate();
 

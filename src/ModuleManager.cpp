@@ -13,14 +13,13 @@ ModuleManager ModuleManager::Default;
 
 
 ModuleManager::ModuleManager()
-    : ntp(NULL), httpServer(NULL), restHandler(NULL)//, _moduleEndpoints( new DefaultModuleRestHandler())
+    : httpServer(NULL), restHandler(NULL)//, _moduleEndpoints( new DefaultModuleRestHandler())
 {
 }
 
-void ModuleManager::begin(WebServer& _http, NTPClient& _ntp)
+void ModuleManager::begin(WebServer& _http)
 {
   httpServer = &_http;
-  ntp = &_ntp;
 
   if(restHandler == NULL) {
     restHandler = new WebServerRequestHandler();

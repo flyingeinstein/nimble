@@ -23,7 +23,7 @@ public:
 
     ModuleManager();
 
-    void begin(WebServer& _http, NTPClient& client);
+    void begin(WebServer& _http);
 
     void handleUpdate();
 
@@ -59,7 +59,6 @@ public:
 protected:
     ModuleSet _modules;
     Logger _logger;
-    NTPClient* ntp;
     WebServer* httpServer;
     WebServerRequestHandler* restHandler;
 

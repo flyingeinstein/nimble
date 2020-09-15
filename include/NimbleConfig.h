@@ -37,6 +37,8 @@
  */
 #define MAX_SLOTS     32
 
+#define TIMESTAMP_MIN  1500000000   // time must be greater than this to be considered NTP valid time
+
 namespace Nimble {
 
 class Module;
