@@ -18,11 +18,6 @@ const char* password = SSID_PASSWORD;
 #endif
 
 
-bool enable_influx = false;
-//const char* influx_server = INFLUX_SERVER;
-const char* influx_database = INFLUX_DATABASE;
-const char* influx_measurement = INFLUX_MEASUREMENT;
-
 #include <FS.h>   // Include the SPIFFS library
 
 #if defined(ALLOW_OTA_UPDATE)
@@ -222,72 +217,6 @@ class OptionsRequestHandler : public RequestHandler
 } optionsRequestHandler;
 
 
-#ifdef ENABLE_INFLUX
-void sendToInflux()
-{
-  if (WiFi.status() != WL_CONNECTED)
-    return;
-  if (data.timestamp < TIMESTAMP_MIN) // some time in 2017, before this code was built
-    return;
-  unsigned long stopwatch = millis();
-  String url = influx_server;
-  url += ":8086/write?precision=s&db=";
-  url += influx_database;
-
-  int fields = 0;
-  String post = influx_measurement;
-  post += ",site=";
-  post += hostname;
-  post += " ";
-
-  if (data.humidityPresent) {
-    post += "humidity=";
-    post += data.humidity;
-    post += ",heatIndex=";
-    post += data.heatIndex;
-    fields += 2;
-  }
-  if (data.moisturePresent) {
-    if (fields > 0)
-      post += ",";
-    post += "moisture=";
-    post += data.moisture;
-  }
-  for (int i = 0; i < data.temperatureCount; i++) {
-    if (fields > 0)
-      post += ",";
-    post += "t";
-    post += i;
-    post += "=";
-    post += data.temperature[i];
-  }
-
-  // timestamp
-  post += " ";
-  post += data.timestamp;
-
-  if (true) {
-    HTTPClient http;
-    http.begin(url);
-    http.addHeader("Content-Type", "text/plain");
-    int httpCode = http.POST(post);
-    //String payload = http.getString();
-    //Serial.print("influx: ");
-    //Serial.println(payload);
-    http.end();
-
-    stopwatch = millis() - stopwatch;
-    Serial.print("influx post in ");
-    Serial.print(stopwatch);
-    Serial.print(" millis");
-  }
-  //Serial.print(url);
-  Serial.print(" => ");
-  Serial.println(post);
-}
-#endif
-
-
 void setup() {
   ESP.wdtDisable();
   ESP.wdtEnable(WDTO_8S);
@@ -399,7 +328,9 @@ void setup() {
    */
   auto& manager = Nimble::ModuleManager::Default;
   Nimble::ModuleSet& modules = manager.modules();
-  Nimble::ModuleManager::Default.begin( server, ntp );
+  Nimble::ModuleManager::Default.begin( server );
+  
+  // service modules
   modules.add( *new OneWireSensor(5, 2) );   // D4
   modules.add( *(display = new Display()) );             // OLED on I2C bus
   modules.add( *new GelfLogger(3) );             // Graylog logger
