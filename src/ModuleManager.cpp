@@ -78,7 +78,7 @@ Rest::Endpoint ModuleManager::delegate(Rest::Endpoint &p)
       if(mod) {
         // delegate to the module, or if unhandles we can return some driver info
         auto mod_result = module / *mod;
-        if (mod_result.status == 0) {
+        if (mod_result.status <= Rest::NoHandler) {
           module / Rest::GET( [&mod](RestRequest& req) {
             req.response["driver"] = mod->getDriverName();
             req.response["alias"] = mod->getAlias();

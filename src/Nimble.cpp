@@ -333,9 +333,12 @@ void setup() {
   // service modules
   modules.add( *new OneWireSensor(5, 2) );   // D4
   modules.add( *(display = new Display()) );             // OLED on I2C bus
-  modules.add( *new GelfLogger(3) );             // Graylog logger
   modules.add( *new DHTSensor(4, 14, DHT22) );      // D5
-  modules.add( *new MotionIR(6, 12) );       // D6
+  //modules.add( *new MotionIR(6, 12) );       // D6
+
+  modules.add( *new NtpClient(10) );
+  modules.add( *new Influx(11) );
+  modules.add( *new GelfLogger(12) );             // Graylog logger
 
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus

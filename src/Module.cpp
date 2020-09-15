@@ -471,11 +471,28 @@ Rest::Endpoint Module::delegate(Rest::Endpoint &p)
       jsonGetReading(req.response, slotid);
       return Rest::OK;
     });
-  } else
-    p / "slots" / Rest::GET([this](RestRequest& req) {
-      jsonGetReadings(req.response);
+  } else {
+    p / "status" / Rest::GET([this](RestRequest& req) {
+      toJson(req.response, JsonSlots);
       return Rest::OK;
     });
+
+    p / "slots" / Rest::GET([this](RestRequest& req) {
+      toJson(req.response, JsonSlots);
+      return Rest::OK;
+    });
+
+    p / "statistics" / Rest::GET([this](RestRequest& req) {
+      toJson(req.response, JsonStatistics);
+      return Rest::OK;
+    });
+
+    p / "detail" / Rest::GET([this](RestRequest& req) {
+      toJson(req.response, (JsonFlags)(JsonSlots|JsonStatistics));
+      return Rest::OK;
+    });
+  }
+
   return {};
 }
 
