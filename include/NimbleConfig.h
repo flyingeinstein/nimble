@@ -28,6 +28,12 @@
 // the Restfully library is available in the board manager or at https://github.com/flyingeinstein/Restfully
 #include <Restfully.h>
 
+namespace Nimble {
+    // hard code the node name of the device
+    extern const char* hostname;
+}
+
+
 /**
  * @brief Defines the maximum number of slots in a module and modules in a set.
  * Setting this to 32 is a good balance for small 32bit devices. Most devices will request exactly the number of

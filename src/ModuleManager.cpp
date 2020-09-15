@@ -12,6 +12,9 @@ namespace Nimble {
 ModuleManager ModuleManager::Default;
 
 
+const char* hostname = SSID_HOSTNAME;
+
+
 ModuleManager::ModuleManager()
     : httpServer(NULL), restHandler(NULL)//, _moduleEndpoints( new DefaultModuleRestHandler())
 {

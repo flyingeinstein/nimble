@@ -10,9 +10,6 @@
 
 //#define ALLOW_OTA_UPDATE
 
-// hard code the node name of the device
-const char* hostname = SSID_HOSTNAME;
-
 // if you dont use the Captive Portal for config you must define
 // the SSID and Password of the network to connect to.
 #if !defined(CAPTIVE_PORTAL)
@@ -143,7 +140,7 @@ void handleRoot() {
   html += "<div class='header'><h1>Nimble Sensor</h1><span class='copyright'>Copyright 2018, Flying Einstein LLC</span></div>";
   // title area 
   html += "<div class='title'><h2><label>Site</label> ";
-  html += hostname;
+  html += Nimble::hostname;
   html += "</h2></div>";
 
   html += "<div class='tiles'>";
@@ -330,7 +327,7 @@ void setup() {
   Portal.begin();
 #else
   WiFi.mode(WIFI_STA);
-  WiFi.hostname(hostname);
+  WiFi.hostname(Nimble::hostname);
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
 #ifdef SERIAL_DEBUG
@@ -391,7 +388,7 @@ void setup() {
 #endif
 
   // add the web server to mDNS
-  MDNS.begin(hostname);
+  MDNS.begin(Nimble::hostname);
   MDNS.addService("http", "tcp", 80);
 
   /**
@@ -421,7 +418,7 @@ void setup() {
   manager.restoreAliasesFile();
 
   String hostinfo;
-  hostinfo += hostname;
+  hostinfo += Nimble::hostname;
   hostinfo += " (IP: ";
   hostinfo += WiFi.localIP().toString();
   hostinfo += ")";
