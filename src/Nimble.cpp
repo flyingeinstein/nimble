@@ -54,6 +54,8 @@ const char* influx_measurement = INFLUX_MEASUREMENT;
 #include "OneWireSensors.h"
 #include "Display.h"
 #include "AtlasScientific.h"
+#include "NtpClient.h"
+#include "Influx.h"
 #include "GelfLogger.h"
 
 #include <Restfully.h>
