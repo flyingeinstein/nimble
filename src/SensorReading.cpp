@@ -8,6 +8,40 @@ namespace Nimble {
 SensorReading NullReading(Invalid, VT_NULL, 0);
 SensorReading InvalidReading(Invalid, VT_INVALID, 0);
 
+SensorReading::SensorReading(const SensorReading& copy)
+  : sensorType(copy.sensorType), valueType(copy.valueType)
+{
+  switch(valueType) {
+    case VT_NULL:
+    case VT_CLEAR:
+    case VT_INVALID:
+    case VT_INT:
+    case VT_LONG: l = copy.l; break;
+    case VT_FLOAT: f = copy.f; break;
+    case VT_BOOL: b = copy.b; break;
+    case VT_PTR: module = copy.module; break;
+    case VT_JSON: json = copy.json; break;
+  }
+}
+
+SensorReading& SensorReading::operator=(const SensorReading& copy)
+{
+  sensorType = copy.sensorType;
+  valueType = copy.valueType;
+  switch(valueType) {
+    case VT_NULL:
+    case VT_CLEAR:
+    case VT_INVALID:
+    case VT_INT:
+    case VT_LONG: l = copy.l; break;
+    case VT_FLOAT: f = copy.f; break;
+    case VT_BOOL: b = copy.b; break;
+    case VT_PTR: module = copy.module; break;
+    case VT_JSON: json = copy.json; break;
+  }
+  return *this;
+}
+
 SensorReading::SensorReading(SensorType st)
   : sensorType(st)
 {

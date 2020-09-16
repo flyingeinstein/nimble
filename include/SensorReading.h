@@ -62,7 +62,6 @@ class SensorAddress {
  */
 class SensorReading
 {
-  // todo: we should also add a String id and alias field (i.e. 1wire would have id as hex string, and alias as the temp probe name)
   public:
     SensorType sensorType;      // the class of sensor
     char valueType;             // what primitive type is store in the reading (see VT_xxxx defines)
@@ -74,6 +73,21 @@ class SensorReading
       Module* module;
       JsonObject* json;
     };
+
+  public:
+    inline SensorReading() : sensorType(Numeric), valueType(VT_CLEAR), timestamp(millis()), l(0) {}
+    explicit SensorReading(SensorType st);
+
+    inline SensorReading(SensorType st, char vt, long _l) : sensorType(st), valueType(vt), timestamp(millis()), l(_l) {}
+    inline SensorReading(SensorType st, float _f) : sensorType(st), valueType('f'), timestamp(millis()), f(_f) {}
+    inline SensorReading(SensorType st, double _f) : sensorType(st), valueType('f'), timestamp(millis()), f((float)_f) {}
+    inline SensorReading(SensorType st, long _l) : sensorType(st), valueType('l'), timestamp(millis()), l(_l) {}
+    inline SensorReading(SensorType st, int _i) : sensorType(st), valueType('i'), timestamp(millis()), l(_i) {}
+    inline SensorReading(SensorType st, bool _b) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
+
+    SensorReading(const SensorReading& copy);
+
+    SensorReading& operator=(const SensorReading& copy);
 
     /**
      * @brief Clear the reading, setting the value to VT_NULL
@@ -87,7 +101,7 @@ class SensorReading
      * @return true 
      * @return false 
      */
-    inline operator bool() const { return sensorType!=Invalid && valueType!=VT_INVALID; }
+    inline operator bool() const { return sensorType != Invalid && sensorType != ErrorCode && valueType != VT_INVALID; }
     
     /**
      * @brief Convert the reading to a printable text
@@ -111,18 +125,6 @@ class SensorReading
      * @param array The array to receive the new sensor reading Json object
      */
     void addTo(JsonArray& array) const;
-
-  public:
-    inline SensorReading() : sensorType(Numeric), valueType(VT_CLEAR), timestamp(millis()), l(0) {}
-    inline SensorReading(SensorType st, char vt, long _l) : sensorType(st), valueType(vt), timestamp(millis()), l(_l) {}
-    inline SensorReading(SensorType st, float _f) : sensorType(st), valueType('f'), timestamp(millis()), f(_f) {}
-    inline SensorReading(SensorType st, double _f) : sensorType(st), valueType('f'), timestamp(millis()), f((float)_f) {}
-    inline SensorReading(SensorType st, long _l) : sensorType(st), valueType('l'), timestamp(millis()), l(_l) {}
-    inline SensorReading(SensorType st, int _i) : sensorType(st), valueType('i'), timestamp(millis()), l(_i) {}
-    inline SensorReading(SensorType st, bool _b) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
-
-    SensorReading(SensorType st);
-    //inline SensorReading(SensorType st, JsonObject _json) : sensorType(st), valueType('b'), timestamp(millis()), b(_b) {}
 };
 
 extern SensorReading NullReading;
