@@ -102,7 +102,7 @@ class Display : public Nimble::Module
     short activePage;
 
 		// list of gcode registers
-		short G, D, S, _F, X, Y, U, P, R, T, C, W, H;
+		short G, D, S, _F, X, Y, U, P, Q, R, T, C, W, H;
 
 		// working var, also target of invalid register
 		short w;

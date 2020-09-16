@@ -166,6 +166,7 @@ short& Display::getRegister(char reg)
 		case 'H': return H;
 		case 'U': return U;
     case 'P': return P;
+    case 'Q': return Q;
 		case 'R': return R;
     case 'T': return T;
 		case 'C': return C;
@@ -190,14 +191,21 @@ void Display::print(SensorReading r) {
 }
 
 void Display::print(const char* str, short strLength) {
-  while(strLength--)
-    display.print(*str++);
+  if(str && strLength > 0) {
+    while(strLength--)
+      display.print(*str++);
+  }
 }
 
 bool Display::exec() 
 {
   SensorReading r;
-  
+
+  if(!Q) {
+    Q = 1;   // re-enable for next command
+    return true;
+  }
+
 	switch(G) {
     case 0: // move to X,Y or R,C (does nothing since the XYRC regs already set the move)
       break;
@@ -337,6 +345,24 @@ bool Display::execute(const char* input, ParseException* _pex)
             display.setCursor(display.getCursorX(),display.getCursorY() + Y);
           else
             display.setCursor(display.getCursorX(),Y);
+        }
+        break;
+      case 'Q':
+        // query a device state or variable and conditionally enable current Q command
+        switch(Q) {
+          // 0 and 1 are explicitly disable and enable
+          case 2:   // is a valid device
+            Q = (bool)owner->getModule(D);
+            break;
+          case 3:   // is device status nominal
+            Q = (owner->getModule(D).getState() == ModuleState::Nominal);
+            break;
+          case 4:   // is device status degraded
+            Q = (owner->getModule(D).getState() == ModuleState::Degraded);
+            break;
+          case 5:   // is device status offline
+            Q = (owner->getModule(D).getState() == ModuleState::Offline);
+            break;
         }
         break;
       case 'T':
