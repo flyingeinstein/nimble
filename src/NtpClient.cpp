@@ -17,6 +17,8 @@ NtpClient::NtpClient(short id)
     // first ntp client becomes default
     if(!defaultNtpClient)
         defaultNtpClient = this;
+
+    _ntp.setUpdateInterval(900);
 }
 
 const char* NtpClient::getDriverName() const
@@ -32,7 +34,9 @@ void NtpClient::begin()
 
 void NtpClient::handleUpdate()
 {
-    _ntp.update();
+    state = _ntp.update()
+        ? Nimble::Nominal
+        : Nimble::Offline;
 }
 
 Rest::Endpoint NtpClient::delegate(Rest::Endpoint &p) 
