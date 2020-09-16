@@ -331,12 +331,13 @@ void setup() {
   Nimble::ModuleSet& modules = manager.modules();
   Nimble::ModuleManager::Default.begin( server );
   
-  // service modules
-  modules.add( *new OneWireSensor(5, 2) );   // D4
+  // sensors
   modules.add( *(display = new Display()) );             // OLED on I2C bus
-  modules.add( *new DHTSensor(4, 14, DHT22) );      // D5
-  //modules.add( *new MotionIR(6, 12) );       // D6
+  modules.add( *new OneWireSensor(5, DALLAS_ONE_WIRE_PIN) );
+  //modules.add( *new DHTSensor(4, DHT_PIN, DHT22) );
+  //modules.add( *new MotionIR(6, MOTION_PIN) );
 
+  // service modules
   modules.add( *new NtpClient(10) );
   modules.add( *new Influx(11) );
   modules.add( *new GelfLogger(12) );             // Graylog logger
@@ -344,9 +345,11 @@ void setup() {
   // we can optionally add the I2C bus as a device which enables external control
   // but without this i2c devices will default to using the system i2c bus
   //ModuleManager.add( *new I2CBus(2) );       // Place Wire bus at 1:0
-  AtlasScientific::EzoProbe* pHsensor = new AtlasScientific::EzoProbe(8, Nimble::pH);
+  AtlasScientific::EzoProbe* pH = new AtlasScientific::EzoProbe(8, Nimble::pH);
+  AtlasScientific::EzoProbe* ORP = new AtlasScientific::EzoProbe(9, Nimble::ORP);
   //pHsensor->setBus( SensorAddress(2,0) );   // attach i2c sensor to a specific bus
-  modules.add( *pHsensor );       // pH probe at 8 using default i2c bus
+  modules.add( *pH );       // pH probe at 8 using default i2c bus
+  modules.add( *ORP );       // pH probe at 8 using default i2c bus
   
   display->setFontTable(display_fonts);
 
