@@ -139,7 +139,7 @@ SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 SensorReading ModuleSet::getReading(short deviceId, unsigned short slotId) const
 {
   const Module& mod = getModule(deviceId);
-  return (mod != NullModule)
+  return mod
     ? mod[slotId]
     : NullReading;
 }

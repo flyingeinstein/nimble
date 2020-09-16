@@ -19,6 +19,7 @@ const char* password = SSID_PASSWORD;
 
 
 #include <FS.h>   // Include the SPIFFS library
+#include "NimbleConfig.h"
 
 #if defined(ALLOW_OTA_UPDATE)
 #include <ArduinoOTA.h>
@@ -272,7 +273,7 @@ void setup() {
 #if defined(ALLOW_OTA_UPDATE)
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname(hostname);
+  ArduinoOTA.setHostname(Nimble::hostname);
 
   // No authentication by default
   //ArduinoOTA.setPassword("");

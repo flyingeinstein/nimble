@@ -28,6 +28,8 @@
 // the Restfully library is available in the board manager or at https://github.com/flyingeinstein/Restfully
 #include <Restfully.h>
 
+#define ALLOW_OTA_UPDATE
+
 namespace Nimble {
     // hard code the node name of the device
     extern const char* hostname;
