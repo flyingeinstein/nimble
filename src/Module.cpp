@@ -271,12 +271,12 @@ const SensorReading& Module::find(String alias, SensorType stype) const
 Module::Slot& Module::getSlot(short slotIndex, SensorType stype)
 {
   if(slotIndex >= slots) {
-    alloc( slotIndex+1 );
+    alloc( slotIndex + 1 );
     auto& slot = readings[slotIndex];
-    slot.reading.sensorType = stype;
+    slot.reading = SensorReading(stype);
     return slot;
   } else {
-    auto slot = readings[slotIndex];
+    auto& slot = readings[slotIndex];
     return (stype == AnySensorType || slot.reading.sensorType == stype)
       ? slot
       : BAD_SLOT_ADDRESS;
@@ -288,7 +288,7 @@ const Module::Slot& Module::getSlot(short slotIndex, SensorType stype) const
   if(slotIndex >= slots)
     return BAD_SLOT_ADDRESS;
 
-  auto& slot = readings[slotIndex];
+  const auto& slot = readings[slotIndex];
   return (stype == AnySensorType || slot.reading.sensorType == stype)
     ? slot
     : BAD_SLOT_ADDRESS;
