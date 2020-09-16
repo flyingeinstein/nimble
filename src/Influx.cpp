@@ -7,10 +7,8 @@ using namespace Nimble;
 //#define PRINT_STATS
 
 Influx::Influx(short id)
-  : Module(id, 0, 60000), influxUrl("http://kuba.lan:8086"), database(INFLUX_DATABASE), measurement(INFLUX_MEASUREMENT), enable(false)
+  : Module(id, 0, 60000), influxUrl("http://" INFLUX_SERVER ":8086"), database(INFLUX_DATABASE), measurement(INFLUX_MEASUREMENT), enable(true)
 {
-  targets.emplace_back(Target(4, {0, 1}));
-  targets.emplace_back(Target(5, {1}));
 }
 
 const char* Influx::getDriverName() const
@@ -18,15 +16,18 @@ const char* Influx::getDriverName() const
     return "Influx";
 }
 
-void concatSlot(String& s, const Module::Slot& slot, char sep) {
+String getSlotName(const Influx::Target& t, int slotn, const Module::Slot& slot) {
+  return ( slotn < (int)t.aliases.size() && !t.aliases[slotn].isEmpty() )
+    ? t.aliases[slotn]
+    : slot.alias.isEmpty()
+      ? SensorTypeName(slot.reading.sensorType)
+      : slot.alias;
+}
+
+void concatSlot(String& s, const Module::Slot& slot, String name, char sep) {
   s += sep;
-  
-  s += slot.alias.isEmpty()
-    ? SensorTypeName(slot.reading.sensorType)
-    : slot.alias;
-
+  s += name;
   s += '=';
-
   s += slot.reading.toString();
 }
 
@@ -53,9 +54,12 @@ String Influx::format(const Influx::Target& target) const {
     int n = 0;
     if(target.slots.empty()) {
       // output all slot values
-      module.forEach([&s, &n](const Slot& slot, void*) {
+      module.forEach([&s, &n, &target](const Slot& slot, void*) {
         if(slot.reading) {
-          concatSlot(s, slot, n ? ',' : ' ');
+          concatSlot(s, slot,
+            getSlotName(target, n, slot),
+            n ? ',' : ' '
+          );
           n++;
         }
         return true;
@@ -64,7 +68,10 @@ String Influx::format(const Influx::Target& target) const {
       for(int sid: target.slots) {
         const auto& slot = module.getSlot(sid);
         if(slot && slot.reading) {
-          concatSlot(s, slot, n ? ',' : ' ');
+          concatSlot(s, slot,
+            getSlotName(target, n, slot),
+            n ? ',' : ' '
+          );
           n++;            
         }
       }
@@ -87,7 +94,7 @@ String Influx::format(const Influx::Target& target) const {
 
 int Influx::transmit()
 {
-    int httpCode = 200;
+    int httpCode = 0;
 
     if (WiFi.status() != WL_CONNECTED)
       return Rest::NetworkConnectTimeoutError;
@@ -117,11 +124,14 @@ int Influx::transmit()
       http.begin(client, url);
       http.addHeader("Content-Type", "text/plain");
       httpCode = http.POST(line);
+      if(httpCode == Rest::NoContent)
+        httpCode = Rest::OK;
       //String payload = http.getString();
       //Serial.print("influx: ");
       //Serial.println(payload);
       http.end();
-    }
+    } else
+      return Rest::ServiceUnavailable;
 
 #if defined(PRINT_STATS)
     stopwatch = millis() - stopwatch;
@@ -146,7 +156,9 @@ void Influx::handleUpdate()
   auto code = transmit();
   state = (code == Rest::OK)
     ? Nominal
-    : Offline;
+    : (code == Rest::ServiceUnavailable)
+      ? Offline
+      : Degraded;
 }
 
 int Influx::dataToJson(JsonObject& target) {
@@ -269,6 +281,19 @@ Influx::Target::Target(JsonObject json)
         }
       }
     }
+
+    auto _aliases = json["aliases"];
+    if(!_aliases.isNull()) {
+      if(_aliases.is<char*>()) {
+        aliases.push_back(_aliases);
+      } else if(_aliases.is<JsonArray>()) {
+        JsonArray narr = _aliases.as<JsonArray>();
+        for(JsonVariant v : narr) {
+          if(v.is<char*>())
+            aliases.push_back(v.as<char*>());
+        }
+      }
+    }
   }
 }
 
@@ -284,6 +309,7 @@ int Influx::Target::toJson(JsonObject& target, ModuleSet& modules) const {
       target["alias"] = mod->alias;
   }
 
+  // return the slots and the resolved slot name
   auto _slots = target.createNestedArray("slots");
   auto _slotnames = mod ? target.createNestedArray("names") : JsonArray();
   for(auto& sid : slots) {
@@ -296,6 +322,12 @@ int Influx::Target::toJson(JsonObject& target, ModuleSet& modules) const {
       );
     }
   }
+
+  auto _aliases = target.createNestedArray("aliases");
+  for(auto& a : aliases) {
+    _aliases.add(a);
+  }
+
   return 0;
 }
 

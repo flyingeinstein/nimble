@@ -12,6 +12,7 @@ class Influx : public Nimble::Module
                 String measurement;
                 int module;
                 std::vector<short> slots;
+                std::vector<String> aliases;
 
                 Target();
                 Target(int module, std::initializer_list<short>&& _slots, const char* measurement = nullptr);
