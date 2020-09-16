@@ -16,12 +16,30 @@ namespace AtlasScientific {
     : Nimble::I2C::Device(id, _address, 2), measurementTime(5000), sensorType(stype)
   {
     switch(stype) {
-      case pH: address = 99; break;
-      case ORP: address = 98; break;
-      case DissolvedOxygen: address = 97; break;
-      case Conductivity: address = 100; break;
-      case CO2: address = 105; break;
-      case Temperature: address = 102; break;
+      case pH:
+        address = 99;
+        alias = "pH";
+        break;
+      case ORP:
+        address = 98;
+        alias = "ORP";
+        break;
+      case DissolvedOxygen:
+        address = 97;
+        alias = "DO2";
+        break;
+      case Conductivity:
+        address = 100;
+        alias = "Conductivity";
+        break;
+      case CO2:
+        address = 105;
+        alias = "CO2";
+        break;
+      case Temperature:
+        address = 102; 
+        alias = "Temperature";
+        break;
       // case Flow:   // apparently Atlas Scientific flow meter doesnt support i2c yet although there is an updated EZO
       default:
         address = 0;
