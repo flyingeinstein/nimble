@@ -54,9 +54,10 @@ class Module : public Rest::Endpoint::Delegate {
         SensorReading reading;    /// the most recent sensor reading
 
         inline Slot() {}
+        Slot(const Slot& copy) = default;
         inline explicit Slot(SensorReading _reading) : reading(_reading) {}
 
-        inline operator bool() const { return reading; }
+        inline operator bool() const { return (bool)reading; }
 
         /// @brief Constructs a special Slot with an ErrorCode
         /// The slot contains a reading of type ErrorCode with value as errorCode. Optionally the Slot alias

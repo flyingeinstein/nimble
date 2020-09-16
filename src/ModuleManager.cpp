@@ -60,7 +60,7 @@ Rest::Endpoint ModuleManager::delegate(Rest::Endpoint &p)
       if(module = device / &devid) {
         if(devid >= 0) {
           // get module by ID
-          mod = &_modules[ devid ];
+          mod = &_modules.getModule( devid );
           if (mod == &NullModule)
             mod = nullptr;
         } else
@@ -68,7 +68,7 @@ Rest::Endpoint ModuleManager::delegate(Rest::Endpoint &p)
       } else if(module = device / &devname) {
         if(!devname.isEmpty()) {
           // get module by name
-          mod = &_modules[ devname ];
+          mod = &_modules.getModule( devname );
           if (mod == &NullModule)
             mod = nullptr;
         } else
@@ -228,7 +228,7 @@ int ModuleManager::parseAliasesFile(const char* aliases)
         aliases++;
 
       // now set the alias
-      Module& dev = _modules[devid];
+      Module& dev = _modules.getModule( devid );
       if(dev) {
         if(slotid>=0) {
           // set slot alias

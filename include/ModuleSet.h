@@ -77,12 +77,12 @@ class ModuleSet : public Module {
     void remove(Module& dev);
 
     /// @brief find a device by id
-    const Module& operator[](short moduleID) const;
-    Module& operator[](short moduleID);
+    const Module& getModule(short moduleID) const;
+    Module& getModule(short moduleID);
 
     /// @brief find a device by its alias
-    const Module& operator[](String alias) const;
-    Module& operator[](String alias);
+    const Module& getModule(String alias) const;
+    Module& getModule(String alias);
 
     /// @brief find a reading by device:slot address.
     /// for convenience, but if you are reading multiple values you should get the device ptr then read the slots (readings)

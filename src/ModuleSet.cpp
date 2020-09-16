@@ -76,7 +76,7 @@ void ModuleSet::remove(Module& dev) {
   }
 }
 
-const Module& ModuleSet::operator[](short moduleID) const {
+const Module& ModuleSet::getModule(short moduleID) const {
   // shortcut: check if indexed slot has module with matching ID
   if(moduleID < slots) {
     const SensorReading& sr = readings[moduleID].reading;
@@ -94,7 +94,7 @@ const Module& ModuleSet::operator[](short moduleID) const {
   return NullModule;
 }
 
-Module& ModuleSet::operator[](short moduleID) {
+Module& ModuleSet::getModule(short moduleID) {
   // shortcut: check if indexed slot has module with matching ID
   if(moduleID < slots) {
     SensorReading& sr = readings[moduleID].reading;
@@ -111,7 +111,7 @@ Module& ModuleSet::operator[](short moduleID) {
   return NullModule;
 }
 
-const Module& ModuleSet::operator[](String alias) const {
+const Module& ModuleSet::getModule(String alias) const {
   if(alias.length() >0) {
     const SensorReading& reading = Module::find(alias, SubModule);
     return (reading && reading.sensorType == SubModule && reading.module)
@@ -121,7 +121,7 @@ const Module& ModuleSet::operator[](String alias) const {
     return NullModule;
 }
 
-Module& ModuleSet::operator[](String alias) {
+Module& ModuleSet::getModule(String alias) {
   if(alias.length() >0) {
     SensorReading& reading = Module::find(alias, SubModule);
     return (reading && reading.sensorType == SubModule && reading.module)
@@ -138,7 +138,7 @@ SensorReading ModuleSet::getReading(const SensorAddress& sa) const
 
 SensorReading ModuleSet::getReading(short deviceId, unsigned short slotId) const
 {
-  const Module& mod = operator[](deviceId);
+  const Module& mod = getModule(deviceId);
   return (mod != NullModule)
     ? mod[slotId]
     : NullReading;
