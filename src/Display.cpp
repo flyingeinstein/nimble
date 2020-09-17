@@ -19,8 +19,9 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
   }
 }
 
-Display::Display(short id)
-	: Module(id, 0, 500, MF_DISPLAY), display(OLED_RESET), fonts(NULL), nfonts(0), pages(NULL), npages(6), activePage(0),
+Display::Display(short id, int _pageAdvancePin)
+	: Module(id, 0, 500, MF_DISPLAY), display(OLED_RESET), fonts(NULL), nfonts(0), pageAdvancePin(_pageAdvancePin),
+    pages(NULL), npages(3), activePage(0),
 	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
 	  w(0), str(NULL), gx(6), gy(9), relativeCoords(false)
 {
@@ -81,6 +82,29 @@ short Display::addPage(const DisplayPage& page)
     }
   }
   return -1;
+}
+
+short Display::nextPage() {
+  short n = npages;
+  // keep advancing until we hit the next valid page (ensure we dont keep looping if there are no active pages)
+  do {
+    activePage++;
+    if(activePage >= npages)
+      activePage = 0;
+    n--;
+  } while (n && !pages[activePage].isValid());
+  return activePage;
+}
+
+short Display::previousPage() {
+  short n = npages;
+  // keep advancing until we hit the next valid page (ensure we dont keep looping if there are no active pages)
+  do {
+    activePage--;
+    if(activePage < 0)
+      activePage = npages - 1;
+  } while(n && !pages[activePage].isValid());
+  return activePage;
 }
 
 short Display::loadPageFromFS(short page_number)
@@ -145,6 +169,17 @@ short Display::loadAllPagesFromFS()
 
 void Display::handleUpdate()
 {
+  if(pageAdvancePin > 0) {
+    bool pab = digitalRead(pageAdvancePin) == LOW;
+    if(pageAdvanceButton && !pab) {
+      // user released button
+      nextPage();
+      Serial.print("page ");
+      Serial.println(activePage);
+    }
+    pageAdvanceButton = pab;
+  }
+
   if(activePage>=0 && activePage<npages && pages[activePage].isValid()) {
     ParseException pex;
     execute(pages[activePage].code(), &pex);

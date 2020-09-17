@@ -118,7 +118,11 @@ int Influx::transmit()
       line += format(target);
     }
 
-    if(enable) {
+    if(line.isEmpty())
+      return Rest::NoContent;
+    else if(!enable)
+      return Rest::ServiceUnavailable;
+    else {
       WiFiClient client;
       HTTPClient http;
       http.begin(client, url);
@@ -130,8 +134,7 @@ int Influx::transmit()
       //Serial.print("influx: ");
       //Serial.println(payload);
       http.end();
-    } else
-      return Rest::ServiceUnavailable;
+    }
 
 #if defined(PRINT_STATS)
     stopwatch = millis() - stopwatch;
@@ -156,7 +159,7 @@ void Influx::handleUpdate()
   auto code = transmit();
   state = (code == Rest::OK)
     ? Nominal
-    : (code == Rest::ServiceUnavailable)
+    : (code == Rest::NoContent || code == Rest::ServiceUnavailable)
       ? Offline
       : Degraded;
 }

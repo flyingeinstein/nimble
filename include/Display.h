@@ -69,7 +69,7 @@ class Display : public Nimble::Module
     short nfonts;
     
   public:
-  	Display(short id=1);
+  	Display(short id=1, int pageAdvancePin=-1);
     virtual ~Display();
 
     virtual const char* getDriverName() const;
@@ -84,6 +84,9 @@ class Display : public Nimble::Module
 
     short addPage(const DisplayPage& page);
 
+    short nextPage();
+    short previousPage();
+
     short loadPageFromFS(short page_number);
     short savePageToFS(short page_number);
     
@@ -97,9 +100,11 @@ class Display : public Nimble::Module
   	bool execute(const char* input, ParseException* pex=NULL);
   
 	protected:
+    int pageAdvancePin;
     DisplayPage* pages;
     short npages;
     short activePage;
+    bool pageAdvanceButton;
 
 		// list of gcode registers
 		short G, D, S, _F, X, Y, U, P, Q, R, T, C, W, H;

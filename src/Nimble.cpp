@@ -332,7 +332,7 @@ void setup() {
   Nimble::ModuleManager::Default.begin( server );
   
   // sensors
-  modules.add( *(display = new Display()) );             // OLED on I2C bus
+  modules.add( *(display = new Display(1, PAGE_ADVANCE_PIN)) );             // OLED on I2C bus
   modules.add( *new OneWireSensor(5, DALLAS_ONE_WIRE_PIN) );
   //modules.add( *new DHTSensor(4, DHT_PIN, DHT22) );
   //modules.add( *new MotionIR(6, MOTION_PIN) );
