@@ -1,0 +1,32 @@
+#!/bin/bash
+# This tool generates appropriate point sizes for a range of fonts
+#
+#   Usage: fc <font-file> hex-from hex-to
+#
+# FYI hex range numbers are in capitals A-F
+#
+
+SIZES="6 8 10"
+
+# you probably have to compile the executable before running this tool. Just run "make" in the fontconvert directory
+FONTCONVERT=~/.arduino15/packages/Maixduino/hardware/k210/0.3.8/libraries/Adafruit-GFX-Library/fontconvert/fontconvert
+
+FONT=$1
+NAME=$2
+
+FROM=$(echo "obase=10; ibase=16; $3" | bc)
+TO=$(echo "obase=10; ibase=16; $4" | bc)
+
+POSTFIX=7b
+[[ $TO -gt 127 ]] && POSTFIX=8b
+
+for pt in $SIZES; do
+  ofile=$NAME-${pt}pt.h
+  ifilename=$(basename $FONT)
+  ibasename="${ifilename%.*}"
+  safename=$(echo "$NAME" | tr '-' '_')
+  classname=${safename}${pt}pt${POSTFIX}
+  echo "#include <nimble-fonts/$ofile>     // FONT(${classname})"
+  $FONTCONVERT $FONT $pt $FROM $TO | sed "s/${ibasename}/${safename}/" > $ofile
+done
+

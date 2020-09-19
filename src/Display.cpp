@@ -2,12 +2,18 @@
 #include "Display.h"
 #include "ModuleManager.h"
 
+#include <time.h>
 #include <ctype.h>
+
 #include <FS.h>   // Include the SPIFFS library
 
 #define OLED_RESET LED_BUILTIN        // as per https://maker.pro/arduino/projects/oled-i2c-display-arduinonodemcu-tutorial
 
 using namespace Nimble;
+
+const char* days_of_week[] = {"Monday","Tuesday","Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+const char *months[]= {"January","February","March","April","May","June",
+                       "July","August","September","October","November","December"};
 
 
 const char* ParseExceptionCodeToString(ParseExceptionCode code) {
@@ -20,7 +26,7 @@ const char* ParseExceptionCodeToString(ParseExceptionCode code) {
 }
 
 Display::Display(short id, int _pageAdvancePin)
-	: Module(id, 0, 500, MF_DISPLAY), display(OLED_RESET), fonts(NULL), nfonts(0), pageAdvancePin(_pageAdvancePin),
+	: Module(id, 0, 500, MF_DISPLAY), display(128, 64), fonts(NULL), nfonts(0), pageAdvancePin(_pageAdvancePin),
     pages(NULL), npages(3), activePage(0),
 	  G(0), D(0), S(0), _F(0), X(0), Y(0), U(0), P(1), R(0), T(0), C(0), W(0), H(0),
 	  w(0), str(NULL), gx(6), gy(9), relativeCoords(false)
@@ -40,12 +46,15 @@ const char* Display::getDriverName() const
 
 void Display::begin()
 {
+  pageAdvanceButton = digitalRead(pageAdvancePin) == LOW;
+
   #if (LCD == SSD1306)
   // Initiate the LCD and disply the Splash Screen
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false);  // initialize with the I2C addr 0x3C (for the 128x32)
+  delay(5);
   display.ssd1306_command(SSD1306_SETCONTRAST);
   display.ssd1306_command(255); // Where arg is a value from 0 to 255 (sets contrast e.g. brightness)
-  display.display();
+  //display.display();
   display.clearDisplay();
 #endif
 
@@ -225,10 +234,108 @@ void Display::print(SensorReading r) {
   }
 }
 
+bool update_datetime(struct tm*& ti) {
+  if(!ti) {
+    time_t rawtime = unix_timestamp();
+    ti = localtime (&rawtime);
+    ti->tm_year += 1900;
+  }
+  return ti != nullptr;
+}
+
+unsigned char hexChar(char x) {
+  return (x >= '0' && x <= '9')
+    ? x - '0'
+    : (x >= 'a' && x <= 'f')
+      ? x - ('a' - 10)
+      : (x >= 'A' && x <= 'F')
+        ? x - ('A' - 10)
+        : 0;
+}
+
 void Display::print(const char* str, short strLength) {
+  struct tm *ti = nullptr;
+  if(strLength <0)
+    strLength = strlen(str);
   if(str && strLength > 0) {
-    while(strLength--)
-      display.print(*str++);
+    while(strLength--) {
+      if(*str == '%') {
+        str++;
+        char s[128];
+        int bytes = 0;
+        char modifier = 0;
+        char var = *str++;
+        strLength--;
+
+        // check for modifier character
+        if(var == '+') {
+          modifier = *str++;
+          var = *str++;
+          strLength -= 2;
+        }
+
+        s[0]=0;
+        switch(var) {
+          case 0:     // encountered end of string, so just print % and exit
+            display.print('%');
+            return;
+          case '%':   // single %
+            display.print('%');
+            break;
+          case 'd': {  // date
+            if(update_datetime(ti)) {
+              switch(modifier) {
+                case 'm': bytes = sprintf(s, "%d", ti->tm_mon); break;
+                case 'M': print(months[ti->tm_mon], 3); break;
+                case 'd': bytes = sprintf(s, "%d", ti->tm_mday); break;
+                case 'y': bytes = sprintf(s, "%d", ti->tm_year); break;
+                case 'w': print(days_of_week[ti->tm_wday], 3); break;
+                case 'W': print(days_of_week[ti->tm_wday], -1); break;
+                default: bytes = sprintf(s, "%d-%d-%d", ti->tm_mon, ti->tm_mday, ti->tm_year); break;
+              }
+            } else
+              print("<na>", 4);
+          } break;
+          case 't': {  // date
+            if(update_datetime(ti)) {
+              switch(modifier) {
+                case 'h': bytes = sprintf(s, "%d", ti->tm_hour); break;
+                case 'm': bytes = sprintf(s, "%d", ti->tm_min); break;
+                case 's': bytes = sprintf(s, "%d", ti->tm_sec); break;
+                case 'p': print((ti->tm_hour>11) ? "pm" : "am", 2); break;
+                case 'P': print((ti->tm_hour>11) ? "PM" : "AM", 2); break;
+                default: bytes = sprintf(s, "%d:%d %s", ti->tm_hour, ti->tm_min, (ti->tm_hour>11) ? "PM" : "AM"); break;
+              }
+            } else
+              print("<na>", 4);
+          } break;
+          case 'x': {
+            if(strLength >= 2) {
+              // read two hex chars
+              unsigned char a = hexChar(*str++);
+              unsigned char b = hexChar(*str++);
+              unsigned long H = (a << 4) | b;
+              strLength -= 2;
+              Serial.print("special<");
+              Serial.print((short)H);
+              Serial.println(">");
+              display.drawChar(display.getCursorX(), display.getCursorY(), H, 1, 0, 1);
+            }
+          }
+          default:
+            display.print('@');
+            display.print('%');
+            display.print(var);
+            break;
+        }
+
+        if(bytes)
+          print(s, bytes);
+
+      } else {
+        display.print(*str++);
+      }
+    }
   }
 }
 

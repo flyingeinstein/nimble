@@ -55,29 +55,41 @@ const char* password = SSID_PASSWORD;
 
 // our fonts
 #include <Fonts/FreeSans9pt7b.h>
-#include <Fonts/FreeSans12pt7b.h>
-#include <Fonts/FreeSans18pt7b.h>
 #include <Fonts/FreeSansBold9pt7b.h>
-#include <Fonts/FreeSansBoldOblique9pt7b.h>
-#include <Fonts/FreeMono9pt7b.h>
-#include <Fonts/FreeMono12pt7b.h>
-#include <Fonts/FreeMono18pt7b.h>
+#include <Fonts/FreeSans12pt7b.h>
+//#include <Fonts/FreeSans18pt7b.h>
+//#include <Fonts/FreeSansBoldOblique9pt7b.h>
+//#include <Fonts/FreeMono9pt7b.h>
+//#include <Fonts/FreeMono12pt7b.h>
+//#include <Fonts/FreeMono18pt7b.h>
 #include <Fonts/Org_01.h>
 #include <Fonts/Picopixel.h>
-//#include <Fonts/Tiny3x3a2pt7b.h>
+
+// these fonts are packaged with the Nimble source code
+// exported from Linux fonts
+#include <nimble-fonts/LomaBold-6pt.h>     // FONT(LomaBold6pt7b)
+#include <nimble-fonts/LomaBold-8pt.h>     // FONT(LomaBold6pt7b)
+#include <nimble-fonts/LomaBold-10pt.h>     // FONT(LomaBold10pt7b)
+#include <nimble-fonts/LomaBold-12pt.h>     // FONT(LomaBold12pt7b)
+#include <nimble-fonts/LomaBold-14pt.h>     // FONT(LomaBold14pt7b)
+
+
 
 const FontInfo display_fonts[] = {  
-  FONT(FreeSans9pt7b),
-  FONT(FreeSans12pt7b),
-  FONT(FreeSans18pt7b),
-  FONT(FreeSansBold9pt7b),
-  FONT(FreeSansBoldOblique9pt7b),
-  FONT(FreeMono9pt7b),
-  FONT(FreeMono12pt7b),
-  FONT(FreeMono18pt7b),
   FONT(Org_01),
   FONT(Picopixel),
-//  FONT(Tiny3x3a2pt7b)
+  FONT(FreeSans9pt7b),
+  FONT(FreeSans12pt7b),
+  //FONT(FreeSans18pt7b),
+  FONT(FreeSansBold9pt7b),
+  //FONT(FreeSansBoldOblique9pt7b),
+  //FONT(FreeMono9pt7b),
+  //FONT(FreeMono12pt7b),
+  FONT(Loma_Bold6pt7b),
+  FONT(Loma_Bold8pt7b),
+  FONT(Loma_Bold10pt7b),
+  FONT(Loma_Bold12pt7b),
+  FONT(Loma_Bold14pt7b),
 };
 Display* display;
 
