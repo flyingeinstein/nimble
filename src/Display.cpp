@@ -321,7 +321,7 @@ void Display::print(const char* str, short strLength) {
               Serial.println(">");
               display.drawChar(display.getCursorX(), display.getCursorY(), H, 1, 0, 1);
             }
-          }
+          } break;
           default:
             display.print('@');
             display.print('%');
