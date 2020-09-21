@@ -260,6 +260,15 @@ Influx::Target::Target(int _module, std::initializer_list<short>&& _slots, const
     measurement = _measurement;
 }
 
+Influx::Target::Target(int _module, std::initializer_list<short>&& _slots, const std::initializer_list<const char*>& _aliases, const char* _measurement)
+  : module(_module), slots(_slots)
+{
+  for(auto a: _aliases)
+    aliases.push_back(a);
+  if(_measurement)
+    measurement = _measurement;
+}
+
 Influx::Target::Target(JsonObject json) 
   : Target()
 {

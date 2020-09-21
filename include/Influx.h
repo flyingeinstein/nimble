@@ -16,6 +16,7 @@ class Influx : public Nimble::Module
 
                 Target();
                 Target(int module, std::initializer_list<short>&& _slots, const char* measurement = nullptr);
+                Target(int module, std::initializer_list<short>&& _slots, const std::initializer_list<const char*>& _aliases, const char* measurement = nullptr);
                 Target(JsonObject json);
 
                 Module* resolve(Nimble::ModuleSet& modules) const;
